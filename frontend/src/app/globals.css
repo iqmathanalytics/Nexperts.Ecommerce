@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f7f9;
+  --foreground: #0f1419;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --ink: #0f1419;
+  --muted: #3f4a57;
+  --line: #d0d5dd;
+  --brand: #f0b800;
+  --brand-deep: #d9a600;
+  --brand-soft: #fff4cc;
+  --brand-text: #7a5a00;
+  --link: #0f1419;
+  --accent: #f0b800;
+  --hero-veil: linear-gradient(180deg, rgba(15, 20, 25, 0.2) 0%, rgba(15, 20, 25, 0.45) 40%, rgba(15, 20, 25, 0.82) 100%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-link: var(--link);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-geist-mono);
+}
+
+@keyframes gold-sheen {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.hero-wordmark {
+  background-image: linear-gradient(
+    105deg,
+    #8c6914 0%,
+    #e8c56a 18%,
+    #fff4cc 38%,
+    #c9a227 55%,
+    #f6e7b2 72%,
+    #d4af37 88%,
+    #9a7318 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 8px 28px rgba(212, 175, 55, 0.28));
+  animation: gold-sheen 7s ease-in-out infinite alternate;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-kenburns-a {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes hero-kenburns-b {
+  from {
+    transform: scale(1.1);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+
+.animate-hero-kenburns-a {
+  transform-origin: center top;
+  animation: hero-kenburns-a 5s ease-out forwards;
+}
+
+.animate-hero-kenburns-b {
+  transform-origin: center top;
+  animation: hero-kenburns-b 5s ease-out forwards;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  background: var(--background);
+  color: var(--ink);
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  color: var(--ink);
+}
+
+::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.animate-rise {
+  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+.animate-rise-delay-3 {
+  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+
+.animate-hero-media {
+  transform-origin: center top;
+  animation: hero-kenburns-a 5s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-delay-1,
+  .animate-rise-delay-2,
+  .animate-rise-delay-3,
+  .animate-hero-media,
+  .animate-hero-kenburns-a,
+  .animate-hero-kenburns-b,
+  .hero-wordmark {
+    animation: none;
+  }
+}

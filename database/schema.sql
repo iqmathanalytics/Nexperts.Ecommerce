@@ -1,0 +1,425 @@
+SET NAMES utf8mb4;
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  phone VARCHAR(30) NULL,
+  avatar_url VARCHAR(500) NULL,
+  status ENUM('ACTIVE','SUSPENDED','DELETED') NOT NULL DEFAULT 'ACTIVE',
+  email_verified_at TIMESTAMP NULL,
+  last_login_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY users_email_unique (email),
+  KEY users_status_idx (status),
+  KEY users_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS roles (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  description VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY roles_name_unique (name)
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(80) NOT NULL,
+  description VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY permissions_code_unique (code)
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  role_id BIGINT UNSIGNED NOT NULL,
+  permission_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY role_permission_unique (role_id, permission_id),
+  KEY role_permissions_role_idx (role_id)
+);
+
+CREATE TABLE IF NOT EXISTS user_roles (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  role_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY user_role_unique (user_id, role_id),
+  KEY user_roles_user_idx (user_id),
+  KEY user_roles_role_idx (role_id)
+);
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  token_hash VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY password_reset_user_idx (user_id),
+  KEY password_reset_token_idx (token_hash)
+);
+
+CREATE TABLE IF NOT EXISTS categories (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  parent_id BIGINT UNSIGNED NULL,
+  name VARCHAR(150) NOT NULL,
+  slug VARCHAR(180) NOT NULL,
+  description TEXT NULL,
+  image_url VARCHAR(500) NULL,
+  status ENUM('ACTIVE','ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+  seo_title VARCHAR(180) NULL,
+  seo_description VARCHAR(320) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY categories_slug_unique (slug),
+  KEY categories_parent_idx (parent_id),
+  KEY categories_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS brands (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  slug VARCHAR(180) NOT NULL,
+  description TEXT NULL,
+  logo_url VARCHAR(500) NULL,
+  status ENUM('ACTIVE','ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+  seo_title VARCHAR(180) NULL,
+  seo_description VARCHAR(320) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY brands_slug_unique (slug),
+  UNIQUE KEY brands_name_unique (name),
+  KEY brands_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(280) NOT NULL,
+  description TEXT NULL,
+  brand_id BIGINT UNSIGNED NULL,
+  status ENUM('DRAFT','PUBLISHED','ARCHIVED') NOT NULL DEFAULT 'DRAFT',
+  seo_title VARCHAR(180) NULL,
+  seo_description VARCHAR(320) NULL,
+  specifications JSON NULL,
+  shipping_info TEXT NULL,
+  return_info TEXT NULL,
+  is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  is_new TINYINT(1) NOT NULL DEFAULT 0,
+  gender ENUM('MEN','WOMEN','UNISEX') NOT NULL DEFAULT 'UNISEX',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY products_slug_unique (slug),
+  KEY products_brand_idx (brand_id),
+  KEY products_status_idx (status),
+  KEY products_featured_idx (is_featured),
+  KEY products_created_idx (created_at),
+  KEY products_name_idx (name)
+);
+
+CREATE TABLE IF NOT EXISTS product_categories (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  category_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY product_category_unique (product_id, category_id),
+  KEY product_categories_product_idx (product_id),
+  KEY product_categories_category_idx (category_id)
+);
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  sku VARCHAR(80) NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  attributes JSON NULL,
+  price DECIMAL(12,2) NOT NULL,
+  mrp DECIMAL(12,2) NOT NULL,
+  weight_grams INT NULL,
+  barcode VARCHAR(64) NULL,
+  is_default TINYINT(1) NOT NULL DEFAULT 0,
+  status ENUM('ACTIVE','ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY product_variants_sku_unique (sku),
+  KEY product_variants_product_idx (product_id),
+  KEY product_variants_price_idx (price)
+);
+
+CREATE TABLE IF NOT EXISTS product_images (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  variant_id BIGINT UNSIGNED NULL,
+  url VARCHAR(800) NOT NULL,
+  storage_key VARCHAR(400) NOT NULL,
+  alt VARCHAR(255) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_primary TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY product_images_product_idx (product_id),
+  KEY product_images_variant_idx (variant_id)
+);
+
+CREATE TABLE IF NOT EXISTS inventory (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  variant_id BIGINT UNSIGNED NOT NULL,
+  stock INT NOT NULL DEFAULT 0,
+  reserved_stock INT NOT NULL DEFAULT 0,
+  reorder_level INT NOT NULL DEFAULT 5,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY inventory_variant_unique (variant_id),
+  KEY inventory_stock_idx (stock)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_transactions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  variant_id BIGINT UNSIGNED NOT NULL,
+  previous_stock INT NOT NULL,
+  new_stock INT NOT NULL,
+  difference INT NOT NULL,
+  reason ENUM('PURCHASE','MANUAL_ADJUSTMENT','DAMAGE','RETURN','CORRECTION','SALE','RESERVE','RELEASE') NOT NULL,
+  admin_user_id BIGINT UNSIGNED NULL,
+  notes VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY inventory_tx_variant_idx (variant_id),
+  KEY inventory_tx_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS carts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY carts_user_unique (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  cart_id BIGINT UNSIGNED NOT NULL,
+  variant_id BIGINT UNSIGNED NOT NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY cart_item_variant_unique (cart_id, variant_id),
+  KEY cart_items_cart_idx (cart_id)
+);
+
+CREATE TABLE IF NOT EXISTS wishlists (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY wishlists_user_unique (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  wishlist_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  variant_id BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY wishlist_item_product_unique (wishlist_id, product_id),
+  KEY wishlist_items_wishlist_idx (wishlist_id)
+);
+
+CREATE TABLE IF NOT EXISTS addresses (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  full_name VARCHAR(150) NOT NULL,
+  phone VARCHAR(30) NOT NULL,
+  line1 VARCHAR(255) NOT NULL,
+  line2 VARCHAR(255) NULL,
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  postal_code VARCHAR(20) NOT NULL,
+  country VARCHAR(80) NOT NULL DEFAULT 'India',
+  is_default TINYINT(1) NOT NULL DEFAULT 0,
+  label VARCHAR(40) DEFAULT 'Home',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY addresses_user_idx (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS coupons (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(40) NOT NULL,
+  type ENUM('PERCENTAGE','FIXED') NOT NULL,
+  value DECIMAL(12,2) NOT NULL,
+  min_order_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  max_discount DECIMAL(12,2) NULL,
+  starts_at TIMESTAMP NOT NULL,
+  ends_at TIMESTAMP NOT NULL,
+  usage_limit INT NULL,
+  usage_count INT NOT NULL DEFAULT 0,
+  per_user_limit INT NOT NULL DEFAULT 1,
+  status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY coupons_code_unique (code),
+  KEY coupons_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS coupon_usage (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  coupon_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
+  discount_amount DECIMAL(12,2) NOT NULL,
+  used_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY coupon_usage_coupon_idx (coupon_id),
+  KEY coupon_usage_user_idx (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_number VARCHAR(32) NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  status ENUM('PENDING','CONFIRMED','PROCESSING','PACKED','SHIPPED','DELIVERED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+  payment_status ENUM('PENDING','SUCCESS','FAILED','REFUNDED') NOT NULL DEFAULT 'PENDING',
+  subtotal DECIMAL(12,2) NOT NULL,
+  discount DECIMAL(12,2) NOT NULL,
+  tax DECIMAL(12,2) NOT NULL,
+  shipping DECIMAL(12,2) NOT NULL,
+  total DECIMAL(12,2) NOT NULL,
+  coupon_id BIGINT UNSIGNED NULL,
+  coupon_code VARCHAR(40) NULL,
+  shipping_address JSON NOT NULL,
+  notes VARCHAR(500) NULL,
+  cancelled_at TIMESTAMP NULL,
+  cancel_reason VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY orders_number_unique (order_number),
+  KEY orders_user_idx (user_id),
+  KEY orders_status_idx (status),
+  KEY orders_payment_idx (payment_status),
+  KEY orders_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  variant_id BIGINT UNSIGNED NOT NULL,
+  product_name VARCHAR(255) NOT NULL,
+  sku VARCHAR(80) NOT NULL,
+  variant_name VARCHAR(150) NOT NULL,
+  image_url VARCHAR(800) NULL,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(12,2) NOT NULL,
+  mrp DECIMAL(12,2) NOT NULL,
+  discount DECIMAL(12,2) NOT NULL,
+  tax DECIMAL(12,2) NOT NULL,
+  total DECIMAL(12,2) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY order_items_order_idx (order_id),
+  KEY order_items_product_idx (product_id)
+);
+
+CREATE TABLE IF NOT EXISTS order_status_history (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  from_status VARCHAR(30) NULL,
+  to_status VARCHAR(30) NOT NULL,
+  changed_by BIGINT UNSIGNED NULL,
+  note VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY order_status_history_order_idx (order_id)
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  provider VARCHAR(40) NOT NULL,
+  method VARCHAR(40) NOT NULL,
+  status ENUM('PENDING','SUCCESS','FAILED','REFUNDED') NOT NULL DEFAULT 'PENDING',
+  amount DECIMAL(12,2) NOT NULL,
+  currency VARCHAR(8) NOT NULL DEFAULT 'INR',
+  provider_ref VARCHAR(120) NULL,
+  metadata JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY payments_order_idx (order_id),
+  KEY payments_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NOT NULL,
+  rating INT NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  comment TEXT NOT NULL,
+  status ENUM('PENDING','APPROVED','REJECTED','HIDDEN') NOT NULL DEFAULT 'PENDING',
+  is_verified TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY reviews_user_product_order_unique (user_id, product_id, order_id),
+  KEY reviews_product_idx (product_id),
+  KEY reviews_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  type VARCHAR(60) NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  body TEXT NOT NULL,
+  read_at TIMESTAMP NULL,
+  metadata JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY notifications_user_idx (user_id),
+  KEY notifications_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NULL,
+  session_id VARCHAR(64) NULL,
+  event_type VARCHAR(80) NOT NULL,
+  payload JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY analytics_events_type_idx (event_type),
+  KEY analytics_events_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  admin_user_id BIGINT UNSIGNED NULL,
+  action VARCHAR(80) NOT NULL,
+  resource VARCHAR(80) NOT NULL,
+  resource_id VARCHAR(64) NULL,
+  metadata JSON NULL,
+  ip_address VARCHAR(64) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY audit_logs_admin_idx (admin_user_id),
+  KEY audit_logs_action_idx (action),
+  KEY audit_logs_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `key` VARCHAR(80) NOT NULL,
+  value JSON NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY settings_key_unique (`key`)
+);
+
+CREATE TABLE IF NOT EXISTS order_counters (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  year INT NOT NULL,
+  last_number INT NOT NULL DEFAULT 0,
+  UNIQUE KEY order_counters_year_unique (year)
+);
