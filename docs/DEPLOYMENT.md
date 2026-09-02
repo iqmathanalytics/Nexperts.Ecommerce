@@ -2,20 +2,16 @@
 
 ## Backend on Render
 
-1. Create a Web Service from this GitHub repo.
-2. Root directory: `backend`
-3. Build command: `npm install && npm run build`
-4. Start command: `npm start`
-5. Health check: `/health`
-6. Add environment variables from `docs/ENVIRONMENT.md`.
-7. After first deploy, run from a Render shell:
+See **`docs/RENDER_DEPLOYMENT.md`** for the new service `nexperts-ecommerce-api`.
 
-```
-npm run db:migrate
-npm run db:seed
-```
+Quick steps:
 
-`render.yaml` is included at the repo root.
+1. Fill `.env.render.local` from `.env.render.local.example`.
+2. Run `.\scripts\render-create-service.ps1` (or use Render Blueprint with `render.yaml`).
+3. Verify `https://nexperts-ecommerce-api.onrender.com/health`.
+4. Run `npm run db:seed` once from Render Shell if needed.
+
+Legacy service `nexperts-api` is left unchanged.
 
 ## Frontend on Cloudflare
 

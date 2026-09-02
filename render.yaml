@@ -1,21 +1,43 @@
+# Render Blueprint — NEW service (separate from legacy nexperts-api)
+# Deploy: Render Dashboard → New → Blueprint → connect repo → apply
+
 services:
   - type: web
-    name: nexperts-api
+    name: nexperts-ecommerce-api
     runtime: node
+    region: singapore
+    plan: free
+    repo: https://github.com/iqmathanalytics/Nexperts.Ecommerce.git
+    branch: main
     rootDir: backend
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm ci --include=dev && npm run build
+    preDeployCommand: npm run db:migrate:prod
+    initialDeployHook: npm run db:seed:prod
+    startCommand: npm run start:prod
     healthCheckPath: /health
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 4000
-      - key: DATABASE_URL
-        sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: FRONTEND_URL
-        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
       - key: COOKIE_SECURE
         value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ADMIN_FRONTEND_URL
+        sync: false
+      - key: SITE_NAME
+        value: Nexperts
+      - key: PAYMENT_PROVIDER
+        value: cod
+      - key: TAX_RATE
+        value: "0.18"
+      - key: FREE_SHIPPING_MIN
+        value: "999"
+      - key: SHIPPING_FLAT
+        value: "49"
