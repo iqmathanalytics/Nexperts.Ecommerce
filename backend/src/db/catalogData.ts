@@ -39,8 +39,8 @@ export const CATEGORY_IMAGES: Record<string, string> = {
   "Mini Dresses": px(2043590),
   Tops: px(1926769),
   Bottoms: px(6764007),
-  "Ethnic Wear": px(20410887),
-  "Ethnic Dresses": px(20410887),
+  "Ethnic Wear": u("photo-1610030469983-98e550d6193c"),
+  "Ethnic Dresses": u("photo-1583391733956-3750e0ff4e8b"),
   Outerwear: px(3317434),
 };
 
@@ -284,8 +284,8 @@ export const CATALOG: Array<{
     fit: "Flared anarkali",
     description:
       "A festive anarkali with delicate embroidery and a graceful flare. Designed for celebrations, family gatherings, and formal ethnic occasions.",
-    image: px(20410887),
-    image2: px(985635),
+    image: u("photo-1610030469983-98e550d6193c"),
+    image2: u("photo-1583391733956-3750e0ff4e8b"),
   },
   {
     name: "SilkRoad Festive Kurta Set",
@@ -300,8 +300,8 @@ export const CATALOG: Array<{
     fit: "Straight",
     description:
       "A refined kurta silhouette in an art-silk blend with festive depth. Wear it for celebrations where elegance matters more than excess.",
-    image: px(20410887),
-    image2: u("photo-1572804013309-59a88b7e92f1"),
+    image: u("photo-1594737625785-a6cbdabd333c"),
+    image2: u("photo-1610030469983-98e550d6193c"),
   },
   {
     name: "UrbanThread Silk Soft Shirt",

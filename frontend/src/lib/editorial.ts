@@ -67,7 +67,7 @@ export const WOMEN_TILES = [
   { href: "/category/dresses?gender=WOMEN", label: "Dresses", image: px(31808831, 800) },
   { href: "/category/tops?gender=WOMEN", label: "Tops", image: px(1926769, 800) },
   { href: "/category/bottoms?gender=WOMEN", label: "Trousers", image: px(6764007, 800) },
-  { href: "/category/ethnic-wear?gender=WOMEN", label: "Heritage", image: px(20410887, 800) },
+  { href: "/category/ethnic-wear?gender=WOMEN", label: "Heritage", image: u("photo-1610030469983-98e550d6193c", 800) },
   { href: "/category/outerwear?gender=WOMEN", label: "Outerwear", image: px(3317434, 800) },
 ];
 
@@ -80,7 +80,7 @@ export const MEN_TILES = [
 
 export const MEGA_WOMEN = [
   { href: "/category/dresses?gender=WOMEN", label: "Dresses", image: u("photo-1595777457583-95e059d581b8", 600) },
-  { href: "/category/ethnic-wear?gender=WOMEN", label: "Festive", image: px(20410887, 600) },
+  { href: "/category/ethnic-wear?gender=WOMEN", label: "Festive", image: u("photo-1583391733956-3750e0ff4e8b", 600) },
   { href: "/sale", label: "Sale", image: px(2043590, 600) },
 ];
 
