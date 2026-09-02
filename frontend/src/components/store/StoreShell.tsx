@@ -1,10 +1,17 @@
 "use client";
 
-import { OpeningScreen } from "@/components/store/OpeningScreen";
+import dynamic from "next/dynamic";
 import { PageFade } from "@/components/store/PageFade";
 import { Header, Footer } from "@/components/store/Header";
-import { SupportChatSlot } from "@/components/store/SupportChatSlot";
 import type { ReactNode } from "react";
+
+const OpeningScreen = dynamic(() => import("@/components/store/OpeningScreen").then((m) => m.OpeningScreen), {
+  ssr: false,
+});
+const OfferPopups = dynamic(() => import("@/components/store/OfferPopups").then((m) => m.OfferPopups), { ssr: false });
+const ProductTransit = dynamic(() => import("@/components/store/ProductTransit").then((m) => m.ProductTransit), {
+  ssr: false,
+});
 
 export function StoreShell({ children }: { children: ReactNode }) {
   return (
@@ -15,7 +22,8 @@ export function StoreShell({ children }: { children: ReactNode }) {
         <PageFade>{children}</PageFade>
       </main>
       <Footer />
-      <SupportChatSlot />
+      <OfferPopups />
+      <ProductTransit />
     </div>
   );
 }

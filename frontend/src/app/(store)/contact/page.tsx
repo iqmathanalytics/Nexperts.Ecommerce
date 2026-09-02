@@ -14,7 +14,7 @@ export default function ContactPage() {
           support@nexperts.com
         </a>
       </p>
-      <p>Support hours: Monday–Saturday, 10:00–18:00 IST. We aim to respond within one business day.</p>
+      <p>Support hours: Monday–Saturday, 10:00–18:00. We aim to respond within one business day.</p>
       <p>
         Browse the <Link href="/products" className="font-medium text-ink underline-offset-2 hover:underline">shop</Link> or
         visit your <Link href="/account" className="font-medium text-ink underline-offset-2 hover:underline">account</Link> for

@@ -65,7 +65,7 @@ export async function previewCoupon(userId: number, code: string, subtotal: numb
     .where(and(eq(couponUsage.couponId, coupon.id), eq(couponUsage.userId, userId)));
   if (Number(usageRows[0]?.used ?? 0) >= coupon.perUserLimit) throw new AppError("INVALID_COUPON", "You have already used this coupon", 400);
   if (subtotal < toMoney(coupon.minOrderAmount)) {
-    throw new AppError("INVALID_COUPON", `Minimum order amount is ₹${coupon.minOrderAmount}`, 400);
+    throw new AppError("INVALID_COUPON", `Minimum order amount is RM ${coupon.minOrderAmount}`, 400);
   }
   const discount = applyCouponDiscount({
     subtotal,
@@ -114,7 +114,7 @@ export async function lockAndValidateCoupon(conn: PoolConnection, userId: number
     throw new AppError("INVALID_COUPON", "You have already used this coupon", 400);
   }
   if (subtotal < toMoney(coupon.min_order_amount)) {
-    throw new AppError("INVALID_COUPON", `Minimum order amount is ₹${coupon.min_order_amount}`, 400);
+    throw new AppError("INVALID_COUPON", `Minimum order amount is RM ${coupon.min_order_amount}`, 400);
   }
   const discount = applyCouponDiscount({
     subtotal,

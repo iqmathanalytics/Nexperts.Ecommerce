@@ -12,8 +12,8 @@ export default function PrivacyPage() {
         to process orders, provide customer support, and improve your shopping experience.
       </p>
       <p>
-        Order and payment details are stored securely on our servers. We do not sell your personal data to third parties.
-        Card data is never stored — online payments use Razorpay when enabled.
+        Order and payment details are stored securely on our servers in line with applicable data protection law.
+        We do not sell your personal data. Card data is never stored on our servers.
       </p>
       <p>
         You may update your profile from account settings, export your data, manage marketing consent, or request deletion below.

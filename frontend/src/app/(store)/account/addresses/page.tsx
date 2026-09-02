@@ -11,7 +11,7 @@ type Address = { id: number; fullName: string; phone: string; line1: string; cit
 export default function AddressesPage() {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ["addresses"], queryFn: () => api<Address[]>("/addresses") });
-  const form = useForm({ defaultValues: { fullName: "", phone: "", line1: "", city: "", state: "", postalCode: "", country: "India", isDefault: false } });
+  const form = useForm({ defaultValues: { fullName: "", phone: "", line1: "", city: "", state: "", postalCode: "", country: "Malaysia", isDefault: false } });
   const create = useMutation({
     mutationFn: (body: unknown) => api("/addresses", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["addresses"] }); form.reset(); },

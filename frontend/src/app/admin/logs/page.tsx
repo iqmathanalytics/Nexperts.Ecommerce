@@ -5,8 +5,8 @@ import { AuditLogsPage } from "@/components/admin/AuditTable";
 export default function LogsPage() {
   return (
     <AuditLogsPage
-      title="Logs"
-      description="Recent admin activity across the store — product updates, order changes, and other actions."
+      title="Audit log"
+      description="Staff actions across the store — product edits, order updates, and inventory changes."
     />
   );
 }

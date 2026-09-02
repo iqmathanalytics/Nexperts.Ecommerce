@@ -165,7 +165,7 @@ export async function placeOrder(userId: number, input: z.infer<typeof checkoutS
     });
     await conn.query(
       `INSERT INTO payments (order_id, provider, method, status, amount, currency, provider_ref, metadata)
-       VALUES (?, ?, ?, ?, ?, 'INR', ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, 'MYR', ?, ?)`,
       [orderId, payment.provider, payment.method, payment.status, quote.total, payment.providerRef, JSON.stringify(payment.metadata ?? {})],
     );
     await conn.query(
@@ -289,7 +289,15 @@ export async function transitionOrder(orderId: number, toStatus: string, actorId
   }
 }
 
-export async function adminListOrders(filters: { q?: string; status?: string; page?: number; limit?: number }) {
+export async function adminListOrders(filters: {
+  q?: string;
+  status?: string;
+  paymentStatus?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}) {
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
   const where: string[] = ["1=1"];
@@ -298,10 +306,22 @@ export async function adminListOrders(filters: { q?: string; status?: string; pa
     where.push("o.status = ?");
     params.push(filters.status);
   }
+  if (filters.paymentStatus) {
+    where.push("o.payment_status = ?");
+    params.push(filters.paymentStatus);
+  }
   if (filters.q) {
     where.push("(o.order_number LIKE ? OR u.email LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)");
     const like = `%${filters.q}%`;
     params.push(like, like, like);
+  }
+  if (filters.from) {
+    where.push("o.created_at >= ?");
+    params.push(`${filters.from} 00:00:00`);
+  }
+  if (filters.to) {
+    where.push("o.created_at < DATE_ADD(?, INTERVAL 1 DAY)");
+    params.push(filters.to);
   }
   const [countRows] = await pool.query(
     `SELECT COUNT(*) AS total FROM orders o INNER JOIN users u ON u.id = o.user_id WHERE ${where.join(" AND ")}`,
@@ -318,4 +338,40 @@ export async function adminListOrders(filters: { q?: string; status?: string; pa
     [...params, limit, (page - 1) * limit],
   );
   return { items: rows, total: Number((countRows as Array<{ total: number }>)[0]?.total ?? 0), page, limit };
+}
+
+export const bulkStatusSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(100),
+  status: z.enum(["PENDING", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"]),
+  note: z.string().max(255).optional(),
+});
+
+export async function bulkTransitionOrders(
+  ids: number[],
+  toStatus: string,
+  actorId: number,
+  note?: string,
+) {
+  const results: Array<{ id: number; ok: boolean; error?: string }> = [];
+  for (const id of ids) {
+    try {
+      if (toStatus === "CANCELLED") {
+        await cancelOrder(id, actorId, note || "Cancelled by admin", true);
+      } else {
+        await transitionOrder(id, toStatus, actorId, note, true);
+      }
+      results.push({ id, ok: true });
+    } catch (err) {
+      results.push({
+        id,
+        ok: false,
+        error: err instanceof AppError ? err.message : "Could not update this order",
+      });
+    }
+  }
+  return {
+    updated: results.filter((r) => r.ok).length,
+    failed: results.filter((r) => !r.ok).length,
+    results,
+  };
 }

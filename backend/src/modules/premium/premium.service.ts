@@ -142,7 +142,20 @@ export async function recommendations(idOrSlug: string) {
 }
 
 export async function designerCollection(slug: string) {
-  const [brand] = await db.select().from(brands).where(eq(brands.slug, slug)).limit(1);
+  const [brand] = await db
+    .select({
+      id: brands.id,
+      name: brands.name,
+      slug: brands.slug,
+      description: brands.description,
+      status: brands.status,
+      logoUrl: brands.logoUrl,
+      heroImageUrl: brands.heroImageUrl,
+      lookbookBio: brands.lookbookBio,
+    })
+    .from(brands)
+    .where(eq(brands.slug, slug))
+    .limit(1);
   if (!brand || brand.status !== "ACTIVE") throw new AppError("NOT_FOUND", "Designer not found", 404);
   const productData = await listProducts({ brand: slug, page: 1, limit: 48, sort: "newest" });
   const lbs = await db
@@ -170,26 +183,29 @@ export async function designerCollection(slug: string) {
 
 export async function seasonalCollection(season: string) {
   const s = season.toLowerCase() as "spring" | "summer" | "festive" | "winter" | "all";
-  const [col] = await db
-    .select()
-    .from(collections)
-    .where(and(eq(collections.season, s), eq(collections.status, "ACTIVE")))
-    .limit(1);
-  if (!col) {
-    const fallback = await listProducts({ page: 1, limit: 24, sort: "newest", isNew: "true" });
+  try {
+    const [col] = await db
+      .select()
+      .from(collections)
+      .where(and(eq(collections.season, s), eq(collections.status, "ACTIVE")))
+      .limit(1);
+    if (!col) {
+      const fallback = await listProducts({ page: 1, limit: 24, sort: "newest", isNew: "true" });
+      return { name: `${season} edit`, description: `Curated ${season} pieces`, products: fallback.items };
+    }
+    const links = await db
+      .select()
+      .from(collectionProducts)
+      .where(eq(collectionProducts.collectionId, col.id))
+      .orderBy(asc(collectionProducts.sortOrder));
+    const all = await listProducts({ page: 1, limit: 48, sort: "newest" });
+    const idSet = new Set(links.map((l) => l.productId));
+    const productsList = idSet.size ? all.items.filter((p) => idSet.has(p.id)) : all.items;
+    return { name: col.name, description: col.description, products: productsList };
+  } catch {
+    const fallback = await listProducts({ page: 1, limit: 24, sort: "newest" });
     return { name: `${season} edit`, description: `Curated ${season} pieces`, products: fallback.items };
   }
-  const links = await db
-    .select()
-    .from(collectionProducts)
-    .where(eq(collectionProducts.collectionId, col.id))
-    .orderBy(asc(collectionProducts.sortOrder));
-  const all = await listProducts({ page: 1, limit: 48, sort: "newest" });
-  const idSet = new Set(links.map((l) => l.productId));
-  const productsList = idSet.size
-    ? all.items.filter((p) => idSet.has(p.id))
-    : all.items;
-  return { name: col.name, description: col.description, products: productsList };
 }
 
 export async function listLookbooks() {
@@ -345,30 +361,31 @@ export async function redeemLoyalty(userId: number, points: number) {
   if (points < 100 || points % 100 !== 0) throw new AppError("VALIDATION", "Redeem in multiples of 100 points", 400);
   const acc = await ensureLoyalty(userId);
   if (acc.balance < points) throw new AppError("INSUFFICIENT", "Not enough points", 400);
-  // 100 points = ₹10
+  // 100 points = RM 10
   const discountAmount = (points / 100) * 10;
   await db.update(loyaltyAccounts).set({ balance: acc.balance - points }).where(eq(loyaltyAccounts.id, acc.id));
   await db.insert(loyaltyTransactions).values({
     accountId: acc.id,
     points: -points,
     type: "REDEEM",
-    reason: `Redeemed for ₹${discountAmount} off`,
+    reason: `Redeemed for RM ${discountAmount} off`,
   });
   return { discountAmount, balance: acc.balance - points, couponHint: `LOYALTY${points}` };
 }
 
 export async function shippingEstimate(pincode: string) {
-  const metro = /^(11|12|40|56|60|70|50)/.test(pincode);
-  const days = metro ? 2 : 5;
+  const east = /^(8[8-9]|9[0-8])/.test(pincode);
+  const klValley = /^(4[0-8]|5[0-9]|6[0-8])/.test(pincode);
+  const days = east ? 5 : klValley ? 2 : 3;
   const eta = new Date();
   eta.setDate(eta.getDate() + days);
   return {
     pincode,
     warehouses: [
-      { id: "WH-NCR", name: "NCR Hub", etaDate: eta.toISOString().slice(0, 10), businessDays: days },
+      { id: "WH-01", name: "Primary Hub", etaDate: eta.toISOString().slice(0, 10), businessDays: days },
       {
-        id: "WH-BLR",
-        name: "Bengaluru Hub",
+        id: "WH-02",
+        name: "Secondary Hub",
         etaDate: new Date(Date.now() + (days + 1) * 86400000).toISOString().slice(0, 10),
         businessDays: days + 1,
       },

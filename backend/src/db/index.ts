@@ -5,8 +5,10 @@ import * as schema from "./schema";
 
 export const pool = mysql.createPool({
   uri: env.DATABASE_URL,
-  connectionLimit: 10,
+  connectionLimit: 8,
   enableKeepAlive: true,
+  keepAliveInitialDelay: 10_000,
+  connectTimeout: 12_000,
   timezone: "Z",
 });
 

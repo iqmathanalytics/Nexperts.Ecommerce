@@ -19,7 +19,7 @@ export default function ReferralsPage() {
   const claim = useMutation({
     mutationFn: () => api("/referrals/claim", { method: "POST", body: JSON.stringify({ code }) }),
     onSuccess: () => {
-      push("Referral applied — ₹20 credit coming your way");
+      push("Referral applied — RM 20 credit coming your way");
       qc.invalidateQueries({ queryKey: ["loyalty"] });
     },
     onError: (e: Error) => push(e.message, "error"),
@@ -33,7 +33,7 @@ export default function ReferralsPage() {
   return (
     <div className="mx-auto max-w-xl px-4 py-12 md:px-6">
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted">Referrals</p>
-      <h1 className="mt-3 font-display text-4xl font-semibold">Give ₹20, get ₹20</h1>
+      <h1 className="mt-3 font-display text-4xl font-semibold">Give RM 20, get RM 20</h1>
       <p className="mt-3 text-sm text-muted">Share your code. When a friend places their first order, you both earn credit.</p>
 
       <div className="mt-8 border border-line bg-surface p-6">

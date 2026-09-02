@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, pool } from "./index";
-import { CATALOG, CATEGORY_TREE, CLOTHING_BRANDS, SIZES } from "./catalogData";
+import { CATALOG, CATEGORY_IMAGES, CATEGORY_TREE, CLOTHING_BRANDS, SIZES } from "./catalogData";
 import {
   addresses,
   brands,
@@ -158,13 +158,13 @@ async function seed() {
 
   await db.insert(addresses).values({
     userId: customerId,
-    fullName: "Arjun Shah",
-    phone: "9876511111",
-    line1: "14, Palm Grove Apartments",
-    line2: "Bandra West",
-    city: "Mumbai",
-    state: "Maharashtra",
-    postalCode: "400050",
+    fullName: "Aina Rahman",
+    phone: "0123456789",
+    line1: "14, The Intermark",
+    line2: "Tun Razak Road",
+    city: "Kuala Lumpur",
+    state: "Federal Territory",
+    postalCode: "50400",
     isDefault: true,
     label: "Home",
   });
@@ -178,6 +178,7 @@ async function seed() {
       description: `${parent.name} for the Nexperts clothing collection.`,
       seoTitle: `${parent.name} | Nexperts`,
       seoDescription: `Shop ${parent.name.toLowerCase()} online at Nexperts.`,
+      imageUrl: CATEGORY_IMAGES[parent.name] ?? null,
       sortOrder: sort++,
     }));
     catIds.set(parent.name, pid);
@@ -189,6 +190,7 @@ async function seed() {
         description: child,
         seoTitle: `${child} | Nexperts`,
         seoDescription: `Shop ${child.toLowerCase()} at Nexperts.`,
+        imageUrl: CATEGORY_IMAGES[child] ?? null,
         sortOrder: sort++,
       }));
       catIds.set(child, cid);
@@ -227,11 +229,11 @@ async function seed() {
         Fabric: item.fabric,
         Fit: item.fit,
         Care: item.care ?? "Gentle wash · Dry clean recommended for evening wear",
-        Origin: item.origin ?? "Designed for India",
+        Origin: item.origin ?? "Designed in-house",
         Styling: item.styling ?? "Style with Nexperts essentials.",
         Model: item.model ?? "True to size",
       },
-      shippingInfo: "Ships within 24–48 hours. Free shipping on orders above ₹999. Premium packaging on every order.",
+      shippingInfo: "Ships within 24–48 hours. Free shipping on orders above RM 999. Premium packaging on every order.",
       returnInfo: "7-day easy returns on unused items with tags attached.",
       isFeatured: true,
       isNew: true,
@@ -309,7 +311,7 @@ async function seed() {
       tax: String(tax),
       shipping: String(shipping),
       total: String(total),
-      shippingAddress: { fullName: "Customer", phone: "9876511111", line1: "14 Palm Grove", city: "Mumbai", state: "Maharashtra", postalCode: "400050", country: "India" },
+      shippingAddress: { fullName: "Customer", phone: "0123456789", line1: "14 Ampang Road", city: "Kuala Lumpur", state: "Federal Territory", postalCode: "50450", country: "Malaysia" },
       createdAt: created,
     }));
     await db.insert(orderItems).values({
@@ -358,7 +360,7 @@ async function seed() {
     slug: "summer-linen-edit",
     season: "summer",
     description: "Breathable linens and light silhouettes for warm days.",
-    imageUrl: "https://picsum.photos/seed/summer-collection/1200/800",
+    imageUrl: "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&crop=entropy&w=1000&h=1333&q=85",
     status: "ACTIVE",
     seoTitle: "Summer Linen Edit | Nexperts",
     seoDescription: "Shop the summer linen collection.",
@@ -368,7 +370,7 @@ async function seed() {
     slug: "festive-glow",
     season: "festive",
     description: "Celebration-ready pieces with rich textures.",
-    imageUrl: "https://picsum.photos/seed/festive-collection/1200/800",
+    imageUrl: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&crop=entropy&w=1000&h=1333&q=85",
     status: "ACTIVE",
     seoTitle: "Festive Glow | Nexperts",
     seoDescription: "Shop festive occasion wear.",
@@ -386,7 +388,7 @@ async function seed() {
     slug: "petal-resort-2026",
     title: "Petal Resort 2026",
     description: "Sun-washed layers and soft dresses from Petal.",
-    coverImageUrl: "https://picsum.photos/seed/petal-lookbook/1400/900",
+    coverImageUrl: "https://images.pexels.com/photos/31808831/pexels-photo-31808831.jpeg?auto=compress&cs=tinysrgb&w=1000&h=1333",
     status: "ACTIVE",
   }));
   await db.insert(lookbookItems).values(
@@ -402,7 +404,7 @@ async function seed() {
   if (petalBrandId) {
     await db.update(brands).set({
       lookbookBio: "Petal designs quiet luxury for everyday rituals.",
-      heroImageUrl: "https://picsum.photos/seed/petal-hero/1600/900",
+      heroImageUrl: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&crop=entropy&w=1000&h=1333&q=85",
     }).where(eq(brands.id, petalBrandId));
   }
 

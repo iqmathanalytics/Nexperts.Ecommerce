@@ -37,7 +37,7 @@ export default async function Layout({ children, params }: { children: ReactNode
         image: p.images?.map((i: { url: string }) => i.url),
         offers: {
           "@type": "Offer",
-          priceCurrency: "INR",
+          priceCurrency: "MYR",
           price: p.variants?.[0]?.price,
           availability: p.variants?.[0]?.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         },

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { success } from "../../utils/http";
-import { clearAuthCookie, requireAdmin, requireCustomer, setAuthCookie } from "../../middleware/auth";
+import { clearAuthCookie, optionalCustomer, requireAdmin, requireCustomer, setAuthCookie } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import * as auth from "./auth.service";
 
@@ -55,9 +55,13 @@ authRouter.post(
 
 authRouter.get(
   "/me",
-  requireCustomer,
+  optionalCustomer,
   asyncHandler(async (req, res) => {
-    const user = await auth.getMe(req.user!.id);
+    if (!req.user) {
+      res.json(success({ user: null }));
+      return;
+    }
+    const user = await auth.getMe(req.user.id);
     res.json(success({ user }));
   }),
 );

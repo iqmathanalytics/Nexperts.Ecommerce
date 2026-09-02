@@ -1,16 +1,19 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
-import { formatINR } from "@/lib/utils";
+import { formatDate, formatMoney } from "@/lib/utils";
 import { OrderStatusFlow } from "@/components/store/OrderStatusFlow";
 import { canCancelOrder, ORDER_TRANSITIONS } from "@/lib/orders";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { AdminDrawer, AdminPage, DataTable, FilterBar } from "@/components/admin/AdminTable";
+import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+
+const STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"] as const;
+const PAYMENTS = ["PENDING", "SUCCESS", "FAILED", "REFUNDED"] as const;
 
 type Order = {
   id: number;
@@ -34,6 +37,10 @@ type OrderDetail = {
   items: Array<{ id: number; productName: string; sku: string; quantity: number; unitPrice: string }>;
 };
 
+function labelStatus(status: string) {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
 export function OrdersList({ title, defaultStatus = "" }: { title: string; defaultStatus?: string }) {
   const qc = useQueryClient();
   const searchParams = useSearchParams();
@@ -42,20 +49,61 @@ export function OrdersList({ title, defaultStatus = "" }: { title: string; defau
   const [q, setQ] = useState("");
   const dq = useDebouncedValue(q, 300);
   const [status, setStatus] = useState(defaultStatus);
+  const [paymentStatus, setPaymentStatus] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [selected, setSelected] = useState<number[]>([]);
+  const [bulkStatus, setBulkStatus] = useState("CONFIRMED");
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setStatus(defaultStatus);
   }, [defaultStatus]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-orders", dq, status],
-    queryFn: () => api<{ items: Order[] }>(`/admin/orders?q=${encodeURIComponent(dq)}&status=${status}&limit=50`),
+    queryKey: ["admin-orders", dq, status, paymentStatus, from, to],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (dq) params.set("q", dq);
+      if (status) params.set("status", status);
+      if (paymentStatus) params.set("paymentStatus", paymentStatus);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      params.set("limit", "100");
+      return api<{ items: Order[]; total?: number }>(`/admin/orders?${params.toString()}`);
+    },
   });
   const items =
     (data?.data as unknown as { items?: Order[] })?.items ??
     (Array.isArray(data?.data) ? (data?.data as unknown as Order[]) : []);
   const rows = Array.isArray(items) ? items : [];
   const viewId = searchParams.get("view");
+  const allSelected = rows.length > 0 && rows.every((o) => selected.includes(o.id));
+  const hasFilters = Boolean(q || (status && status !== defaultStatus) || paymentStatus || from || to);
+
+  const bulk = useMutation({
+    mutationFn: () =>
+      api<{ updated: number; failed: number }>(`/admin/orders/bulk-status`, {
+        method: "POST",
+        body: JSON.stringify({
+          ids: selected,
+          status: bulkStatus,
+          note: bulkStatus === "CANCELLED" ? "Cancelled by admin" : `Marked ${labelStatus(bulkStatus)} by admin`,
+        }),
+      }),
+    onSuccess: (res) => {
+      const updated = res.data?.updated ?? 0;
+      const failed = res.data?.failed ?? 0;
+      setBulkMsg(
+        failed
+          ? `Updated ${updated} order${updated === 1 ? "" : "s"}. ${failed} could not move to ${labelStatus(bulkStatus)}.`
+          : `Updated ${updated} order${updated === 1 ? "" : "s"} to ${labelStatus(bulkStatus)}.`,
+      );
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+    onError: (e: Error) => setBulkMsg(e.message),
+  });
 
   function setView(id: number | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -65,32 +113,127 @@ export function OrdersList({ title, defaultStatus = "" }: { title: string; defau
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
+  function toggle(id: number) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function toggleAll() {
+    setSelected(allSelected ? [] : rows.map((o) => o.id));
+  }
+
+  const selectedPreview = useMemo(
+    () => rows.filter((o) => selected.includes(o.id)).slice(0, 3),
+    [rows, selected],
+  );
+
   return (
-    <AdminPage title={title}>
+    <AdminPage title={title} description="Search and filter orders, then confirm or update them in one place.">
       <FilterBar>
-        <Input className="max-w-sm" placeholder="Search order / customer" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-48">
+        <Input className="max-w-sm" placeholder="Search order, name, or email" value={q} onChange={(e) => setQ(e.target.value)} />
+        <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-44">
           <option value="">All statuses</option>
-          {["PENDING", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"].map((s) => (
+          {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {labelStatus(s)}
             </option>
           ))}
         </Select>
+        <Select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className="w-44">
+          <option value="">All payments</option>
+          {PAYMENTS.map((s) => (
+            <option key={s} value={s}>
+              {labelStatus(s)}
+            </option>
+          ))}
+        </Select>
+        <Input className="w-40" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <Input className="w-40" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        {hasFilters ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setQ("");
+              setStatus(defaultStatus);
+              setPaymentStatus("");
+              setFrom("");
+              setTo("");
+            }}
+          >
+            Reset filters
+          </Button>
+        ) : null}
       </FilterBar>
+
+      {selected.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand/20 bg-brand-soft px-4 py-3">
+          <p className="text-sm font-medium">
+            {selected.length} marked
+            {selectedPreview.length ? (
+              <span className="ml-1 font-normal text-muted">
+                · {selectedPreview.map((o) => `${o.firstName} ${o.lastName}`.trim() || o.email).join(", ")}
+                {selected.length > selectedPreview.length ? "…" : ""}
+              </span>
+            ) : null}
+          </p>
+          <Select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="w-44">
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {labelStatus(s)}
+              </option>
+            ))}
+          </Select>
+          <Button size="sm" disabled={bulk.isPending} onClick={() => bulk.mutate()}>
+            {bulk.isPending ? "Updating…" : "Change status"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+            Clear
+          </Button>
+          <p className="w-full text-xs text-muted">Only orders that can legally move to this status are updated. The rest stay as they are.</p>
+        </div>
+      ) : null}
+
+      {bulk.isError ? <FormError error={bulk.error} /> : null}
+      {bulkMsg ? <p className="text-sm text-brand-text">{bulkMsg}</p> : null}
+
       <DataTable
         columns={[
-          { id: "order", header: "Order ID", cell: (o) => o.orderNumber },
-          { id: "customer", header: "Customer", cell: (o) => `${o.firstName} ${o.lastName}` },
-          { id: "date", header: "Date", cell: (o) => new Date(o.createdAt).toLocaleDateString() },
-          { id: "amount", header: "Amount", cell: (o) => formatINR(Number(o.total)) },
-          { id: "payment", header: "Payment", cell: (o) => o.paymentStatus },
-          { id: "status", header: "Status", cell: (o) => o.status },
+          {
+            id: "pick",
+            header: "",
+            headerClassName: "w-10",
+            cell: (o) => (
+              <input
+                type="checkbox"
+                checked={selected.includes(o.id)}
+                onChange={() => toggle(o.id)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Mark ${o.orderNumber}`}
+              />
+            ),
+          },
+          { id: "order", header: "Order", cell: (o) => o.orderNumber },
+          {
+            id: "customer",
+            header: "Customer",
+            cell: (o) => (
+              <span>
+                <span className="block font-medium">
+                  {o.firstName} {o.lastName}
+                </span>
+                <span className="text-[11px] text-muted">{o.email}</span>
+              </span>
+            ),
+          },
+          { id: "date", header: "Date", cell: (o) => formatDate(o.createdAt) },
+          { id: "amount", header: "Amount", cell: (o) => formatMoney(Number(o.total)) },
+          { id: "payment", header: "Payment", cell: (o) => labelStatus(o.paymentStatus) },
+          { id: "status", header: "Status", cell: (o) => labelStatus(o.status) },
           {
             id: "actions",
             header: "Actions",
             cell: (o) => (
-              <button type="button" className="text-teal-800 hover:underline" onClick={() => setView(o.id)}>
+              <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setView(o.id)}>
                 View
               </button>
             ),
@@ -102,7 +245,18 @@ export function OrdersList({ title, defaultStatus = "" }: { title: string; defau
         empty="No orders match these filters."
         selectedKey={viewId ? Number(viewId) : null}
         onRowClick={(o) => setView(o.id)}
-        footer={`${rows.length} order${rows.length === 1 ? "" : "s"}`}
+        footer={
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="inline-flex items-center gap-2 text-ink">
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+              Mark all on this page
+            </label>
+            <span>
+              {rows.length} order{rows.length === 1 ? "" : "s"}
+              {selected.length ? ` · ${selected.length} marked` : ""}
+            </span>
+          </div>
+        }
       />
       <OrderDrawer
         viewId={viewId}
@@ -160,11 +314,11 @@ function OrderDrawer({
   return (
     <AdminDrawer open={Boolean(viewId)} title={o?.orderNumber ?? "Order"} onClose={onClose}>
       {!o ? (
-        <p className="text-sm text-slate-500">Loading order…</p>
+        <p className="text-sm text-muted">Loading order…</p>
       ) : (
         <>
-          <p className="text-sm text-slate-500">
-            {o.status} · {o.paymentStatus}
+          <p className="text-sm text-muted">
+            {labelStatus(o.status)} · {labelStatus(o.paymentStatus)}
           </p>
           <div className="mt-3">
             <OrderStatusFlow status={o.status} />
@@ -175,12 +329,12 @@ function OrderDrawer({
                 <span>
                   {i.productName} × {i.quantity} ({i.sku})
                 </span>
-                <span>{formatINR(Number(i.unitPrice) * i.quantity)}</span>
+                <span>{formatMoney(Number(i.unitPrice) * i.quantity)}</span>
               </p>
             ))}
           </div>
           {address ? (
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-3 text-sm text-muted">
               Ship to {address.fullName}, {address.line1}, {address.city} {address.postalCode}
             </p>
           ) : null}
@@ -195,7 +349,7 @@ function OrderDrawer({
                   disabled={update.isPending}
                   onClick={() => update.mutate({ status: s, note: statusNote[s] ?? `Marked ${s.toLowerCase()}` })}
                 >
-                  Mark {s.toLowerCase()}
+                  Mark {labelStatus(s)}
                 </Button>
               ))}
             {canCancelOrder(o.status) ? (

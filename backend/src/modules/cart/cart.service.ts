@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db";
 import { cartItems, carts, inventory, productImages, productVariants, products, wishlistItems, wishlists } from "../../db/schema";
 import { AppError } from "../../utils/http";
@@ -24,46 +24,76 @@ async function getOrCreateWishlist(userId: number) {
   return { id: Number(result[0].insertId), userId };
 }
 
+async function primaryImagesByProduct(productIds: number[]) {
+  const imageByProduct = new Map<number, string>();
+  if (!productIds.length) return imageByProduct;
+  const imgs = await db
+    .select({
+      productId: productImages.productId,
+      url: productImages.url,
+    })
+    .from(productImages)
+    .where(inArray(productImages.productId, productIds))
+    .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder));
+  for (const img of imgs) {
+    if (!imageByProduct.has(img.productId)) imageByProduct.set(img.productId, img.url);
+  }
+  return imageByProduct;
+}
+
 export async function getCart(userId: number) {
   const cart = await getOrCreateCart(userId);
-  const items = await db.select().from(cartItems).where(eq(cartItems.cartId, cart.id));
+  const rows = await db
+    .select({
+      id: cartItems.id,
+      quantity: cartItems.quantity,
+      variantId: productVariants.id,
+      productId: products.id,
+      name: products.name,
+      slug: products.slug,
+      productStatus: products.status,
+      variantName: productVariants.name,
+      sku: productVariants.sku,
+      variantStatus: productVariants.status,
+      price: productVariants.price,
+      mrp: productVariants.mrp,
+      stock: inventory.stock,
+      reservedStock: inventory.reservedStock,
+    })
+    .from(cartItems)
+    .innerJoin(productVariants, eq(productVariants.id, cartItems.variantId))
+    .innerJoin(products, eq(products.id, productVariants.productId))
+    .leftJoin(inventory, eq(inventory.variantId, productVariants.id))
+    .where(eq(cartItems.cartId, cart.id));
+
+  const imageByProduct = await primaryImagesByProduct([...new Set(rows.map((r) => r.productId))]);
   const detailed = [];
   let subtotal = 0;
   const issues: string[] = [];
-  for (const item of items) {
-    const [variant] = await db.select().from(productVariants).where(eq(productVariants.id, item.variantId)).limit(1);
-    if (!variant) continue;
-    const [product] = await db.select().from(products).where(eq(products.id, variant.productId)).limit(1);
-    const [inv] = await db.select().from(inventory).where(eq(inventory.variantId, variant.id)).limit(1);
-    const [img] = await db
-      .select()
-      .from(productImages)
-      .where(eq(productImages.productId, variant.productId))
-      .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder))
-      .limit(1);
-    const available = Math.max(0, Number(inv?.stock ?? 0) - Number(inv?.reservedStock ?? 0));
-    const price = toMoney(variant.price);
-    const mrp = toMoney(variant.mrp);
-    if (!product || product.status !== "PUBLISHED" || variant.status !== "ACTIVE") {
-      issues.push(`${variant.sku} is no longer available`);
-    } else if (available < item.quantity) {
-      issues.push(`${product.name} only has ${available} in stock`);
+  for (const row of rows) {
+    const available = Math.max(0, Number(row.stock ?? 0) - Number(row.reservedStock ?? 0));
+    const price = toMoney(row.price);
+    const mrp = toMoney(row.mrp);
+    if (row.productStatus !== "PUBLISHED" || row.variantStatus !== "ACTIVE") {
+      issues.push(`${row.sku} is no longer available`);
+    } else if (available < row.quantity) {
+      issues.push(`${row.name} only has ${available} in stock`);
     }
-    subtotal += price * item.quantity;
+    subtotal += price * row.quantity;
     detailed.push({
-      id: item.id,
-      variantId: variant.id,
-      productId: variant.productId,
-      name: product?.name,
-      slug: product?.slug,
-      variantName: variant.name,
-      sku: variant.sku,
-      quantity: item.quantity,
+      id: row.id,
+      variantId: row.variantId,
+      productId: row.productId,
+      name: row.name,
+      slug: row.slug,
+      variantName: row.variantName,
+      sku: row.sku,
+      quantity: row.quantity,
       price,
       mrp,
       discountPercent: discountPercent(mrp, price),
       available,
-      imageUrl: img?.url ?? null,
+      imageUrl: imageByProduct.get(row.productId) ?? null,
     });
   }
   return { id: cart.id, items: detailed, subtotal: toMoney(subtotal), issues };
@@ -135,28 +165,57 @@ export async function moveCartItemToWishlist(userId: number, itemId: number) {
 export async function getWishlist(userId: number) {
   const wl = await getOrCreateWishlist(userId);
   const items = await db.select().from(wishlistItems).where(eq(wishlistItems.wishlistId, wl.id));
+  if (!items.length) return { id: wl.id, items: [] };
+
+  const productIds = [...new Set(items.map((i) => i.productId))];
+  const variantIds = items.map((i) => i.variantId).filter((id): id is number => id != null);
+
+  const [productRows, imageByProduct, explicitVariants, defaultVariants] = await Promise.all([
+    db
+      .select({ id: products.id, name: products.name, slug: products.slug, status: products.status })
+      .from(products)
+      .where(inArray(products.id, productIds)),
+    primaryImagesByProduct(productIds),
+    variantIds.length
+      ? db
+          .select({
+            id: productVariants.id,
+            productId: productVariants.productId,
+            price: productVariants.price,
+            mrp: productVariants.mrp,
+          })
+          .from(productVariants)
+          .where(inArray(productVariants.id, variantIds))
+      : Promise.resolve([]),
+    db
+      .select({
+        id: productVariants.id,
+        productId: productVariants.productId,
+        price: productVariants.price,
+        mrp: productVariants.mrp,
+      })
+      .from(productVariants)
+      .where(and(inArray(productVariants.productId, productIds), eq(productVariants.isDefault, true))),
+  ]);
+
+  const productById = new Map(productRows.map((p) => [p.id, p]));
+  const variantById = new Map(explicitVariants.map((v) => [v.id, v]));
+  const defaultByProduct = new Map(defaultVariants.map((v) => [v.productId, v]));
+
   const detailed = [];
   for (const item of items) {
-    const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
+    const product = productById.get(item.productId);
     if (!product || product.status !== "PUBLISHED") continue;
-    const [img] = await db
-      .select()
-      .from(productImages)
-      .where(eq(productImages.productId, item.productId))
-      .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder))
-      .limit(1);
-    const [variant] = item.variantId
-      ? await db.select().from(productVariants).where(eq(productVariants.id, item.variantId)).limit(1)
-      : await db.select().from(productVariants).where(and(eq(productVariants.productId, item.productId), eq(productVariants.isDefault, true))).limit(1);
+    const variant = (item.variantId ? variantById.get(item.variantId) : undefined) ?? defaultByProduct.get(item.productId);
     detailed.push({
       id: item.id,
       productId: item.productId,
       variantId: variant?.id ?? null,
-      name: product?.name,
-      slug: product?.slug,
+      name: product.name,
+      slug: product.slug,
       price: toMoney(variant?.price ?? 0),
       mrp: toMoney(variant?.mrp ?? 0),
-      imageUrl: img?.url ?? null,
+      imageUrl: imageByProduct.get(item.productId) ?? null,
     });
   }
   return { id: wl.id, items: detailed };

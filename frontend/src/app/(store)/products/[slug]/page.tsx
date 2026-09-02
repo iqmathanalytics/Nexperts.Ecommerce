@@ -22,6 +22,7 @@ import { ProductGrid } from "@/components/store/ProductCard";
 import { ReviewForm, type ReviewEligible } from "@/components/store/ReviewForm";
 import { SizeGuideModal } from "@/components/store/SizeGuideModal";
 import { ScarcityBanner } from "@/components/store/ScarcityBanner";
+import { ProductCommerceDetails } from "@/components/store/ProductCommerceDetails";
 import { formatINR } from "@/lib/utils";
 import type { ProductCard } from "@/lib/types";
 import { useSession } from "@/hooks/useSession";
@@ -66,7 +67,8 @@ type Product = {
     createdAt: string;
     fitFeedback?: string | null;
   }>;
-  related: ProductCard[];
+  related?: ProductCard[];
+  categories?: Array<{ id: number; name: string; slug: string }>;
 };
 
 export default function ProductPage() {
@@ -86,6 +88,19 @@ export default function ProductPage() {
     queryFn: () => api<Product>(`/products/${slug}`),
   });
   const product = data?.data;
+  const related = useQuery({
+    queryKey: ["products", "related", slug, product?.categories?.[0]?.slug, product?.gender],
+    queryFn: () => {
+      const cat = product?.categories?.[0]?.slug;
+      const qs = new URLSearchParams({ limit: "8", sort: "popularity" });
+      if (cat) qs.set("category", cat);
+      if (product?.gender && product.gender !== "UNISEX") qs.set("gender", product.gender);
+      return api<ProductCard[]>(`/products?${qs}`);
+    },
+    enabled: Boolean(product),
+    staleTime: 60_000,
+  });
+  const relatedItems = (related.data?.data ?? product?.related ?? []).filter((p) => p.slug !== slug).slice(0, 8);
 
   const fit = useQuery({
     queryKey: ["fit", product?.id],
@@ -99,13 +114,10 @@ export default function ProductPage() {
 
   const presence = useQuery({
     queryKey: ["presence", product?.id],
-    queryFn: async () => {
-      await api(`/products/${product!.id}/presence`, { method: "POST", body: "{}" }).catch(() => null);
-      return api<{ viewers: number }>(`/products/${product!.id}/presence`).catch(() => ({ data: { viewers: 0 } }));
-    },
+    queryFn: () => api<{ viewers: number }>(`/products/${product!.id}/presence`).catch(() => ({ data: { viewers: 0 } })),
     enabled: Boolean(product?.id),
     retry: false,
-    refetchInterval: 30_000,
+    staleTime: 60_000,
   });
 
   const ugc = useQuery({
@@ -200,7 +212,7 @@ export default function ProductPage() {
   if (isLoading) {
     return (
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 md:grid-cols-2 md:px-6">
-        <Skeleton className="aspect-[3/4] w-full" />
+        <Skeleton className="aspect-[2/3] w-full" />
         <div className="space-y-4">
           <Skeleton className="h-4 w-1/4" />
           <Skeleton className="h-10 w-3/4" />
@@ -224,10 +236,12 @@ export default function ProductPage() {
         ]}
       />
 
-      <div className="mt-8 grid items-start gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16">
-        <ProductGallery images={product.images} name={product.name} />
+      <div className="mt-8 grid items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14">
+        <div className="lg:sticky lg:top-[calc(var(--store-chrome)+1rem)] lg:self-start">
+          <ProductGallery images={product.images} name={product.name} />
+        </div>
 
-        <div className="lg:sticky lg:top-28">
+        <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
             {product.brand?.name}
             {product.gender ? ` · ${product.gender === "UNISEX" ? "Unisex" : product.gender === "MEN" ? "Men" : "Women"}` : ""}
@@ -337,54 +351,12 @@ export default function ProductPage() {
             </motion.div>
           </div>
 
-          <div className="mt-10 divide-y divide-line border-y border-line">
-            <details className="group open:bg-transparent" open>
-              <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                Composition & care
-              </summary>
-              <dl className="space-y-2 pb-5 text-sm">
-                {Object.entries(product.specifications ?? {})
-                  .filter(([k]) => !["Styling", "Model"].includes(k))
-                  .map(([k, v]) => (
-                    <div key={k} className="flex justify-between gap-6">
-                      <dt className="text-muted">{k}</dt>
-                      <dd className="max-w-[60%] text-right">{v}</dd>
-                    </div>
-                  ))}
-                {!Object.keys(product.specifications ?? {}).length ? (
-                  <p className="text-muted">See product label for fabric details.</p>
-                ) : null}
-              </dl>
-            </details>
-            {product.specifications?.Styling ? (
-              <details>
-                <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                  How to wear
-                </summary>
-                <p className="pb-5 text-sm leading-7 text-muted">{product.specifications.Styling}</p>
-              </details>
-            ) : null}
-            {product.specifications?.Model ? (
-              <details>
-                <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                  Fit & model
-                </summary>
-                <p className="pb-5 text-sm leading-7 text-muted">{product.specifications.Model}. Use the size guide for body measurements.</p>
-              </details>
-            ) : null}
-            <details>
-              <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                Shipping
-              </summary>
-              <p className="pb-5 text-sm leading-7 text-muted">{product.shippingInfo ?? "2–5 business days across India."}</p>
-            </details>
-            <details>
-              <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                Returns
-              </summary>
-              <p className="pb-5 text-sm leading-7 text-muted">{product.returnInfo ?? "7-day returns on unused items with tags."}</p>
-            </details>
-          </div>
+          <ProductCommerceDetails
+            specifications={product.specifications}
+            shippingInfo={product.shippingInfo}
+            returnInfo={product.returnInfo}
+            sku={variant.sku}
+          />
         </div>
       </div>
 
@@ -438,7 +410,7 @@ export default function ProductPage() {
 
       <section className="mt-16">
         <h2 className="mb-6 font-display text-3xl font-semibold">You may also like</h2>
-        <ProductGrid products={product.related} />
+        <ProductGrid products={relatedItems} />
       </section>
 
       <SizeGuideModal

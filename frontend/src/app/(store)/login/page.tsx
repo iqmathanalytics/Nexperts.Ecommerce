@@ -8,10 +8,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { Suspense, useState } from "react";
 import { safeNextPath } from "@/lib/auth";
+import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
+import { WOMEN_HERO } from "@/lib/editorial";
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -29,7 +31,10 @@ function LoginForm() {
       const guest = readGuestCart();
       if (guest.length) {
         try {
-          await api("/cart/merge", { method: "POST", body: JSON.stringify({ items: guest.map((g) => ({ variantId: g.variantId, quantity: g.quantity })) }) });
+          await api("/cart/merge", {
+            method: "POST",
+            body: JSON.stringify({ items: guest.map((g) => ({ variantId: g.variantId, quantity: g.quantity })) }),
+          });
           clearGuestCart();
         } catch {
           /* merge best-effort */
@@ -41,28 +46,52 @@ function LoginForm() {
     },
     onError: (e: Error) => setError(e.message),
   });
+
   return (
-    <div className="mx-auto max-w-md px-4 py-16 text-ink">
-      <h1 className="text-3xl font-semibold text-ink">Sign in</h1>
-      <p className="mt-2 text-sm text-muted">
-        Required to add items to your bag, save a wishlist, or place an order.
-      </p>
-      <p className="mt-2 text-xs text-muted">
-        Staff managing the store should use{" "}
+    <AuthStage
+      image={WOMEN_HERO}
+      kicker="Member"
+      title="Welcome back"
+      subtitle="Sign in to your house account — bag, wishlist, orders, and styling notes in one place."
+    >
+      {error ? (
+        <div className="mb-5">
+          <Toast tone="error" message={error} />
+        </div>
+      ) : null}
+
+      <form className="space-y-4" onSubmit={form.handleSubmit((v) => login.mutate(v))}>
+        <div>
+          <Label>Email</Label>
+          <AuthInput type="email" autoComplete="email" placeholder="you@email.com" {...form.register("email")} />
+          <FieldError message={form.formState.errors.email?.message} />
+        </div>
+        <div>
+          <Label>Password</Label>
+          <PasswordField registration={form.register("password")} />
+        </div>
+        <Button type="submit" className="mt-2 h-12 w-full rounded-full" disabled={login.isPending}>
+          {login.isPending ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <Link href="/forgot-password" className="font-semibold text-ink underline-offset-4 hover:underline">
+          Forgot password?
+        </Link>
+        <Link href={`/register?next=${encodeURIComponent(next)}`} className="font-semibold text-ink underline-offset-4 hover:underline">
+          Create an account
+        </Link>
+      </div>
+
+      <p className="mt-8 text-xs leading-relaxed text-muted">
+        Store staff should use{" "}
         <Link href="/admin/login" className="font-semibold text-ink underline-offset-2 hover:underline">
           Admin login
         </Link>
-        .
+        . Complimentary shipping over RM 999.
       </p>
-      {error && <div className="mt-4"><Toast tone="error" message={error} /></div>}
-      <form className="mt-6 space-y-4" onSubmit={form.handleSubmit((v) => login.mutate(v))}>
-        <div><Label>Email</Label><Input type="email" {...form.register("email")} /><FieldError message={form.formState.errors.email?.message} /></div>
-        <div><Label>Password</Label><Input type="password" {...form.register("password")} /></div>
-        <Button type="submit" className="w-full" disabled={login.isPending}>Sign in</Button>
-      </form>
-      <p className="mt-4 text-sm"><Link href="/forgot-password" className="text-ink font-semibold">Forgot password?</Link></p>
-      <p className="mt-2 text-sm">New here? <Link href={`/register?next=${encodeURIComponent(next)}`} className="text-ink font-semibold">Create an account</Link></p>
-    </div>
+    </AuthStage>
   );
 }
 

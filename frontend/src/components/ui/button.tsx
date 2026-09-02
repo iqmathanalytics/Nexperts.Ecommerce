@@ -3,16 +3,17 @@ import { cn } from "@/lib/utils";
 import type { ButtonHTMLAttributes } from "react";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-sm text-sm font-semibold tracking-wide transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]",
+  "btn-store inline-flex items-center justify-center gap-2 rounded-sm text-sm font-semibold tracking-wide disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]",
   {
     variants: {
       variant: {
-        default: "bg-ink text-white hover:bg-ink/90",
-        brand: "bg-ink text-white hover:bg-ink/90",
-        outline: "border border-line bg-transparent text-ink hover:border-ink hover:bg-surface-muted",
-        ghost: "bg-transparent text-ink hover:bg-surface-muted",
+        /** Fixed near-black / white — stays readable even if theme tokens flip. */
+        default: "bg-[#1c1915] text-white hover:bg-[#2a2620]",
+        brand: "bg-[#1e3d32] text-white hover:bg-[#142820]",
+        outline: "border border-line bg-transparent text-[#1c1915] hover:border-[#1c1915] hover:bg-surface-muted",
+        ghost: "bg-transparent text-[#1c1915] hover:bg-surface-muted",
         danger: "bg-danger text-white hover:opacity-90",
-        secondary: "bg-surface-muted text-ink hover:bg-line",
+        secondary: "bg-surface-muted text-[#1c1915] hover:bg-line",
       },
       size: {
         default: "h-11 px-5 py-2",

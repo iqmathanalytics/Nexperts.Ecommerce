@@ -45,12 +45,12 @@ export function LookbookCarousel({
           <Link
             key={item.id}
             href={`/lookbooks/${item.slug}`}
-            className="relative h-[28rem] w-[min(85vw,28rem)] shrink-0 snap-center overflow-hidden"
+            className="product-arch relative h-[36rem] w-[min(70vw,22rem)] shrink-0 snap-center overflow-hidden bg-brand shadow-[0_40px_80px_-40px_rgba(0,0,0,0.6)]"
           >
             {item.videoUrl ? (
-              <video src={item.videoUrl} className="absolute inset-0 h-full w-full object-cover" muted loop autoPlay playsInline />
+              <video src={item.videoUrl} className="absolute inset-0 h-full w-full object-cover object-center" muted loop autoPlay playsInline />
             ) : item.coverImageUrl ? (
-              <Image src={item.coverImageUrl} alt="" fill className="object-cover" sizes="420px" />
+              <Image src={item.coverImageUrl} alt="" fill className="object-cover object-center" sizes="420px" />
             ) : (
               <div className="absolute inset-0 bg-white/10" />
             )}

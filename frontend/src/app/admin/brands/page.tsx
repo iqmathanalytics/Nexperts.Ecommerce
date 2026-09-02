@@ -4,37 +4,78 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/input";
-import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { AdminImageField } from "@/components/admin/AdminImageField";
+import { mediaUrl } from "@/lib/utils";
 
-type Brand = { id: number; name: string; slug: string; status?: string };
+type Brand = {
+  id: number;
+  name: string;
+  slug: string;
+  status?: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  lookbookBio?: string | null;
+  heroImageUrl?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+};
+
+const emptyForm = {
+  name: "",
+  slug: "",
+  description: "",
+  lookbookBio: "",
+  logoUrl: "",
+  heroImageUrl: "",
+  seoTitle: "",
+  seoDescription: "",
+  status: "ACTIVE",
+};
 
 export default function BrandsPage() {
   const qc = useQueryClient();
-  const [name, setName] = useState("");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("ACTIVE");
+  const [editing, setEditing] = useState<Brand | "new" | null>(null);
+  const [form, setForm] = useState(emptyForm);
   const { data, isLoading } = useQuery({
     queryKey: ["admin-brands"],
     queryFn: () => api<Brand[]>("/admin/brands"),
   });
-  const create = useMutation({
-    mutationFn: () => api("/admin/brands", { method: "POST", body: JSON.stringify({ name }) }),
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = {
+        name: form.name,
+        slug: form.slug || undefined,
+        description: form.description || null,
+        lookbookBio: form.lookbookBio || null,
+        logoUrl: form.logoUrl || null,
+        heroImageUrl: form.heroImageUrl || null,
+        seoTitle: form.seoTitle || null,
+        seoDescription: form.seoDescription || null,
+        status: form.status,
+      };
+      return editing === "new"
+        ? api("/admin/brands", { method: "POST", body: JSON.stringify(body) })
+        : api(`/admin/brands/${(editing as Brand).id}`, { method: "PUT", body: JSON.stringify(body) });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-brands"] });
-      setName("");
+      setEditing(null);
     },
   });
   const archive = useMutation({
     mutationFn: (id: number) => api(`/admin/brands/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-brands"] }),
   });
-  const logo = async (id: number, file: File) => {
-    const fd = new FormData();
-    fd.append("logo", file);
-    await api(`/admin/brands/${id}/logo`, { method: "POST", body: fd });
-    qc.invalidateQueries({ queryKey: ["admin-brands"] });
-  };
+  const restore = useMutation({
+    mutationFn: (id: number) => api(`/admin/brands/${id}/restore`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-brands"] }),
+  });
+
   const rows = useMemo(() => {
     const all = data?.data ?? [];
     const query = q.trim().toLowerCase();
@@ -45,21 +86,27 @@ export default function BrandsPage() {
     });
   }, [data?.data, q, status]);
 
+  function openNew() {
+    setForm(emptyForm);
+    setEditing("new");
+  }
+  function openEdit(b: Brand) {
+    setForm({
+      name: b.name,
+      slug: b.slug,
+      description: b.description ?? "",
+      lookbookBio: b.lookbookBio ?? "",
+      logoUrl: b.logoUrl ?? "",
+      heroImageUrl: b.heroImageUrl ?? "",
+      seoTitle: b.seoTitle ?? "",
+      seoDescription: b.seoDescription ?? "",
+      status: b.status ?? "ACTIVE",
+    });
+    setEditing(b);
+  }
+
   return (
-    <AdminPage title="Brands">
-      <form
-        className="flex shrink-0 gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (name.trim()) create.mutate();
-        }}
-      >
-        <Input className="max-w-sm" placeholder="Brand name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" disabled={create.isPending}>
-          Add
-        </Button>
-        <FormError error={create.error ?? archive.error} />
-      </form>
+    <AdminPage title="Brands" description="Brand labels shown on product cards and filters." actions={<Button onClick={openNew}>Add brand</Button>}>
       <FilterBar>
         <Input className="max-w-sm" placeholder="Search brand" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-40">
@@ -68,29 +115,36 @@ export default function BrandsPage() {
           <option value="ARCHIVED">Archived</option>
         </Select>
       </FilterBar>
+      <FormError error={archive.error ?? restore.error} />
       <DataTable
         columns={[
-          { id: "name", header: "Name", cell: (b) => b.name },
-          { id: "slug", header: "Slug", className: "text-slate-500", cell: (b) => `/${b.slug}` },
-          { id: "status", header: "Status", cell: (b) => b.status ?? "ACTIVE" },
           {
             id: "logo",
             header: "Logo",
-            cell: (b) => (
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => e.target.files?.[0] && logo(b.id, e.target.files[0])}
-              />
-            ),
+            cell: (b) =>
+              b.logoUrl ? <img src={mediaUrl(b.logoUrl)} alt="" className="h-10 w-10 rounded object-cover" /> : <span className="text-muted">—</span>,
           },
+          { id: "name", header: "Name", cell: (b) => b.name },
+          { id: "slug", header: "Slug", className: "text-muted", cell: (b) => `/designers/${b.slug}` },
+          { id: "status", header: "Status", cell: (b) => b.status ?? "ACTIVE" },
           {
             id: "actions",
             header: "",
             cell: (b) => (
-              <Button size="sm" variant="ghost" onClick={() => archive.mutate(b.id)}>
-                Archive
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" onClick={() => openEdit(b)}>
+                  Edit
+                </Button>
+                {(b.status ?? "ACTIVE") === "ARCHIVED" ? (
+                  <Button size="sm" variant="ghost" onClick={() => restore.mutate(b.id)}>
+                    Restore
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" onClick={() => archive.mutate(b.id)}>
+                    Archive
+                  </Button>
+                )}
+              </div>
             ),
           },
         ]}
@@ -98,8 +152,55 @@ export default function BrandsPage() {
         rowKey={(b) => b.id}
         loading={isLoading}
         empty="No brands match these filters."
-        footer={`${rows.length} brand${rows.length === 1 ? "" : "s"}`}
+        footer={`${rows.length} brand${rows.length === 1 ? "" : "s"} · designer pages use hero, bio, and products`}
       />
+      <AdminDrawer open={Boolean(editing)} title={editing === "new" ? "Add brand" : "Edit brand"} onClose={() => setEditing(null)}>
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (form.name.trim()) save.mutate();
+          }}
+        >
+          <div>
+            <Label>Name</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div>
+            <Label>Slug</Label>
+            <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="auto from name" />
+          </div>
+          <div>
+            <Label>Description</Label>
+            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div>
+            <Label>Lookbook bio (designer page)</Label>
+            <Textarea value={form.lookbookBio} onChange={(e) => setForm({ ...form, lookbookBio: e.target.value })} />
+          </div>
+          <AdminImageField label="Logo" value={form.logoUrl} onChange={(logoUrl) => setForm({ ...form, logoUrl })} folder="brands" />
+          <AdminImageField label="Hero image" value={form.heroImageUrl} onChange={(heroImageUrl) => setForm({ ...form, heroImageUrl })} folder="brands" />
+          <div>
+            <Label>SEO title</Label>
+            <Input value={form.seoTitle} onChange={(e) => setForm({ ...form, seoTitle: e.target.value })} />
+          </div>
+          <div>
+            <Label>SEO description</Label>
+            <Textarea value={form.seoDescription} onChange={(e) => setForm({ ...form, seoDescription: e.target.value })} />
+          </div>
+          <div>
+            <Label>Status</Label>
+            <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <option>ACTIVE</option>
+              <option>ARCHIVED</option>
+            </Select>
+          </div>
+          <FormError error={save.error} />
+          <Button type="submit" disabled={save.isPending}>
+            Save
+          </Button>
+        </form>
+      </AdminDrawer>
     </AdminPage>
   );
 }

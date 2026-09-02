@@ -12,7 +12,7 @@ export const addressSchema = z.object({
   city: z.string().min(2).max(100),
   state: z.string().min(2).max(100),
   postalCode: z.string().min(4).max(20),
-  country: z.string().min(2).max(80).default("India"),
+  country: z.string().min(2).max(80).default("Malaysia"),
   isDefault: z.boolean().optional(),
   label: z.string().max(40).optional(),
 });

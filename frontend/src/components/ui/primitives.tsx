@@ -10,7 +10,7 @@ export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>
 export function ProductCardSkeleton() {
   return (
     <div className="space-y-3">
-      <Skeleton className="aspect-[3/4] w-full" />
+        <Skeleton className="aspect-[2/3] w-full" />
       <Skeleton className="h-3 w-1/3" />
       <Skeleton className="h-4 w-4/5" />
       <Skeleton className="h-4 w-1/4" />
@@ -143,7 +143,7 @@ export function LoyaltyBadge({ points, label = "pts" }: { points: number; label?
   return (
     <span className="inline-flex items-center gap-1.5 rounded-sm border border-brand/40 bg-brand-soft px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-text">
       <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-      {points.toLocaleString("en-IN")} {label}
+      {points.toLocaleString("en-MY")} {label}
     </span>
   );
 }

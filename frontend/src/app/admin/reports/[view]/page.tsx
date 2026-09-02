@@ -40,8 +40,8 @@ function SalesReport({ title }: { title: string }) {
   if (sales.isLoading) return <Spinner />;
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
-      <section className="rounded-xl bg-white p-5">
+      <h1 className="mb-4 font-display text-3xl font-semibold tracking-tight">{title}</h1>
+      <section className="rounded-2xl border border-line bg-surface-raised p-5">
         <h2 className="font-medium">30-day sales summary</h2>
         <pre className="mt-3 overflow-auto text-sm">{JSON.stringify(sales.data?.data, null, 2)}</pre>
       </section>
@@ -55,8 +55,8 @@ function InventoryReport({ title }: { title: string }) {
   const i = inv.data?.data;
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-semibold">{title}</h1>
-      <section className="rounded-xl bg-white p-5">
+      <h1 className="mb-4 font-display text-3xl font-semibold tracking-tight">{title}</h1>
+      <section className="rounded-2xl border border-line bg-surface-raised p-5">
         <h2 className="font-medium">Inventory snapshot</h2>
         <p className="mt-2 text-sm">Value {formatINR(i?.inventoryValue ?? 0)}</p>
         <p className="text-sm">Best sellers: {(i?.bestSelling ?? []).map((p: { name: string }) => p.name).join(", ") || "—"}</p>

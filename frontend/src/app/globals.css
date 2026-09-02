@@ -1,53 +1,60 @@
 @import "tailwindcss";
 
-/* Zara/H&M/Uniqlo-inspired: clean paper, black ink, sparse Nexperts accent */
+/* Tropical modern luxury — global stage */
 :root {
-  --background: #ffffff;
-  --foreground: #000000;
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-muted: #f4f4f4;
-  --ink: #000000;
-  --muted: #737373;
-  --line: #e5e5e5;
-  --brand: #111111;
-  --brand-deep: #000000;
-  --brand-soft: #f5f5f5;
-  --brand-text: #111111;
-  --link: #000000;
-  --accent: #b8963e;
+  --background: #f3eee6;
+  --foreground: #1c1915;
+  --surface: #faf6ef;
+  --surface-raised: #fffdf8;
+  --surface-muted: #ebe4d6;
+  --ink: #1c1915;
+  --muted: #4f4a42;
+  --line: #e0d6c6;
+  --brand: #1e3d32;
+  --brand-deep: #142820;
+  --brand-soft: #e7efe9;
+  --brand-text: #1e3d32;
+  --link: #1c1915;
+  --accent: #c4a056;
   --success: #1f6b45;
-  --danger: #c41e3a;
-  --focus: rgba(0, 0, 0, 0.2);
+  --danger: #b4232c;
+  --focus: rgba(30, 61, 50, 0.22);
   --hero-veil: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.05) 0%,
-    rgba(0, 0, 0, 0.25) 50%,
-    rgba(0, 0, 0, 0.55) 100%
+    rgba(8, 10, 9, 0.62) 0%,
+    rgba(8, 10, 9, 0.22) 42%,
+    rgba(6, 8, 7, 0.82) 100%
   );
+  --store-chrome: 6.5rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --store-chrome: 9.25rem;
+  }
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
-  --surface: #111111;
-  --surface-raised: #171717;
-  --surface-muted: #1a1a1a;
-  --ink: #f5f5f5;
-  --muted: #a3a3a3;
-  --line: #2a2a2a;
-  --brand: #f5f5f5;
-  --brand-deep: #ffffff;
-  --brand-soft: #1a1a1a;
-  --brand-text: #f5f5f5;
-  --link: #f5f5f5;
+  --background: #0f1210;
+  --foreground: #f4efe6;
+  --surface: #161a18;
+  --surface-raised: #1c221f;
+  --surface-muted: #1a211d;
+  --ink: #f4efe6;
+  --muted: #a8a093;
+  --line: #2a322d;
+  --brand: #d4b56a;
+  --brand-deep: #f4efe6;
+  --brand-soft: #1a211d;
+  --brand-text: #f4efe6;
+  --link: #f4efe6;
   --accent: #d4b56a;
-  --focus: rgba(245, 245, 245, 0.22);
+  --focus: rgba(212, 181, 106, 0.22);
   --hero-veil: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.15) 0%,
     rgba(0, 0, 0, 0.4) 50%,
-    rgba(0, 0, 0, 0.7) 100%
+    rgba(0, 0, 0, 0.78) 100%
   );
   color-scheme: dark;
 }
@@ -83,29 +90,29 @@
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(22px) rotateX(8deg);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) rotateX(0);
   }
 }
 
 @keyframes hero-kenburns-a {
   from {
-    transform: scale(1.02);
+    transform: scale(1.04) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.08);
+    transform: scale(1.12) translate3d(-1.5%, -1%, 40px);
   }
 }
 
 @keyframes hero-kenburns-b {
   from {
-    transform: scale(1.08);
+    transform: scale(1.1) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.02);
+    transform: scale(1.04) translate3d(1.2%, 1%, 20px);
   }
 }
 
@@ -118,18 +125,64 @@
   }
 }
 
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 12px);
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8%, 12%, 0) scale(1.12);
+  }
+}
+
+@keyframes orb-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(-10%, -8%, 0) scale(0.92);
+  }
+}
+
+@keyframes orb-drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 8%, 0);
+  }
+  50% {
+    transform: translate3d(6%, -10%, 0);
+  }
+}
+
 .animate-hero-kenburns-a {
   transform-origin: center top;
-  animation: hero-kenburns-a 8s ease-out forwards;
+  animation: hero-kenburns-a 10s ease-out forwards;
 }
 
 .animate-hero-kenburns-b {
   transform-origin: center top;
-  animation: hero-kenburns-b 8s ease-out forwards;
+  animation: hero-kenburns-b 10s ease-out forwards;
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--surface-muted) 25%, #fafafa 50%, var(--surface-muted) 75%);
+  background: linear-gradient(90deg, var(--surface-muted) 25%, #faf6ef 50%, var(--surface-muted) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
@@ -163,24 +216,55 @@ select {
 }
 
 .animate-rise {
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-rise-delay-1 {
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+  animation: rise-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
 .animate-rise-delay-2 {
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+  animation: rise-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
 }
 
 .animate-rise-delay-3 {
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+  animation: rise-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
 }
 
 .animate-hero-media {
   transform-origin: center top;
-  animation: hero-kenburns-a 8s ease-out forwards;
+  animation: hero-kenburns-a 10s ease-out forwards;
+}
+
+/* Full-viewport campaign films — cover phone (portrait) and desktop without letterbox. */
+.hero-stage {
+  height: 100svh;
+  width: 100%;
+  overflow: hidden;
+}
+.hero-film {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #1e3d32;
+}
+.hero-film-media {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: auto;
+  height: auto;
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  object-position: center 22%;
+}
+@media (min-width: 768px) {
+  .hero-film-media {
+    object-position: center center;
+  }
 }
 
 .font-display {
@@ -189,9 +273,121 @@ select {
 
 .nexperts-mark {
   font-family: var(--font-display), serif;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.2em;
+  margin-right: -0.2em;
   text-transform: uppercase;
+}
+
+/* High-contrast store CTAs — fixed ink/white so labels stay readable on film. */
+.btn-hero {
+  display: inline-flex;
+  height: 2.75rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease, transform 80ms ease;
+}
+@media (min-width: 640px) {
+  .btn-hero {
+    width: 12rem;
+  }
+}
+.btn-hero:hover,
+.btn-hero:active {
+  will-change: transform;
+}
+.btn-hero:active {
+  transform: scale(0.98);
+}
+.btn-hero-solid {
+  border-color: #ffffff;
+  background-color: #ffffff;
+  color: #1c1915;
+}
+.btn-hero-solid:hover {
+  background-color: #f3eee6;
+  color: #1c1915;
+}
+.btn-hero-outline {
+  border-color: rgba(255, 255, 255, 0.95);
+  background-color: rgba(12, 12, 12, 0.58);
+  color: #ffffff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+.btn-hero-outline:hover {
+  background-color: #ffffff;
+  color: #1c1915;
+  text-shadow: none;
+}
+.btn-store {
+  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease, opacity 100ms ease, transform 80ms ease;
+}
+.btn-store:active {
+  transform: scale(0.985);
+}
+
+/* Page scrollbar — cream track, forest thumb, gold hover */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--brand) 72%, var(--ink)) var(--surface-muted);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--surface-muted);
+  border-left: 1px solid var(--line);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 88%, var(--accent)) 0%,
+    var(--brand-deep) 100%
+  );
+  border: 2px solid var(--surface-muted);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--accent) 0%, var(--brand) 100%);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--surface-muted);
+}
+
+.admin-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-nav::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+.admin-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  border-radius: 99px;
+}
+.admin-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 181, 106, 0.55);
+}
+.admin-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
 .scrollbar-none {
@@ -212,7 +408,7 @@ select {
 }
 
 .animate-marquee {
-  animation: marquee 28s linear infinite;
+  animation: marquee 32s linear infinite;
 }
 
 @keyframes marquee-reverse {
@@ -225,7 +421,7 @@ select {
 }
 
 .animate-marquee-reverse {
-  animation: marquee-reverse 22s linear infinite;
+  animation: marquee-reverse 26s linear infinite;
 }
 
 @keyframes sale-pulse {
@@ -243,7 +439,7 @@ select {
 }
 
 .offer-shimmer {
-  background: linear-gradient(110deg, transparent 20%, rgba(184, 150, 62, 0.35) 45%, transparent 70%);
+  background: linear-gradient(110deg, transparent 20%, rgba(196, 160, 86, 0.4) 45%, transparent 70%);
   background-size: 220% 100%;
   animation: skeleton-shimmer 3.2s ease-in-out infinite;
 }
@@ -259,6 +455,69 @@ select {
 
 .group:hover .card-shine {
   animation: card-shine 0.85s ease;
+}
+
+.product-arch {
+  border-radius: 1.25rem;
+}
+
+.product-podium {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 6%;
+  height: 18%;
+  border-radius: 100%;
+  background: radial-gradient(ellipse at center, rgba(28, 25, 21, 0.16), transparent 72%);
+  transform: rotateX(68deg) translateZ(-40px);
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.orb-a {
+  width: 42vw;
+  height: 42vw;
+  max-width: 520px;
+  max-height: 520px;
+  top: -8%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(196, 160, 86, 0.55), transparent 68%);
+  animation: orb-drift-a 16s ease-in-out infinite;
+}
+
+.orb-b {
+  width: 36vw;
+  height: 36vw;
+  max-width: 420px;
+  max-height: 420px;
+  top: 18%;
+  right: -6%;
+  background: radial-gradient(circle, rgba(30, 61, 50, 0.35), transparent 70%);
+  animation: orb-drift-b 18s ease-in-out infinite;
+}
+
+.orb-c {
+  width: 28vw;
+  height: 28vw;
+  max-width: 320px;
+  max-height: 320px;
+  bottom: 8%;
+  left: 32%;
+  background: radial-gradient(circle, rgba(196, 160, 86, 0.28), transparent 70%);
+  animation: orb-drift-c 14s ease-in-out infinite;
+}
+
+.float-slow {
+  animation: float-y 6s ease-in-out infinite;
+}
+
+.ring-spin {
+  animation: spin-slow 28s linear infinite;
 }
 
 details > summary {
@@ -280,7 +539,16 @@ details > summary::-webkit-details-marker {
   .animate-marquee,
   .animate-marquee-reverse,
   .animate-sale-pulse,
-  .offer-shimmer {
+  .offer-shimmer,
+  .orb-a,
+  .orb-b,
+  .orb-c,
+  .float-slow,
+  .ring-spin {
+    animation: none;
+  }
+
+  .group:hover .card-shine {
     animation: none;
   }
 }

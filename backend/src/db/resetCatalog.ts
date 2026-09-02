@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, pool } from "./index";
-import { CATALOG, CATEGORY_TREE, CLOTHING_BRANDS, SIZES } from "./catalogData";
+import { CATALOG, CATEGORY_IMAGES, CATEGORY_TREE, CLOTHING_BRANDS, SIZES } from "./catalogData";
 import {
   brands,
   categories,
@@ -65,6 +65,7 @@ async function ensureTaxonomy() {
           description: `${parent.name} for the Nexperts clothing collection.`,
           seoTitle: `${parent.name} | Nexperts`,
           seoDescription: `Shop ${parent.name.toLowerCase()} online at Nexperts.`,
+          imageUrl: CATEGORY_IMAGES[parent.name] ?? null,
           sortOrder: sort,
           status: "ACTIVE",
         }),
@@ -77,6 +78,7 @@ async function ensureTaxonomy() {
         .set({
           status: "ACTIVE",
           description: `${parent.name} for the Nexperts clothing collection.`,
+          imageUrl: CATEGORY_IMAGES[parent.name] ?? row.imageUrl,
           sortOrder: sort,
         })
         .where(eq(categories.id, row.id));
@@ -92,11 +94,12 @@ async function ensureTaxonomy() {
           description: child,
           seoTitle: `${child} | Nexperts`,
           seoDescription: `Shop ${child.toLowerCase()} at Nexperts.`,
+          imageUrl: CATEGORY_IMAGES[child] ?? null,
           sortOrder: sort,
           status: "ACTIVE",
         });
       } else {
-        await db.update(categories).set({ status: "ACTIVE", parentId: row.id, sortOrder: sort }).where(eq(categories.id, existing.id));
+        await db.update(categories).set({ status: "ACTIVE", parentId: row.id, sortOrder: sort, imageUrl: CATEGORY_IMAGES[child] ?? existing.imageUrl }).where(eq(categories.id, existing.id));
       }
       sort += 1;
     }
@@ -221,7 +224,7 @@ async function main() {
         Fit: item.fit,
         Care: "Gentle wash · Dry clean recommended for evening wear",
       },
-      shippingInfo: "Ships within 24–48 hours. Free shipping on orders above ₹999. Premium packaging on every order.",
+      shippingInfo: "Ships within 24–48 hours. Free shipping on orders above RM 999. Premium packaging on every order.",
       returnInfo: "7-day easy returns on unused items with tags attached.",
       isFeatured: true,
       isNew: true,

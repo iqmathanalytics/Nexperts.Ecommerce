@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { IndianRupee, Package, ShoppingBag, TrendingDown } from "lucide-react";
+import { Banknote, Package, ShoppingBag, TrendingDown } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/state";
 import { formatINR } from "@/lib/utils";
+import { AdminPage } from "@/components/admin/AdminTable";
 import {
   ChartCard,
   DonutChart,
@@ -67,31 +68,29 @@ export default function AnalyticsPage() {
   const loading = dash.isLoading || sales.isLoading || inv.isLoading;
 
   return (
-    <div className="space-y-5 pb-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Analytics</h1>
-          <p className="mt-1 text-sm text-slate-500">Sales, customers, and inventory for {periodLabel.toLowerCase()}.</p>
-        </div>
-        <Select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-40">
+    <AdminPage
+      title="Analytics"
+      description={`Sales, customers, and inventory for ${periodLabel.toLowerCase()}.`}
+      actions={
+        <Select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-40 bg-surface-raised">
           {PERIOD_OPTIONS.map((p) => (
             <option key={p.value} value={p.value}>
               {p.label}
             </option>
           ))}
         </Select>
-      </div>
-
+      }
+    >
       {loading ? (
         <div className="flex justify-center py-16">
           <Spinner />
         </div>
       ) : (
-        <>
+        <div className="space-y-5 pb-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard icon={IndianRupee} label="Gross revenue" value={formatINR(s?.grossRevenue ?? 0)} hint={periodLabel} />
-            <KpiCard icon={IndianRupee} label="Net revenue" value={formatINR(s?.netRevenue ?? 0)} hint="After tax" />
-            <KpiCard icon={ShoppingBag} label="Units sold" value={(s?.unitsSold ?? 0).toLocaleString("en-IN")} />
+            <KpiCard icon={Banknote} label="Gross revenue" value={formatINR(s?.grossRevenue ?? 0)} hint={periodLabel} />
+            <KpiCard icon={Banknote} label="Net revenue" value={formatINR(s?.netRevenue ?? 0)} hint="After SST" />
+            <KpiCard icon={ShoppingBag} label="Units sold" value={(s?.unitsSold ?? 0).toLocaleString("en-MY")} />
             <KpiCard icon={TrendingDown} label="Discounts" value={formatINR(s?.discounts ?? 0)} hint={`Refunds ${formatINR(s?.refunds ?? 0)}`} />
           </div>
 
@@ -113,12 +112,12 @@ export default function AnalyticsPage() {
             </ChartCard>
           </div>
 
-          <h2 className="pt-2 text-lg font-semibold">Inventory health</h2>
+          <h2 className="pt-2 font-display text-lg font-semibold">Inventory health</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard icon={Package} label="Inventory value" value={formatINR(i?.inventoryValue ?? 0)} />
-            <KpiCard icon={Package} label="Total units" value={(i?.totalStock ?? 0).toLocaleString("en-IN")} />
-            <KpiCard icon={Package} label="Low stock SKUs" value={(i?.lowStock ?? 0).toLocaleString("en-IN")} tone={(i?.lowStock ?? 0) > 0 ? "warning" : "default"} />
-            <KpiCard icon={Package} label="Out of stock" value={(i?.outOfStock ?? 0).toLocaleString("en-IN")} tone={(i?.outOfStock ?? 0) > 0 ? "danger" : "default"} />
+            <KpiCard icon={Package} label="Total units" value={(i?.totalStock ?? 0).toLocaleString("en-MY")} />
+            <KpiCard icon={Package} label="Low stock SKUs" value={(i?.lowStock ?? 0).toLocaleString("en-MY")} tone={(i?.lowStock ?? 0) > 0 ? "warning" : "default"} />
+            <KpiCard icon={Package} label="Out of stock" value={(i?.outOfStock ?? 0).toLocaleString("en-MY")} tone={(i?.outOfStock ?? 0) > 0 ? "danger" : "default"} />
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
             <ChartCard title="SKU status">
@@ -134,14 +133,14 @@ export default function AnalyticsPage() {
               <HorizontalBars data={i?.bestSelling ?? []} />
             </ChartCard>
             <ChartCard title="Slow moving" hint="In stock, no sales">
-              <HorizontalBars data={i?.slowMoving ?? []} color="#64748b" />
+              <HorizontalBars data={i?.slowMoving ?? []} color="#6e675c" />
             </ChartCard>
           </div>
 
           <PremiumAnalyticsBlock />
-        </>
+        </div>
       )}
-    </div>
+    </AdminPage>
   );
 }
 
@@ -161,7 +160,7 @@ function PremiumAnalyticsBlock() {
   if (premium.isError || !p) return null;
   return (
     <div className="space-y-4 pt-4">
-      <h2 className="text-lg font-semibold">Premium insights</h2>
+      <h2 className="font-display text-lg font-semibold">Premium insights</h2>
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="Revenue by designer">
           <HorizontalBars
@@ -180,14 +179,14 @@ function PremiumAnalyticsBlock() {
       <ChartCard title="Fit feedback trends">
         <div className="space-y-2 text-sm">
           {(p.fitTrends ?? []).slice(0, 8).map((f) => (
-            <div key={f.productId} className="flex justify-between border-b border-slate-100 py-2">
+            <div key={f.productId} className="flex justify-between border-b border-line py-2">
               <span>Product #{f.productId}</span>
-              <span className="text-slate-500">
+              <span className="text-muted">
                 S {f.smallCount} · T {f.trueCount} · L {f.largeCount}
               </span>
             </div>
           ))}
-          {!p.fitTrends?.length ? <p className="text-slate-500">No fit data yet.</p> : null}
+          {!p.fitTrends?.length ? <p className="text-muted">No fit data yet.</p> : null}
         </div>
       </ChartCard>
     </div>

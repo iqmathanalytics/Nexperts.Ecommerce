@@ -55,7 +55,10 @@ export async function uploadImage(file: Express.Multer.File, folder: string) {
   const destDir = path.join(process.cwd(), "uploads", folder);
   await fs.mkdir(destDir, { recursive: true });
   await fs.writeFile(path.join(process.cwd(), "uploads", key), file.buffer);
-  return { key, url: `/uploads/${key}` };
+  const origin = env.FRONTEND_URL.includes("localhost") || env.FRONTEND_URL.includes("127.0.0.1")
+    ? `http://localhost:${env.PORT}`
+    : env.FRONTEND_URL;
+  return { key, url: `${origin.replace(/\/$/, "")}/uploads/${key}` };
 }
 
 export async function deleteImage(key: string) {

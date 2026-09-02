@@ -36,7 +36,7 @@ export default function DesignerPage() {
     <div>
       <section className="relative flex min-h-[50vh] items-end bg-ink text-white">
         {brand.heroImageUrl ? (
-          <Image src={brand.heroImageUrl} alt="" fill className="object-cover opacity-60" sizes="100vw" priority />
+          <Image src={brand.heroImageUrl} alt="" fill className="object-cover object-center opacity-90" sizes="100vw" priority />
         ) : null}
         <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-16 md:px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">Designer</p>
@@ -55,7 +55,7 @@ export default function DesignerPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {lookbooks.map((l) => (
                 <a key={l.id} href={`/lookbooks/${l.slug}`} className="group relative aspect-[4/5] overflow-hidden bg-surface-muted">
-                  {l.coverImageUrl ? <Image src={l.coverImageUrl} alt="" fill className="object-cover transition duration-500 group-hover:scale-105" sizes="33vw" /> : null}
+                  {l.coverImageUrl ? <Image src={l.coverImageUrl} alt="" fill className="object-cover object-center" sizes="33vw" /> : null}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 text-white">
                     <p className="font-display text-2xl">{l.title}</p>
                   </div>

@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { HeroSlideshow } from "@/components/store/HeroSlideshow";
+import { CampaignHero } from "@/components/store/CampaignHero";
 import { ProductRail } from "@/components/store/ProductRail";
 import { LookbookCarousel } from "@/components/store/LookbookCarousel";
 import { Reveal } from "@/components/store/Reveal";
 import { CampaignTile } from "@/components/store/CampaignTile";
-import { CAMPAIGNS, DRESS_EDITS } from "@/lib/editorial";
+import { AmbientScene } from "@/components/store/AmbientScene";
+import { CAMPAIGNS, DRESS_EDITS, DEFAULT_EDITORIAL, HERO_VIDEO, MEN_HERO_VIDEO, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
+import { categoryHref, isWomenOnlyCategory, SHARED_CATEGORY_SLUGS } from "@/lib/shop";
 import type { CategoryNode, ProductCard } from "@/lib/types";
 
 export type HomeData = {
@@ -25,57 +27,48 @@ export type HomeData = {
     coverImageUrl: string | null;
     videoUrl?: string | null;
   }>;
+  editorial?: Partial<StorefrontEditorial> | null;
 };
 
-const TICKER = ["Free shipping over ₹999", "WELCOME10 · 10% off", "FESTIVE20 · festive edit", "7-day returns", "FLAT200 · ₹200 off", "Member points"];
+const DESTINATIONS = [
+  { city: "Complimentary shipping", note: "On orders over RM 999" },
+  { city: "Personal styling", note: "By appointment" },
+  { city: "Easy returns", note: "7-day window" },
+  { city: "Member rewards", note: "Points on every order" },
+  { city: "Worldwide delivery", note: "Tracked dispatch" },
+];
 
 export function HomePageView({ data }: { data: HomeData }) {
   const featured = data.featured ?? [];
   const categories = data.categories ?? [];
   const lookbooks = data.lookbooks ?? [];
+  const editorial = mergeEditorial(data.editorial);
+  const campaigns = editorial.campaigns.length ? editorial.campaigns : CAMPAIGNS;
+  const dressEdits = editorial.dressEdits.length ? editorial.dressEdits : DRESS_EDITS;
+  const ticker = editorial.ticker.length ? editorial.ticker : DEFAULT_EDITORIAL.ticker;
+  const promoCodes = editorial.promoCodes.length ? editorial.promoCodes : DEFAULT_EDITORIAL.promoCodes;
 
   return (
-    <div className="bg-white text-ink">
-      <section className="relative flex min-h-[100svh] items-end overflow-hidden">
-        <div className="absolute inset-0">
-          <HeroSlideshow />
-        </div>
-        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 pb-20 pt-40 md:px-8 md:pb-24">
-          <p className="animate-rise nexperts-mark text-xs text-white/90 md:text-sm">Nexperts</p>
-          <h1 className="animate-rise-delay-1 mt-5 max-w-2xl font-display text-5xl font-semibold leading-[0.95] tracking-tight text-white md:text-7xl">
-            New season.
-            <br />
-            Worn your way.
-          </h1>
-          <p className="animate-rise-delay-2 mt-5 max-w-md text-sm text-white/80 md:text-base">
-            Woman and Man clothing — dresses, layers, and festive pieces cut for India.
-          </p>
-          <div className="animate-rise-delay-3 mt-9 flex flex-wrap gap-3">
-            <Link
-              href="/women"
-              className="inline-flex h-12 items-center bg-white px-7 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink transition hover:bg-white/90"
-            >
-              Woman
-            </Link>
-            <Link
-              href="/men"
-              className="inline-flex h-12 items-center border border-white/70 bg-transparent px-7 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
-            >
-              Man
-            </Link>
-            <Link
-              href="/category/dresses"
-              className="inline-flex h-12 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-white underline-offset-4 hover:underline"
-            >
-              Dresses
-            </Link>
-          </div>
-        </div>
-      </section>
+    <div className="bg-background text-ink">
+      <CampaignHero
+        videos={[HERO_VIDEO, MEN_HERO_VIDEO]}
+        kicker="Nexperts"
+        title={editorial.homeHeadline}
+        subtitle={editorial.homeSubhead}
+        actions={[
+          { href: "/women", label: "Shop woman", variant: "solid" },
+          { href: "/men", label: "Shop man", variant: "outline" },
+        ]}
+        links={[
+          { href: categoryHref("dresses", "WOMEN"), label: "Dresses" },
+          { href: "/products?sort=newest", label: "New in" },
+          { href: "/sale", label: "Sale" },
+        ]}
+      />
 
-      <div className="overflow-hidden border-y border-line bg-ink text-white">
+      <div className="overflow-hidden border-y border-line bg-brand text-white">
         <div className="animate-marquee flex w-max gap-12 py-2.5 text-[10px] font-semibold uppercase tracking-[0.28em]">
-          {[...TICKER, ...TICKER].map((t, i) => (
+          {[...ticker, ...ticker].map((t, i) => (
             <span key={`${t}-${i}`} className="opacity-85">
               {t}
               <span className="mx-6 text-accent">◆</span>
@@ -84,72 +77,75 @@ export function HomePageView({ data }: { data: HomeData }) {
         </div>
       </div>
 
-      <section className="grid md:grid-cols-2">
-        {CAMPAIGNS.slice(0, 2).map((c) => (
-          <CampaignTile key={c.href} {...c} tall />
+      <section className="grid gap-4 p-3 md:grid-cols-2 md:p-5">
+        {campaigns.slice(0, 2).map((c) => (
+          <CampaignTile key={c.href} href={c.href} image={c.image} label={c.label} title={c.title ?? c.label} cta={c.cta ?? "Shop"} tall />
         ))}
       </section>
 
-      <CampaignTile {...CAMPAIGNS[2]!} />
+      {campaigns[2] ? (
+        <div className="px-3 pb-3 md:px-5">
+          <CampaignTile href={campaigns[2].href} image={campaigns[2].image} label={campaigns[2].label} title={campaigns[2].title ?? campaigns[2].label} cta={campaigns[2].cta ?? "Shop"} />
+        </div>
+      ) : null}
 
       <section className="overflow-hidden bg-accent text-ink">
         <div className="animate-marquee-reverse flex w-max gap-10 py-3 text-[11px] font-semibold uppercase tracking-[0.22em]">
-          {["WELCOME10", "First order 10% off", "FESTIVE20", "Celebration wear", "FLAT200", "₹200 off", "Free shipping ₹999+"].flatMap((t, i) => [
-            <span key={`${t}-${i}`} className="px-2">
-              {t}
-            </span>,
-          ]).concat(
-            ["WELCOME10", "First order 10% off", "FESTIVE20", "Celebration wear", "FLAT200", "₹200 off", "Free shipping ₹999+"].map((t, i) => (
-              <span key={`b-${t}-${i}`} className="px-2">
+          {[...promoCodes, ...promoCodes].map((t, i) => (
+              <span key={`${t}-${i}`} className="px-2">
                 {t}
               </span>
-            )),
-          )}
+            ))}
         </div>
       </section>
 
       {featured.length > 0 ? (
-        <Reveal>
-          <section className="mx-auto max-w-[1400px] px-4 py-16 md:px-8 md:py-24">
-            <div className="mb-8 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">New in</p>
-                <h2 className="mt-2 font-display text-3xl font-semibold md:text-5xl">This week</h2>
+        <section className="relative overflow-hidden">
+          <AmbientScene />
+          <Reveal>
+            <div className="relative mx-auto max-w-[1400px] px-4 py-16 md:px-8 md:py-24">
+              <div className="mb-10 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">New drop</p>
+                  <h2 className="mt-2 font-display text-3xl font-medium italic md:text-6xl">This week’s silhouettes</h2>
+                </div>
+                <Link href="/products?sort=newest" className="text-[11px] font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline">
+                  View all
+                </Link>
               </div>
-              <Link href="/products?sort=newest" className="text-[11px] font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline">
-                View all
-              </Link>
+              <ProductRail products={featured.slice(0, 8)} />
             </div>
-            <ProductRail products={featured.slice(0, 8)} />
-          </section>
-        </Reveal>
+          </Reveal>
+        </section>
       ) : null}
 
-      <section className="bg-surface-muted/50">
+      <section className="relative">
         <div className="mx-auto max-w-[1400px] px-4 py-16 md:px-8 md:py-20">
           <Reveal>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">The dress view</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold md:text-5xl">Cut, drape, occasion</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">The dress studio</p>
+            <h2 className="mt-2 max-w-xl font-display text-3xl font-medium italic md:text-5xl">Cut, drape, occasion</h2>
           </Reveal>
-          <div className="mt-10 grid gap-3 md:grid-cols-3">
-            {DRESS_EDITS.map((d, i) => (
-              <Reveal key={d.href} delay={i * 0.08}>
-                <Link href={d.href} className="group relative block min-h-[58vh] overflow-hidden bg-white">
-                  <Image
-                    src={d.image}
-                    alt={d.title}
-                    fill
-                    quality={70}
-                    sizes="(max-width:768px) 100vw, 33vw"
-                    className="object-cover object-[center_12%] transition duration-700 group-hover:scale-[1.06]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-6">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/75">{d.label}</p>
-                    <p className="mt-1 font-display text-3xl font-semibold text-white">{d.title}</p>
-                    <span className="mt-3 inline-block text-[10px] uppercase tracking-[0.18em] text-white/80 opacity-0 transition duration-300 group-hover:opacity-100">
-                      Shop the cut →
-                    </span>
+          <div className="mt-12 grid items-end gap-8 md:grid-cols-3">
+            {dressEdits.map((d, i) => (
+              <Reveal key={d.href} delay={i * 0.08} className={i === 1 ? "md:-translate-y-10" : i === 2 ? "md:translate-y-6" : ""}>
+                <Link href={d.href} className="group relative block">
+                  <div className="product-arch relative aspect-[3/4] overflow-hidden bg-surface-muted shadow-[0_40px_80px_-40px_rgba(28,25,21,0.5)]">
+                    <Image
+                      src={d.image}
+                      alt={d.title ?? d.label}
+                      fill
+                      quality={70}
+                      sizes="(max-width:768px) 100vw, 33vw"
+                      className="object-cover object-top"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-7">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/75">{d.label}</p>
+                      <p className="mt-1 font-display text-3xl font-semibold text-white">{d.title ?? d.label}</p>
+                      <span className="mt-3 inline-block text-[10px] uppercase tracking-[0.18em] text-white/80 opacity-0 transition duration-300 group-hover:opacity-100">
+                        Shop the cut →
+                      </span>
+                    </div>
                   </div>
                 </Link>
               </Reveal>
@@ -160,38 +156,74 @@ export function HomePageView({ data }: { data: HomeData }) {
 
       {lookbooks.length > 0 ? <LookbookCarousel items={lookbooks} /> : null}
 
+      <section className="border-y border-line bg-brand text-white">
+        <div className="mx-auto grid max-w-[1400px] gap-8 px-4 py-14 md:grid-cols-5 md:px-8">
+          {DESTINATIONS.map((d) => (
+            <div key={d.city}>
+              <p className="font-display text-2xl font-semibold">{d.city}</p>
+              <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-white/60">{d.note}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {categories.length > 0 ? (
-        <section className="border-t border-line">
+        <section>
           <div className="mx-auto max-w-[1400px] px-4 py-16 md:px-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">Shop by category</p>
-            <div className="mt-8 grid grid-cols-2 gap-px bg-line md:grid-cols-5">
-              {categories.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/category/${c.slug}`}
-                  className="group bg-white px-4 py-10 text-center transition hover:bg-ink hover:text-white"
-                >
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] transition group-hover:tracking-[0.28em]">
-                    {c.name}
-                  </span>
-                </Link>
-              ))}
+            <div className="mt-8 grid gap-10 md:grid-cols-2">
+              <div>
+                <h3 className="font-display text-2xl font-semibold">Woman</h3>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {categories
+                    .filter((c) => isWomenOnlyCategory(c.slug) || SHARED_CATEGORY_SLUGS.has(c.slug))
+                    .map((c) => (
+                      <Link
+                        key={`w-${c.id}`}
+                        href={categoryHref(c.slug, "WOMEN")}
+                        className="btn-store rounded-full border border-line bg-white px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1c1915] hover:border-[#1e3d32] hover:bg-[#1e3d32] hover:text-white"
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="font-display text-2xl font-semibold">Man</h3>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {categories
+                    .filter((c) => SHARED_CATEGORY_SLUGS.has(c.slug))
+                    .map((c) => (
+                      <Link
+                        key={`m-${c.id}`}
+                        href={categoryHref(c.slug, "MEN")}
+                        className="btn-store rounded-full border border-line bg-white px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1c1915] hover:border-[#1e3d32] hover:bg-[#1e3d32] hover:text-white"
+                      >
+                        {c.slug === "tops" ? "Shirts" : c.slug === "outerwear" ? "Jackets" : c.name}
+                      </Link>
+                    ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
       ) : null}
 
-      <section className="border-t border-line">
-        <div className="mx-auto grid max-w-[1400px] gap-px bg-line md:grid-cols-3">
+      <section className="px-4 pb-20 md:px-8">
+        <div className="mx-auto grid max-w-[1400px] gap-5 md:grid-cols-3">
           {[
-            { href: "/sale", title: "Sale", text: "Selected pieces, reduced." },
-            { href: "/style-quiz", title: "Find your fit", text: "Five questions. Better sizing." },
-            { href: "/account/loyalty", title: "Member", text: "Earn points on every order." },
+            { href: "/sale", title: "The sale room", text: "Selected pieces, reduced — still cut for climate." },
+            { href: "/style-quiz", title: "Find your fit", text: "Five questions. A better size for tropical heat." },
+            { href: "/account/loyalty", title: "House members", text: "Earn points on every order, redeem in MYR." },
           ].map((b) => (
-            <Link key={b.href} href={b.href} className="group bg-white px-8 py-12 transition hover:bg-surface-muted">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em]">{b.title}</p>
+            <Link
+              key={b.href}
+              href={b.href}
+              className="group rounded-[2rem] border border-line bg-surface px-8 py-12 transition hover:-translate-y-1 hover:shadow-[0_30px_60px_-36px_rgba(28,25,21,0.45)]"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink">{b.title}</p>
               <p className="mt-2 text-sm text-muted">{b.text}</p>
-              <span className="mt-4 inline-block translate-y-1 text-[10px] uppercase tracking-[0.18em] opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+              <span className="mt-4 inline-block translate-y-1 text-[10px] uppercase tracking-[0.18em] text-ink opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                 Explore →
               </span>
             </Link>

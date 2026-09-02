@@ -5,9 +5,15 @@ function isEmailConfigured() {
   return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
 }
 
+let transporter: ReturnType<typeof nodemailer.createTransport> | null | undefined;
+
 function getTransporter() {
-  if (!isEmailConfigured()) return null;
-  return nodemailer.createTransport({
+  if (transporter !== undefined) return transporter;
+  if (!isEmailConfigured()) {
+    transporter = null;
+    return transporter;
+  }
+  transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE,
@@ -16,17 +22,18 @@ function getTransporter() {
       pass: env.SMTP_PASS,
     },
   });
+  return transporter;
 }
 
 export async function sendEmail(input: { to: string; subject: string; text: string; html: string }) {
-  const transporter = getTransporter();
-  if (!transporter) {
+  const mailer = getTransporter();
+  if (!mailer) {
     if (!isProd) {
       console.log(`[email:dev] To: ${input.to}\nSubject: ${input.subject}\n${input.text}`);
     }
     return;
   }
-  await transporter.sendMail({
+  await mailer.sendMail({
     from: env.EMAIL_FROM,
     to: input.to,
     subject: input.subject,
@@ -57,7 +64,7 @@ export async function sendOrderConfirmationEmail(input: {
   orderId: number;
 }) {
   const orderUrl = `${env.FRONTEND_URL}/account/orders/${input.orderId}`;
-  const total = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(input.total);
+  const total = new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR", maximumFractionDigits: 0 }).format(input.total);
   await sendEmail({
     to: input.email,
     subject: `${env.SITE_NAME} — Order ${input.orderNumber} confirmed`,

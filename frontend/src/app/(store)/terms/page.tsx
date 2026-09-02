@@ -19,7 +19,7 @@ export default function TermsPage() {
         page. Refunds for eligible returns are processed after inspection.
       </p>
       <p>
-        Our liability is limited to the amount paid for the affected order. These terms are governed by the laws of India.
+        Our liability is limited to the amount paid for the affected order. These terms are governed by applicable law.
       </p>
     </StaticPage>
   );

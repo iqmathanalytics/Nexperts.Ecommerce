@@ -2,7 +2,7 @@
 
 import { notFound, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { IndianRupee, Package, ShoppingBag, TrendingDown } from "lucide-react";
+import { Banknote, Package, ShoppingBag, TrendingDown } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { Select } from "@/components/ui/input";
@@ -94,9 +94,9 @@ function SalesAnalytics({ title }: { title: string }) {
         </Select>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={IndianRupee} label="Gross revenue" value={formatINR(s?.grossRevenue ?? 0)} />
-        <KpiCard icon={IndianRupee} label="Net revenue" value={formatINR(s?.netRevenue ?? 0)} />
-        <KpiCard icon={ShoppingBag} label="Orders" value={(s?.orders ?? 0).toLocaleString("en-IN")} hint={`AOV ${formatINR(s?.aov ?? 0)}`} />
+        <KpiCard icon={Banknote} label="Gross revenue" value={formatINR(s?.grossRevenue ?? 0)} />
+        <KpiCard icon={Banknote} label="Net revenue" value={formatINR(s?.netRevenue ?? 0)} />
+        <KpiCard icon={ShoppingBag} label="Orders" value={(s?.orders ?? 0).toLocaleString("en-MY")} hint={`AOV ${formatINR(s?.aov ?? 0)}`} />
         <KpiCard icon={TrendingDown} label="Discounts" value={formatINR(s?.discounts ?? 0)} />
       </div>
       <div className="grid gap-4 xl:grid-cols-3">
@@ -123,9 +123,9 @@ function InventoryAnalytics({ title }: { title: string }) {
       <h1 className="text-2xl font-semibold">{title}</h1>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard icon={Package} label="Inventory value" value={formatINR(i?.inventoryValue ?? 0)} />
-        <KpiCard icon={Package} label="Total units" value={(i?.totalStock ?? 0).toLocaleString("en-IN")} />
-        <KpiCard icon={Package} label="Low stock" value={(i?.lowStock ?? 0).toLocaleString("en-IN")} tone={(i?.lowStock ?? 0) > 0 ? "warning" : "default"} />
-        <KpiCard icon={Package} label="Out of stock" value={(i?.outOfStock ?? 0).toLocaleString("en-IN")} tone={(i?.outOfStock ?? 0) > 0 ? "danger" : "default"} />
+        <KpiCard icon={Package} label="Total units" value={(i?.totalStock ?? 0).toLocaleString("en-MY")} />
+        <KpiCard icon={Package} label="Low stock" value={(i?.lowStock ?? 0).toLocaleString("en-MY")} tone={(i?.lowStock ?? 0) > 0 ? "warning" : "default"} />
+        <KpiCard icon={Package} label="Out of stock" value={(i?.outOfStock ?? 0).toLocaleString("en-MY")} tone={(i?.outOfStock ?? 0) > 0 ? "danger" : "default"} />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <ChartCard title="SKU status">

@@ -9,7 +9,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useStoreUi } from "@/components/store/StoreUiContext";
-import { fade } from "@/lib/motion";
+import { fade, isModifiedClick } from "@/lib/motion";
+import { categoryHref } from "@/lib/shop";
 
 type Suggest = {
   products: Array<{ name: string; slug: string; sku?: string; brand?: string | null }>;
@@ -35,7 +36,7 @@ function pushRecent(term: string) {
 
 export function SearchOverlay() {
   const router = useRouter();
-  const { searchOpen, closeSearch } = useStoreUi();
+  const { searchOpen, closeSearch, goToProduct } = useStoreUi();
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
   const debouncedQ = useDebouncedValue(q, 220);
@@ -102,7 +103,12 @@ export function SearchOverlay() {
                   <Link
                     key={p.slug}
                     href={`/products/${p.slug}`}
-                    onClick={closeSearch}
+                    onClick={(e) => {
+                      closeSearch();
+                      if (isModifiedClick(e)) return;
+                      e.preventDefault();
+                      goToProduct({ href: `/products/${p.slug}`, name: p.name });
+                    }}
                     className="block border-b border-line py-3 transition hover:pl-1"
                   >
                     <span className="font-medium">{p.name}</span>
@@ -110,7 +116,7 @@ export function SearchOverlay() {
                   </Link>
                 ))}
                 {(suggest.data?.data.categories ?? []).map((c) => (
-                  <Link key={c.slug} href={`/category/${c.slug}`} onClick={closeSearch} className="block py-2 text-sm text-muted">
+                  <Link key={c.slug} href={categoryHref(c.slug)} onClick={closeSearch} className="block py-2 text-sm text-muted">
                     Category · {c.name}
                   </Link>
                 ))}

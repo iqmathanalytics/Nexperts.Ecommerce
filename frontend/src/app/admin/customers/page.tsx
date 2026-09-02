@@ -57,7 +57,7 @@ export default function CustomersPage() {
   const customer = detail.data?.data;
 
   return (
-    <AdminPage title="Customers">
+    <AdminPage title="Customers" description="Member accounts, order totals, and account status.">
       <FilterBar>
         <Input className="max-w-sm" placeholder="Search name, email or phone" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-44">
@@ -86,10 +86,10 @@ export default function CustomersPage() {
       />
       <AdminDrawer open={Boolean(open)} title={customer ? `${customer.firstName} ${customer.lastName}` : "Customer"} onClose={() => setOpen(null)}>
         {!customer ? (
-          <p className="text-sm text-slate-500">Loading customer…</p>
+          <p className="text-sm text-muted">Loading customer…</p>
         ) : (
           <div className="space-y-3 text-sm">
-            <p className="text-slate-600">{customer.email}</p>
+            <p className="text-muted">{customer.email}</p>
             <p>
               Orders: {customer.orders?.length ?? 0} · Reviews: {customer.reviews?.length ?? 0} · Addresses:{" "}
               {customer.addresses?.length ?? 0}

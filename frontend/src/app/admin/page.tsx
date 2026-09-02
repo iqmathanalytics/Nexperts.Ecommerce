@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  IndianRupee,
+  Banknote,
   MessageSquareWarning,
   Package,
   PackageX,
@@ -16,6 +16,7 @@ import { api } from "@/lib/api";
 import { Select } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/state";
 import { formatINR } from "@/lib/utils";
+import { AdminPage } from "@/components/admin/AdminTable";
 import {
   ChartCard,
   DonutChart,
@@ -54,50 +55,48 @@ export default function AdminDashboard() {
   const periodLabel = PERIOD_OPTIONS.find((p) => p.value === period)?.label ?? "This period";
 
   return (
-    <div className="space-y-5 pb-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Store performance for {periodLabel.toLowerCase()}.</p>
-        </div>
-        <Select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-40">
+    <AdminPage
+      title="Dashboard"
+      description={`Store performance for ${periodLabel.toLowerCase()}.`}
+      actions={
+        <Select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-40 bg-surface-raised">
           {PERIOD_OPTIONS.map((p) => (
             <option key={p.value} value={p.value}>
               {p.label}
             </option>
           ))}
         </Select>
-      </div>
-
+      }
+    >
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Spinner />
         </div>
       ) : isError || !data ? (
-        <p className="rounded-xl bg-white p-6 text-sm text-slate-600">Unable to load dashboard metrics.</p>
+        <p className="rounded-2xl border border-line bg-surface-raised p-6 text-sm text-muted">Unable to load dashboard metrics.</p>
       ) : (
         <DashboardBody data={data.data} periodLabel={periodLabel} />
       )}
-    </div>
+    </AdminPage>
   );
 }
 
 function DashboardBody({ data, periodLabel }: { data: Dash; periodLabel: string }) {
   const k = data.kpis;
   return (
-    <>
+    <div className="space-y-5 pb-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard icon={IndianRupee} label="Revenue" value={formatINR(k.revenue)} hint={periodLabel} href="/admin/analytics" />
-        <KpiCard icon={ShoppingBag} label="Orders" value={k.orders.toLocaleString("en-IN")} hint={periodLabel} href="/admin/orders" />
-        <KpiCard icon={TrendingUp} label="Average order" value={formatINR(k.aov)} hint={`${k.productsSold.toLocaleString("en-IN")} units sold`} />
-        <KpiCard icon={Users} label="Customers" value={k.customers.toLocaleString("en-IN")} hint="Active accounts" href="/admin/customers" />
+        <KpiCard icon={Banknote} label="Revenue" value={formatINR(k.revenue)} hint={periodLabel} href="/admin/analytics" />
+        <KpiCard icon={ShoppingBag} label="Orders" value={k.orders.toLocaleString("en-MY")} hint={periodLabel} href="/admin/orders" />
+        <KpiCard icon={TrendingUp} label="Average order" value={formatINR(k.aov)} hint={`${k.productsSold.toLocaleString("en-MY")} units sold`} />
+        <KpiCard icon={Users} label="Customers" value={k.customers.toLocaleString("en-MY")} hint="Active accounts" href="/admin/customers" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           icon={AlertTriangle}
           label="Pending orders"
-          value={k.pendingOrders.toLocaleString("en-IN")}
+          value={k.pendingOrders.toLocaleString("en-MY")}
           hint="Needs action"
           href="/admin/orders"
           tone={k.pendingOrders > 0 ? "warning" : "default"}
@@ -105,7 +104,7 @@ function DashboardBody({ data, periodLabel }: { data: Dash; periodLabel: string 
         <KpiCard
           icon={Package}
           label="Low stock"
-          value={k.lowStock.toLocaleString("en-IN")}
+          value={k.lowStock.toLocaleString("en-MY")}
           hint="At or below reorder"
           href="/admin/inventory"
           tone={k.lowStock > 0 ? "warning" : "default"}
@@ -113,7 +112,7 @@ function DashboardBody({ data, periodLabel }: { data: Dash; periodLabel: string 
         <KpiCard
           icon={PackageX}
           label="Out of stock"
-          value={k.outOfStock.toLocaleString("en-IN")}
+          value={k.outOfStock.toLocaleString("en-MY")}
           hint="Unavailable SKUs"
           href="/admin/inventory"
           tone={k.outOfStock > 0 ? "danger" : "default"}
@@ -121,7 +120,7 @@ function DashboardBody({ data, periodLabel }: { data: Dash; periodLabel: string 
         <KpiCard
           icon={MessageSquareWarning}
           label="Pending reviews"
-          value={k.pendingReviews.toLocaleString("en-IN")}
+          value={k.pendingReviews.toLocaleString("en-MY")}
           hint="Awaiting moderation"
           href="/admin/reviews"
           tone={k.pendingReviews > 0 ? "warning" : "default"}
@@ -142,13 +141,13 @@ function DashboardBody({ data, periodLabel }: { data: Dash; periodLabel: string 
           <HorizontalBars data={data.topProducts} />
         </ChartCard>
         <ChartCard title="Top categories" hint="Units sold">
-          <HorizontalBars data={data.topCategories} color="#d9a600" />
+          <HorizontalBars data={data.topCategories} color="#c4a056" />
         </ChartCard>
       </div>
 
       <ChartCard title="New customers" hint="Sign-ups over the selected period">
         <GrowthChart data={data.customerGrowth} />
       </ChartCard>
-    </>
+    </div>
   );
 }

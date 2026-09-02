@@ -59,7 +59,18 @@ export const adminOpsRouter = Router();
 adminOpsRouter.use(requireAdmin);
 
 adminOpsRouter.get("/orders", requirePermission("order.read"), asyncHandler(async (req, res) => {
-  res.json(success(await order.adminListOrders({ q: String(req.query.q ?? ""), status: String(req.query.status ?? ""), page: Number(req.query.page ?? 1), limit: Number(req.query.limit ?? 20) })));
+  res.json(success(await order.adminListOrders({
+    q: String(req.query.q ?? ""),
+    status: String(req.query.status ?? ""),
+    paymentStatus: String(req.query.paymentStatus ?? ""),
+    from: String(req.query.from ?? ""),
+    to: String(req.query.to ?? ""),
+    page: Number(req.query.page ?? 1),
+    limit: Number(req.query.limit ?? 50),
+  })));
+}));
+adminOpsRouter.post("/orders/bulk-status", requirePermission("order.update"), validate(order.bulkStatusSchema), asyncHandler(async (req, res) => {
+  res.json(success(await order.bulkTransitionOrders(req.body.ids, req.body.status, req.user!.id, req.body.note)));
 }));
 adminOpsRouter.get("/orders/:id", requirePermission("order.read"), asyncHandler(async (req, res) => {
   res.json(success(await order.getOrderById(Number(req.params.id), undefined, true)));

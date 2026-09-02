@@ -46,7 +46,7 @@ export function MiniCart() {
             <Link
               href={loginUrl("/cart")}
               onClick={closeMiniCart}
-              className="inline-flex h-11 items-center bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink/90"
+              className="btn-store inline-flex h-11 items-center bg-[#1c1915] px-5 text-sm font-semibold text-white hover:bg-[#2a2620]"
             >
               Sign in
             </Link>
@@ -68,9 +68,9 @@ export function MiniCart() {
             <ul className="flex-1 space-y-4 overflow-y-auto p-5">
               {items.map((item) => (
                 <li key={item.id} className="flex gap-3">
-                  <Link href={`/products/${item.slug}`} onClick={closeMiniCart} className="relative h-24 w-18 shrink-0 overflow-hidden bg-surface-muted">
+                  <Link href={`/products/${item.slug}`} onClick={closeMiniCart} className="relative h-24 w-16 shrink-0 overflow-hidden bg-surface-muted">
                     {item.imageUrl ? (
-                      <Image src={item.imageUrl} alt="" fill className="object-cover object-top" sizes="72px" />
+                      <Image src={item.imageUrl} alt="" fill className="object-cover object-center" sizes="72px" />
                     ) : (
                       <div className="h-full w-full bg-line" />
                     )}
@@ -97,14 +97,14 @@ export function MiniCart() {
                 <Link
                   href="/checkout"
                   onClick={closeMiniCart}
-                  className="inline-flex h-11 items-center justify-center bg-ink text-sm font-semibold text-white transition hover:bg-ink/90"
+                  className="btn-store inline-flex h-11 items-center justify-center bg-[#1c1915] text-sm font-semibold text-white hover:bg-[#2a2620]"
                 >
                   Checkout
                 </Link>
                 <Link
                   href="/cart"
                   onClick={closeMiniCart}
-                  className="inline-flex h-11 items-center justify-center border border-line text-sm font-semibold transition hover:border-ink"
+                  className="btn-store inline-flex h-11 items-center justify-center border border-line bg-white text-sm font-semibold text-[#1c1915] hover:border-[#1c1915]"
                 >
                   View bag
                 </Link>

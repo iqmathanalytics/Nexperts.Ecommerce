@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { ProductCardSkeleton } from "@/components/ui/state";
-import { OFFERS } from "@/components/store/OfferTheatre";
+import { CampaignHero } from "@/components/store/CampaignHero";
+import { SALE_HERO, SALE_HERO_VIDEO } from "@/lib/editorial";
 import type { ProductCard } from "@/lib/types";
 
 function pad(n: number) {
@@ -34,17 +35,24 @@ function SaleClock() {
   const secs = s % 60;
   const parts = [
     { l: "Days", v: pad(days) },
-    { l: "Hours", v: pad(hours) },
+    { l: "Hrs", v: pad(hours) },
     { l: "Mins", v: pad(mins) },
     { l: "Secs", v: pad(secs) },
   ];
 
   return (
-    <div className="mt-8 flex gap-3">
+    <div className="mx-auto grid w-full max-w-[24.75rem] grid-cols-4 gap-2 sm:gap-2.5" role="timer" aria-label="Sale ends in">
       {parts.map((p) => (
-        <div key={p.l} className="min-w-16 border border-white/20 bg-white/10 px-3 py-2 text-center backdrop-blur-sm">
-          <p className="font-display text-2xl font-semibold tabular-nums md:text-3xl">{p.v}</p>
-          <p className="text-[9px] uppercase tracking-[0.16em] text-white/70">{p.l}</p>
+        <div
+          key={p.l}
+          className="flex min-h-[4.75rem] flex-col items-center justify-center border border-accent/45 bg-ink/80 px-1 py-2.5 text-center backdrop-blur-md md:min-h-[5.25rem]"
+        >
+          <p className="font-display text-[1.7rem] font-medium leading-none tabular-nums text-accent md:text-[2.05rem]">
+            {p.v}
+          </p>
+          <p className="mt-2 w-full text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-white/80">
+            {p.l}
+          </p>
         </div>
       ))}
     </div>
@@ -60,35 +68,34 @@ export default function SalePage() {
   const onSale = (data?.data ?? []).filter((p) => p.discountPercent > 0);
 
   return (
-    <div className="bg-white text-ink">
-      <section className="relative overflow-hidden bg-ink text-white">
-        <div className="offer-shimmer pointer-events-none absolute inset-0" />
-        <div className="relative mx-auto max-w-[1400px] px-4 py-16 md:px-8 md:py-24">
-          <p className="nexperts-mark animate-rise text-[10px] text-white/60">Nexperts</p>
-          <h1 className="animate-rise-delay-1 mt-3 font-display text-5xl font-semibold md:text-7xl">Sale</h1>
-          <p className="animate-rise-delay-2 mt-4 max-w-lg text-sm text-white/75">
-            Selected pieces, reduced. Codes rotate in the bar above — copy one before checkout.
-          </p>
-          <SaleClock />
-          <div className="mt-8 flex flex-wrap gap-2">
-            {OFFERS.filter((o) => o.code !== "FREE").map((o) => (
-              <span key={o.code} className="border border-white/25 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                {o.code}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+    <div className="bg-background text-ink">
+      <CampaignHero
+        video={SALE_HERO_VIDEO}
+        image={SALE_HERO}
+        kicker="The sale room"
+        title={"Selected pieces,\nreduced"}
+        subtitle="Limited-time cuts for Woman and Man. Copy a code from the bar before checkout."
+        actions={[
+          { href: "/products?gender=WOMEN&sort=discount", label: "Woman", variant: "solid" },
+          { href: "/products?gender=MEN&sort=discount", label: "Man", variant: "outline" },
+        ]}
+      >
+        <SaleClock />
+      </CampaignHero>
       <div className="mx-auto max-w-[1400px] px-4 py-12 md:px-6">
-        {isLoading ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <ProductCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : (
-          <ProductGrid products={onSale.length ? onSale : data?.data ?? []} dense />
-        )}
+        <p className="font-display text-3xl font-medium italic tracking-tight md:text-4xl">On sale now</p>
+        <p className="mt-2 max-w-lg text-sm text-muted">Markdowns on current-season silhouettes — while they last.</p>
+        <div className="mt-10">
+          {isLoading ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <ProductGrid products={onSale.length ? onSale : data?.data ?? []} dense />
+          )}
+        </div>
         <p className="mt-8 text-center text-sm text-muted">
           Prefer browsing by department?{" "}
           <Link href="/women" className="underline underline-offset-4">

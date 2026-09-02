@@ -15,15 +15,16 @@ export const adminNav: AdminNavSection[] = [
       { label: "Products", href: "/admin/products" },
       { label: "Categories", href: "/admin/categories" },
       { label: "Brands", href: "/admin/brands" },
+      { label: "Collections", href: "/admin/collections" },
+      { label: "Lookbooks", href: "/admin/lookbooks" },
     ],
   },
   {
-    title: "Inventory",
-    items: [{ label: "Inventory", href: "/admin/inventory" }],
-  },
-  {
-    title: "Orders",
-    items: [{ label: "Orders", href: "/admin/orders" }],
+    title: "Operations",
+    items: [
+      { label: "Inventory", href: "/admin/inventory" },
+      { label: "Orders", href: "/admin/orders" },
+    ],
   },
   {
     title: "Customers",
@@ -37,12 +38,11 @@ export const adminNav: AdminNavSection[] = [
     ],
   },
   {
-    title: "Administration",
-    items: [{ label: "Users", href: "/admin/users" }],
-  },
-  {
-    title: "Logs",
-    items: [{ label: "Logs", href: "/admin/logs" }],
+    title: "System",
+    items: [
+      { label: "Users", href: "/admin/users" },
+      { label: "Audit log", href: "/admin/logs" },
+    ],
   },
 ];
 
@@ -54,8 +54,18 @@ export function isAdminNavActive(path: string, href: string) {
 }
 
 export function adminNavSectionForPath(path: string) {
+  return adminPageMeta(path).section;
+}
+
+export function adminPageMeta(path: string): { section: string; title: string } {
+  if (path === "/admin") return { section: "Overview", title: "Dashboard" };
+  if (path.startsWith("/admin/analytics")) return { section: "Overview", title: "Analytics" };
+  if (path === "/admin/products/create") return { section: "Catalog", title: "Create product" };
+  if (/^\/admin\/products\/\d+/.test(path)) return { section: "Catalog", title: "Edit product" };
   for (const section of adminNav) {
-    if (section.items.some((item) => isAdminNavActive(path, item.href))) return section.title;
+    for (const item of section.items) {
+      if (isAdminNavActive(path, item.href)) return { section: section.title, title: item.label };
+    }
   }
-  return null;
+  return { section: "System", title: "Studio" };
 }

@@ -59,9 +59,9 @@ export default function CouponsPage() {
   }, [data?.data, q, status]);
 
   return (
-    <AdminPage title="Coupons">
+    <AdminPage title="Coupons" description="Discount codes for checkout — percentage, fixed, and free shipping.">
       <form
-        className="grid shrink-0 gap-2 rounded-xl bg-white p-4 md:grid-cols-3"
+        className="grid shrink-0 gap-2 rounded-2xl border border-line bg-surface-raised p-4 md:grid-cols-3"
         onSubmit={form.handleSubmit((v) => create.mutate(v))}
       >
         <Input placeholder="CODE" {...form.register("code", { required: true })} />

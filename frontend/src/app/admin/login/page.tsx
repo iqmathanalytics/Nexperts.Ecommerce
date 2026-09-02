@@ -1,19 +1,22 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, Eye, EyeOff, Lock, Package, ShieldCheck, ShoppingBag } from "lucide-react";
+import { BarChart3, Lock, Package, ShieldCheck, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { SITE_NAME } from "@/lib/utils";
 import type { User } from "@/lib/types";
+import { AuthInput, PasswordField } from "@/components/store/AuthStage";
+import { WOMEN_HERO } from "@/lib/editorial";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -26,7 +29,6 @@ export default function AdminLogin() {
   const router = useRouter();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<LoginBody>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } });
 
   const session = useQuery({
@@ -51,39 +53,53 @@ export default function AdminLogin() {
 
   if (session.isPending || session.isSuccess) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-amber-300" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" />
       </div>
     );
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
-      <aside className="relative hidden overflow-hidden bg-slate-950 px-12 py-12 text-slate-200 lg:flex lg:flex-col lg:justify-between">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(240,184,0,0.18),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(15,118,110,0.22),transparent_40%)]" />
-        <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300">{SITE_NAME}</p>
-          <h1 className="mt-4 font-serif text-4xl leading-tight text-white">Admin portal</h1>
-          <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
-            Sign in to manage clothing, orders, inventory, and store performance from one workspace.
-          </p>
+    <div className="grid min-h-screen bg-background text-ink lg:grid-cols-[1.05fr_0.95fr]">
+      <aside className="relative hidden overflow-hidden bg-brand lg:block">
+        <Image src={WOMEN_HERO} alt="" fill priority quality={70} sizes="50vw" className="object-cover object-top" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand via-brand/55 to-brand/20" />
+        <div className="pointer-events-none absolute -right-16 top-20 h-72 w-72 rounded-full border border-white/15" aria-hidden />
+        <div className="float-slow pointer-events-none absolute right-16 top-40 h-28 w-28 rounded-full border border-accent/40" aria-hidden />
+        <div className="relative flex h-full flex-col justify-between p-12 text-white">
+          <div>
+            <p className="nexperts-mark text-[10px] text-white/70">{SITE_NAME} · Studio</p>
+            <h1 className="mt-5 font-display text-5xl font-semibold leading-[0.95]">
+              House
+              <br />
+              console
+            </h1>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-white/75">
+              Manage clothing, orders, and inventory — the same language as the storefront.
+            </p>
+          </div>
+          <ul className="space-y-4 text-sm text-white/85">
+            <Feature icon={Package} label="Catalog, brands, and stock" />
+            <Feature icon={ShoppingBag} label="Orders and customer activity" />
+            <Feature icon={BarChart3} label="Revenue and review insight" />
+          </ul>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-white/50">Staff only · Customer accounts use store login</p>
         </div>
-        <ul className="relative space-y-4 text-sm">
-          <Feature icon={Package} label="Clothing categories, brands, and inventory in one place" />
-          <Feature icon={ShoppingBag} label="Track orders and customer activity" />
-          <Feature icon={BarChart3} label="Revenue, stock, and review insights" />
-        </ul>
-        <p className="relative text-xs text-slate-500">Staff access only. Customer accounts cannot sign in here.</p>
       </aside>
 
-      <main className="flex items-center justify-center bg-slate-100 px-4 py-10 sm:px-8">
-        <div className="w-full max-w-md">
+      <main className="relative flex items-center justify-center px-4 py-12 md:px-10">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="orb orb-a opacity-30" />
+          <div className="orb orb-c opacity-25" />
+        </div>
+        <div className="relative w-full max-w-md">
           <div className="mb-8 lg:hidden">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{SITE_NAME}</p>
-            <h1 className="mt-2 text-2xl font-semibold text-slate-950">Admin portal</h1>
+            <p className="nexperts-mark text-[10px] text-muted">{SITE_NAME}</p>
+            <h1 className="mt-2 font-display text-3xl font-semibold">House console</h1>
           </div>
+
           <form
-            className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+            className="rounded-[2rem] border border-line bg-surface p-8 shadow-[0_32px_70px_-40px_rgba(28,25,21,0.45)]"
             onSubmit={form.handleSubmit((values) => {
               setError(null);
               login.mutate(values);
@@ -91,15 +107,15 @@ export default function AdminLogin() {
             noValidate
           >
             <div className="mb-6 flex items-start gap-3">
-              <span className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-slate-950 text-amber-300">
+              <span className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-brand text-accent">
                 <ShieldCheck className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="text-xl font-semibold text-slate-950">Welcome back</h2>
-                <p className="mt-1 text-sm text-slate-500">Enter your staff credentials to continue.</p>
-                <p className="mt-2 text-xs text-slate-500">
+                <h2 className="font-display text-2xl font-semibold">Welcome back</h2>
+                <p className="mt-1 text-sm text-muted">Enter staff credentials to continue.</p>
+                <p className="mt-2 text-xs text-muted">
                   Shoppers should use the{" "}
-                  <Link href="/login" className="font-semibold text-slate-800 underline-offset-2 hover:underline">
+                  <Link href="/login" className="font-semibold text-ink underline-offset-2 hover:underline">
                     store login
                   </Link>
                   .
@@ -107,20 +123,17 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {error && (
+            {error ? (
               <div className="mb-4">
                 <Toast tone="error" message={error} />
               </div>
-            )}
+            ) : null}
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="admin-email" className="text-slate-700">
-                  Email
-                </Label>
-                <Input
+                <Label htmlFor="admin-email">Email</Label>
+                <AuthInput
                   id="admin-email"
-                  className="border-slate-300 bg-white text-slate-900"
                   type="email"
                   autoComplete="username"
                   placeholder="you@nexperts.com"
@@ -129,39 +142,21 @@ export default function AdminLogin() {
                 <FieldError message={form.formState.errors.email?.message} />
               </div>
               <div>
-                <Label htmlFor="admin-password" className="text-slate-700">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="admin-password"
-                    className="border-slate-300 bg-white pr-11 text-slate-900"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
-                    {...form.register("password")}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-500 hover:text-slate-800"
-                    onClick={() => setShowPassword((open) => !open)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+                <Label htmlFor="admin-password">Password</Label>
+                <PasswordField id="admin-password" registration={form.register("password")} placeholder="Enter your password" />
                 <FieldError message={form.formState.errors.password?.message} />
               </div>
             </div>
 
-            <Button type="submit" className="mt-6 w-full bg-slate-950 text-white hover:bg-slate-800" disabled={login.isPending}>
+            <Button type="submit" className="mt-6 h-12 w-full rounded-full" disabled={login.isPending}>
               <Lock className="h-4 w-4" />
               {login.isPending ? "Signing in…" : "Sign in"}
             </Button>
           </form>
-          <p className="mt-6 text-center text-sm text-slate-500">
+
+          <p className="mt-6 text-center text-sm text-muted">
             Looking for the store?{" "}
-            <Link href="/" className="font-semibold text-slate-900 hover:underline">
+            <Link href="/" className="font-semibold text-ink underline-offset-4 hover:underline">
               Go to {SITE_NAME}
             </Link>
           </p>
@@ -174,7 +169,7 @@ export default function AdminLogin() {
 function Feature({ icon: Icon, label }: { icon: typeof Package; label: string }) {
   return (
     <li className="flex items-center gap-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-amber-300">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-accent">
         <Icon className="h-4 w-4" />
       </span>
       <span>{label}</span>

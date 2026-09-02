@@ -36,7 +36,7 @@ export function AuditTable({ description }: { description?: string }) {
 
   return (
     <>
-      {description ? <p className="shrink-0 text-sm text-slate-600">{description}</p> : null}
+      {description ? <p className="shrink-0 text-sm text-muted">{description}</p> : null}
       <FilterBar>
         <Input className="max-w-sm" placeholder="Search action, resource, or admin" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={resource} onChange={(e) => setResource(e.target.value)} className="w-44">

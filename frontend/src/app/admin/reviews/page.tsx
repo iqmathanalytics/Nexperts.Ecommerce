@@ -47,7 +47,7 @@ export default function ReviewsAdmin() {
   });
 
   return (
-    <AdminPage title="Reviews">
+    <AdminPage title="Reviews" description="Customer product reviews awaiting moderation or already published.">
       <FormError error={mod.error ?? del.error} />
       <FilterBar>
         <Input className="max-w-sm" placeholder="Search product, review, or customer" value={q} onChange={(e) => setQ(e.target.value)} />

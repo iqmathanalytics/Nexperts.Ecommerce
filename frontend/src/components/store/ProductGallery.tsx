@@ -1,68 +1,93 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, ZoomIn } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Img = { id: number; url: string; isPrimary: boolean };
 
 export function ProductGallery({ images, name }: { images: Img[]; name: string }) {
-  const [zoom, setZoom] = useState<Img | null>(null);
-  const shots = images.length ? images : [];
+  const shots = useMemo(() => {
+    if (!images.length) return [];
+    return [...images].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
+  }, [images]);
+  const [active, setActive] = useState(0);
+
+  const current = shots[Math.min(active, Math.max(shots.length - 1, 0))];
+
+  if (!current) {
+    return (
+      <div className="flex aspect-[3/4] w-full items-center justify-center rounded-2xl bg-surface-muted text-sm text-muted">
+        No image available
+      </div>
+    );
+  }
+
+  function go(delta: number) {
+    setActive((i) => {
+      const next = i + delta;
+      if (next < 0) return shots.length - 1;
+      if (next >= shots.length) return 0;
+      return next;
+    });
+  }
 
   return (
-    <>
-      <div className="grid gap-2 md:grid-cols-2 md:gap-3">
-        {shots.map((img, i) => (
-          <button
-            key={img.id}
-            type="button"
-            onClick={() => setZoom(img)}
-            className={`group relative overflow-hidden bg-surface-muted ${
-              i === 0 && shots.length === 1 ? "md:col-span-2 aspect-[3/4]" : i === 2 ? "md:col-span-2 aspect-[16/10]" : "aspect-[3/4]"
-            }`}
-          >
+    <div className="w-full">
+      <div className="relative w-full overflow-hidden rounded-2xl bg-surface-muted shadow-[0_32px_70px_-32px_rgba(28,25,21,0.45)]">
+        <div className="relative aspect-[3/4] w-full">
             <Image
-              src={img.url}
-              alt={`${name} ${i + 1}`}
+              key={current.id}
+              src={current.url}
+              alt={`${name} ${active + 1}`}
               fill
-              priority={i === 0}
-              quality={70}
-              sizes={i === 2 ? "80vw" : "(max-width:768px) 100vw, 40vw"}
-              className="object-cover object-[center_12%] transition duration-700 ease-out group-hover:scale-[1.06]"
+              priority={active === 0}
+              quality={75}
+              sizes="(max-width:1024px) 100vw, 48vw"
+              className="object-cover object-top"
             />
-            <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center bg-white/90 opacity-0 transition group-hover:opacity-100">
-              <ZoomIn className="h-4 w-4" />
-            </span>
-          </button>
-        ))}
+        </div>
+
+        {shots.length > 1 ? (
+          <>
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              className="absolute left-3 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#1c1915] shadow"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              className="absolute right-3 top-1/2 z-10 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#1c1915] shadow"
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        ) : null}
       </div>
 
-      <AnimatePresence>
-        {zoom ? (
-          <motion.div
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setZoom(null)}
-          >
-            <button type="button" className="absolute right-4 top-4 text-white" aria-label="Close" onClick={() => setZoom(null)}>
-              <X className="h-7 w-7" />
-            </button>
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              className="relative h-[88vh] w-full max-w-4xl"
-              onClick={(e) => e.stopPropagation()}
+      {shots.length > 1 ? (
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {shots.map((img, i) => (
+            <button
+              key={img.id}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`View image ${i + 1}`}
+              aria-current={i === active}
+              className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-lg border bg-surface-muted ${
+                i === active ? "border-[#1c1915]" : "border-transparent opacity-70 hover:opacity-100"
+              }`}
             >
-              <Image src={zoom.url} alt={name} fill className="object-contain" sizes="100vw" />
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </>
+              <Image src={img.url} alt="" fill sizes="64px" quality={55} className="object-cover object-top" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

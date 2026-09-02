@@ -11,6 +11,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageState, ProductCardSkeleton } from "@/components/ui/state";
 import type { CategoryNode, ProductCard } from "@/lib/types";
+import { isWomenOnlyCategory, parseShopGender, type ShopGender } from "@/lib/shop";
 
 function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -37,7 +38,15 @@ function FilterSection({ title, children, defaultOpen = true }: { title: string;
   );
 }
 
-export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?: string; hideHeading?: boolean }) {
+export function CatalogInner({
+  forcedCategory,
+  forcedGender,
+  hideHeading,
+}: {
+  forcedCategory?: string;
+  forcedGender?: ShopGender;
+  hideHeading?: boolean;
+}) {
   const params = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -48,8 +57,11 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
   const apiQuery = useMemo(() => {
     const q = new URLSearchParams(params.toString());
     if (forcedCategory) q.set("category", forcedCategory);
+    const gender = parseShopGender(q.get("gender")) ?? forcedGender;
+    if (gender) q.set("gender", gender);
+    else q.delete("gender");
     return q;
-  }, [params, forcedCategory]);
+  }, [params, forcedCategory, forcedGender]);
 
   const filterKey = useMemo(() => {
     const q = new URLSearchParams(apiQuery.toString());
@@ -114,6 +126,8 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
       const keepQ = next.get("q");
       [...next.keys()].forEach((k) => next.delete(k));
       if (keepQ && pathname === "/search") next.set("q", keepQ);
+      if (forcedCategory) next.set("category", forcedCategory);
+      if (forcedGender) next.set("gender", forcedGender);
     });
   }
 
@@ -125,9 +139,16 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
 
   const meta = data?.meta;
   const categoryValue = params.get("category") ?? forcedCategory ?? "";
-  const flatCats = (cats.data?.data ?? []).flatMap((c) => [
+  const activeGender = forcedGender ?? parseShopGender(params.get("gender"));
+  const visibleCats = (cats.data?.data ?? []).filter((c) => {
+    if (activeGender === "MEN") return !isWomenOnlyCategory(c.slug);
+    return true;
+  });
+  const flatCats = visibleCats.flatMap((c) => [
     { ...c, label: c.name },
-    ...c.children.map((child) => ({ ...child, label: `${c.name} · ${child.name}` })),
+    ...c.children
+      .filter((child) => (activeGender === "MEN" ? !isWomenOnlyCategory(child.slug) : true))
+      .map((child) => ({ ...child, label: `${c.name} · ${child.name}` })),
   ]);
   const hasFilters = Boolean(
     params.get("q") ||
@@ -148,11 +169,19 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
         <section className="border-b border-line bg-surface">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted">Clothing</p>
-            <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink md:text-6xl">
-              {pathname === "/search" ? "Search" : "Shop"}
+            <h1 className="mt-3 font-display text-4xl font-medium italic tracking-tight text-ink md:text-6xl">
+              {pathname === "/search"
+                ? "Search"
+                : activeGender === "WOMEN"
+                  ? "Woman"
+                  : activeGender === "MEN"
+                    ? "Man"
+                    : "Shop"}
             </h1>
             <p className="mt-3 max-w-xl text-sm text-muted md:text-base">
-              Filter by category, brand, and price — then bag your look.
+              {activeGender
+                ? "Pieces for this collection — filter by category, brand, and price."
+                : "Filter by category, brand, and price — then bag your look."}
             </p>
           </div>
         </section>
@@ -164,19 +193,19 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
             <button
               type="button"
               onClick={() => setFilter("category", "")}
-              className={`shrink-0 border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-                !categoryValue ? "border-ink bg-ink text-white" : "border-line text-muted hover:border-ink hover:text-ink"
+              className={`inline-flex shrink-0 items-center justify-center border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                !categoryValue ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"
               }`}
             >
               All
             </button>
-            {(cats.data?.data ?? []).map((c) => (
+            {(visibleCats).map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => setFilter("category", c.slug)}
-                className={`shrink-0 border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-                  categoryValue === c.slug ? "border-ink bg-ink text-white" : "border-line text-muted hover:border-ink hover:text-ink"
+                className={`inline-flex shrink-0 items-center justify-center border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                  categoryValue === c.slug ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"
                 }`}
               >
                 {c.name}
@@ -245,18 +274,25 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
 
           <FilterSection title="Gender">
             <div className="flex flex-wrap gap-2">
-              {[
-                ["", "All"],
-                ["WOMEN", "Women"],
-                ["MEN", "Men"],
-                ["UNISEX", "Unisex"],
-              ].map(([v, label]) => (
+              {(forcedGender && forcedCategory && isWomenOnlyCategory(forcedCategory)
+                ? ([["WOMEN", "Women"]] as const)
+                : forcedGender
+                  ? ([
+                      ["WOMEN", "Women"],
+                      ["MEN", "Men"],
+                    ] as const)
+                  : ([
+                      ["", "All"],
+                      ["WOMEN", "Women"],
+                      ["MEN", "Men"],
+                    ] as const)
+              ).map(([v, label]) => (
                 <button
                   key={label}
                   type="button"
                   onClick={() => setFilter("gender", v)}
-                  className={`border px-3 py-1.5 text-xs transition ${
-                    (params.get("gender") ?? "") === v ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
+                  className={`inline-flex items-center justify-center border px-3 py-1.5 text-xs transition ${
+                    (activeGender ?? "") === v ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
                   }`}
                 >
                   {label}
@@ -270,14 +306,14 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
               <Input
                 key={`min-${params.get("minPrice") ?? ""}`}
                 type="number"
-                placeholder="Min ₹"
+                placeholder="Min RM"
                 defaultValue={params.get("minPrice") ?? ""}
                 onBlur={(e) => setFilter("minPrice", e.target.value)}
               />
               <Input
                 key={`max-${params.get("maxPrice") ?? ""}`}
                 type="number"
-                placeholder="Max ₹"
+                placeholder="Max RM"
                 defaultValue={params.get("maxPrice") ?? ""}
                 onBlur={(e) => setFilter("maxPrice", e.target.value)}
               />

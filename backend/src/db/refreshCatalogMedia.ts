@@ -1,5 +1,5 @@
 import { pool } from "./index";
-import { CATALOG, SIZES } from "./catalogData";
+import { CATALOG, CATEGORY_IMAGES, SIZES, px, u } from "./catalogData";
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -27,7 +27,7 @@ async function main() {
       Fabric: item.fabric,
       Fit: item.fit,
       Care: item.care ?? "Gentle wash · Dry clean recommended for evening wear",
-      Origin: item.origin ?? "Designed for India",
+      Origin: item.origin ?? "Designed in-house",
       Styling: item.styling ?? "Style with Nexperts essentials.",
       Model: item.model ?? "True to size",
     });
@@ -50,7 +50,7 @@ async function main() {
         [
           item.description,
           specs,
-          "Ships within 24–48 hours. Free shipping on orders above ₹999. Premium packaging on every order.",
+          "Ships within 24–48 hours. Free shipping on orders above RM 999. Premium packaging on every order.",
           "7-day easy returns on unused items with tags attached.",
           existing.id,
         ],
@@ -80,7 +80,7 @@ async function main() {
         `${item.name} | ${item.brand} | Nexperts`,
         `${item.description.slice(0, 140)}…`,
         specs,
-        "Ships within 24–48 hours. Free shipping on orders above ₹999.",
+        "Ships within 24–48 hours. Free shipping on orders above RM 999.",
         "7-day easy returns on unused items with tags attached.",
       ],
     );
@@ -119,6 +119,37 @@ async function main() {
       );
     }
     created += 1;
+  }
+
+  async function tryQuery(sql: string, params: unknown[]) {
+    try {
+      await pool.query(sql, params);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`Skipped optional media update: ${message}`);
+    }
+  }
+
+  await tryQuery("UPDATE collections SET image_url = ? WHERE slug = ?", [
+    u("photo-1539008835657-9e8e9680c956"),
+    "summer-linen-edit",
+  ]);
+  await tryQuery("UPDATE collections SET image_url = ? WHERE slug = ?", [
+    u("photo-1572804013309-59a88b7e92f1"),
+    "festive-glow",
+  ]);
+  await tryQuery("UPDATE lookbooks SET cover_image_url = ? WHERE slug = ?", [
+    px(31808831),
+    "petal-resort-2026",
+  ]);
+  await tryQuery("UPDATE brands SET hero_image_url = ? WHERE name = ?", [
+    u("photo-1595777457583-95e059d581b8"),
+    "Petal",
+  ]);
+  await tryQuery("DELETE FROM settings WHERE `key` = ?", ["storefront.editorial"]);
+
+  for (const [name, url] of Object.entries(CATEGORY_IMAGES)) {
+    await tryQuery("UPDATE categories SET image_url = ? WHERE name = ?", [url, name]);
   }
 
   await pool.end();

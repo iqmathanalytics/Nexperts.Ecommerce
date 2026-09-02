@@ -39,7 +39,7 @@ export default function LoyaltyPage() {
       <h1 className="mt-3 font-display text-4xl font-semibold">Loyalty</h1>
       <div className="mt-8 border border-line bg-surface p-6">
         <LoyaltyBadge points={data.data.balance} />
-        <p className="mt-4 text-sm text-muted">100 points = ₹10 off. Redeem at checkout after generating a reward.</p>
+        <p className="mt-4 text-sm text-muted">100 points = RM 10 off. Redeem at checkout after generating a reward.</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Input value={points} onChange={(e) => setPoints(e.target.value)} className="w-32" type="number" min={100} step={100} />
           <Button disabled={redeem.isPending} onClick={() => redeem.mutate()}>
@@ -53,7 +53,7 @@ export default function LoyaltyPage() {
           <li key={t.id} className="flex items-center justify-between px-4 py-3 text-sm">
             <div>
               <p className="font-medium">{t.reason}</p>
-              <p className="text-xs text-muted">{new Date(t.createdAt).toLocaleDateString("en-IN")}</p>
+              <p className="text-xs text-muted">{new Date(t.createdAt).toLocaleDateString("en-MY")}</p>
             </div>
             <span className={t.type === "REDEEM" ? "text-danger" : "text-success"}>
               {t.type === "REDEEM" ? "−" : "+"}

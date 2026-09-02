@@ -88,7 +88,7 @@ export async function createReview(userId: number, input: z.infer<typeof reviewS
     isVerified: true,
   });
   if (input.fitFeedback) {
-    const { updateFitStats } = await import("../premium/premium.service");
+    const { updateFitStats } = await import("../premium/premium.service.js");
     await updateFitStats(input.productId, input.fitFeedback);
   }
   return { id: Number(result[0].insertId), ...input, status: "PENDING" };

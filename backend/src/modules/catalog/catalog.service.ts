@@ -14,6 +14,10 @@ import {
 } from "../../db/schema";
 import { AppError } from "../../utils/http";
 import { discountPercent, toMoney } from "../../utils/money";
+import { getEditorial } from "./adminMerch.service";
+import { cacheGet, cacheSet } from "../../utils/ttlCache";
+import { env } from "../../config/env";
+import { isOnlinePaymentEnabled } from "../../utils/payments";
 
 export const productQuerySchema = z.object({
   q: z.string().optional(),
@@ -38,7 +42,6 @@ type ProductRow = {
   id: number;
   name: string;
   slug: string;
-  description: string | null;
   status: string;
   is_featured: number;
   is_new: number;
@@ -82,6 +85,15 @@ function mapCard(row: ProductRow, imageUrl: string | null, hoverImageUrl: string
 
 export async function listProducts(raw: z.infer<typeof productQuerySchema>) {
   const query = productQuerySchema.parse(raw);
+  const cacheKey = `products:${query.category ?? ""}:${query.brand ?? ""}:${query.q ?? ""}:${query.sort}:${query.page}:${query.limit}:${query.gender ?? ""}:${query.featured ?? ""}:${query.isNew ?? ""}:${query.inStock ?? ""}:${query.minPrice ?? ""}:${query.maxPrice ?? ""}:${query.minRating ?? ""}`;
+  const cached = cacheGet<Awaited<ReturnType<typeof queryProducts>>>(cacheKey);
+  if (cached) return cached;
+  const data = await queryProducts(query);
+  cacheSet(cacheKey, data, 20_000);
+  return data;
+}
+
+async function queryProducts(query: z.infer<typeof productQuerySchema>) {
   const where: string[] = ["p.status = 'PUBLISHED'", "v.is_default = 1", "v.status = 'ACTIVE'", "(p.brand_id IS NULL OR b.status = 'ACTIVE')"];
   const params: unknown[] = [];
 
@@ -129,7 +141,7 @@ export async function listProducts(raw: z.infer<typeof productQuerySchema>) {
   if (query.featured === "true") where.push("p.is_featured = 1");
   if (query.isNew === "true") where.push("p.is_new = 1");
   if (query.gender) {
-    where.push("p.gender = ?");
+    where.push("(p.gender = ? OR p.gender = 'UNISEX')");
     params.push(query.gender);
   }
   if (query.minRating != null) {
@@ -156,6 +168,7 @@ export async function listProducts(raw: z.infer<typeof productQuerySchema>) {
 
   const whereSql = where.join(" AND ");
   const offset = (query.page - 1) * query.limit;
+  const needsSold = query.sort === "popularity";
 
   const countSql = `
     SELECT COUNT(*) AS total
@@ -166,25 +179,38 @@ export async function listProducts(raw: z.infer<typeof productQuerySchema>) {
     WHERE ${whereSql}
   `;
   const listSql = `
-    SELECT p.id, p.name, p.slug, p.description, p.status, p.is_featured, p.is_new, p.gender, p.created_at,
+    SELECT p.id, p.name, p.slug, p.status, p.is_featured, p.is_new, p.gender, p.created_at,
            p.brand_id, b.name AS brand_name, b.slug AS brand_slug,
            v.id AS variant_id, v.sku, v.price, v.mrp,
            (i.stock - i.reserved_stock) AS available,
-           COALESCE((SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.id AND r.status = 'APPROVED'), 0) AS avg_rating,
-           COALESCE((SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id AND r.status = 'APPROVED'), 0) AS review_count,
-           COALESCE((SELECT SUM(oi.quantity) FROM order_items oi WHERE oi.product_id = p.id), 0) AS sold
+           COALESCE(rv.avg_rating, 0) AS avg_rating,
+           COALESCE(rv.review_count, 0) AS review_count
+           ${needsSold ? ", COALESCE(sold.qty, 0) AS sold" : ", 0 AS sold"}
     FROM products p
     INNER JOIN product_variants v ON v.product_id = p.id AND v.is_default = 1
     INNER JOIN inventory i ON i.variant_id = v.id
     LEFT JOIN brands b ON b.id = p.brand_id
+    LEFT JOIN (
+      SELECT product_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+      FROM reviews WHERE status = 'APPROVED' GROUP BY product_id
+    ) rv ON rv.product_id = p.id
+    ${
+      needsSold
+        ? `LEFT JOIN (
+      SELECT product_id, SUM(quantity) AS qty FROM order_items GROUP BY product_id
+    ) sold ON sold.product_id = p.id`
+        : ""
+    }
     WHERE ${whereSql}
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
   `;
 
-  const [countRows] = await pool.query(countSql, params);
+  const [[countRows], [rows]] = await Promise.all([
+    pool.query(countSql, params),
+    pool.query(listSql, [...params, query.limit, offset]),
+  ]);
   const total = Number((countRows as Array<{ total: number }>)[0]?.total ?? 0);
-  const [rows] = await pool.query(listSql, [...params, query.limit, offset]);
   const list = rows as ProductRow[];
   const ids = list.map((r) => r.id);
   const images = ids.length
@@ -246,66 +272,93 @@ export async function searchSuggest(q: string) {
   return { products: productRows, categories: cats, brands: brs };
 }
 
-export async function getProductBySlug(slug: string) {
+const brandCardColumns = {
+  id: brands.id,
+  name: brands.name,
+  slug: brands.slug,
+  status: brands.status,
+} as const;
+
+export async function getProductBySlug(slug: string, opts: { lite?: boolean } = {}) {
+  const cacheKey = `product:${slug}:${opts.lite ? "lite" : "full"}`;
+  const cached = cacheGet<Awaited<ReturnType<typeof loadProductBySlug>>>(cacheKey);
+  if (cached) return cached;
+  const data = await loadProductBySlug(slug, opts);
+  cacheSet(cacheKey, data, opts.lite ? 45_000 : 20_000);
+  return data;
+}
+
+async function loadProductBySlug(slug: string, opts: { lite?: boolean }) {
   const [product] = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
   if (!product || product.status !== "PUBLISHED") {
     throw new AppError("NOT_FOUND", "Product not found", 404);
   }
-  const [brand] = product.brandId
-    ? await db.select().from(brands).where(eq(brands.id, product.brandId)).limit(1)
-    : [null];
+
+  const [brand, cats, variants, images, reviewRows] = await Promise.all([
+    product.brandId
+      ? db
+          .select(brandCardColumns)
+          .from(brands)
+          .where(eq(brands.id, product.brandId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    db
+      .select({ id: categories.id, name: categories.name, slug: categories.slug })
+      .from(productCategories)
+      .innerJoin(categories, eq(productCategories.categoryId, categories.id))
+      .where(eq(productCategories.productId, product.id)),
+    db
+      .select({
+        id: productVariants.id,
+        sku: productVariants.sku,
+        name: productVariants.name,
+        attributes: productVariants.attributes,
+        price: productVariants.price,
+        mrp: productVariants.mrp,
+        isDefault: productVariants.isDefault,
+        stock: inventory.stock,
+        reservedStock: inventory.reservedStock,
+      })
+      .from(productVariants)
+      .leftJoin(inventory, eq(inventory.variantId, productVariants.id))
+      .where(and(eq(productVariants.productId, product.id), eq(productVariants.status, "ACTIVE"))),
+    db
+      .select({
+        id: productImages.id,
+        url: productImages.url,
+        isPrimary: productImages.isPrimary,
+        variantId: productImages.variantId,
+        alt: productImages.alt,
+      })
+      .from(productImages)
+      .where(eq(productImages.productId, product.id))
+      .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder)),
+    opts.lite
+      ? Promise.resolve([])
+      : db
+          .select({
+            id: reviews.id,
+            rating: reviews.rating,
+            title: reviews.title,
+            comment: reviews.comment,
+            createdAt: reviews.createdAt,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          })
+          .from(reviews)
+          .innerJoin(users, eq(reviews.userId, users.id))
+          .where(and(eq(reviews.productId, product.id), eq(reviews.status, "APPROVED")))
+          .orderBy(desc(reviews.createdAt))
+          .limit(20),
+  ]);
+
   if (brand && brand.status !== "ACTIVE") {
     throw new AppError("NOT_FOUND", "Product not found", 404);
   }
-  const cats = await db
-    .select({ id: categories.id, name: categories.name, slug: categories.slug })
-    .from(productCategories)
-    .innerJoin(categories, eq(productCategories.categoryId, categories.id))
-    .where(eq(productCategories.productId, product.id));
-  const variants = await db
-    .select({
-      id: productVariants.id,
-      sku: productVariants.sku,
-      name: productVariants.name,
-      attributes: productVariants.attributes,
-      price: productVariants.price,
-      mrp: productVariants.mrp,
-      isDefault: productVariants.isDefault,
-      stock: inventory.stock,
-      reservedStock: inventory.reservedStock,
-    })
-    .from(productVariants)
-    .leftJoin(inventory, eq(inventory.variantId, productVariants.id))
-    .where(and(eq(productVariants.productId, product.id), eq(productVariants.status, "ACTIVE")));
-  const images = await db
-    .select()
-    .from(productImages)
-    .where(eq(productImages.productId, product.id))
-    .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder));
-  const reviewRows = await db
-    .select({
-      id: reviews.id,
-      rating: reviews.rating,
-      title: reviews.title,
-      comment: reviews.comment,
-      createdAt: reviews.createdAt,
-      firstName: users.firstName,
-      lastName: users.lastName,
-    })
-    .from(reviews)
-    .innerJoin(users, eq(reviews.userId, users.id))
-    .where(and(eq(reviews.productId, product.id), eq(reviews.status, "APPROVED")))
-    .orderBy(desc(reviews.createdAt))
-    .limit(20);
+
   const avgRating =
     reviewRows.length === 0 ? 0 : reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length;
-
-  const related = await listProducts({
-    category: cats[0]?.slug,
-    page: 1,
-    limit: 8,
-    sort: "popularity",
-  });
 
   return {
     ...product,
@@ -330,11 +383,19 @@ export async function getProductBySlug(slug: string) {
     rating: Number(avgRating.toFixed(1)),
     reviewCount: reviewRows.length,
     reviews: reviewRows,
-    related: related.items.filter((p) => p.slug !== slug).slice(0, 8),
+    related: [] as Awaited<ReturnType<typeof listProducts>>["items"],
   };
 }
 
 export async function listCategoriesTree() {
+  const cached = cacheGet<Awaited<ReturnType<typeof loadCategoriesTree>>>("categories");
+  if (cached) return cached;
+  const data = await loadCategoriesTree();
+  cacheSet("categories", data, 60_000);
+  return data;
+}
+
+async function loadCategoriesTree() {
   const all = await db.select().from(categories).where(eq(categories.status, "ACTIVE")).orderBy(asc(categories.sortOrder));
   const byParent = new Map<number | null, typeof all>();
   for (const c of all) {
@@ -350,7 +411,26 @@ export async function listCategoriesTree() {
 }
 
 export async function listBrands() {
-  return db.select().from(brands).where(eq(brands.status, "ACTIVE")).orderBy(asc(brands.name));
+  const cached = cacheGet<Awaited<ReturnType<typeof loadBrands>>>("brands");
+  if (cached) return cached;
+  const data = await loadBrands();
+  cacheSet("brands", data, 60_000);
+  return data;
+}
+
+async function loadBrands() {
+  return db
+    .select({
+      id: brands.id,
+      name: brands.name,
+      slug: brands.slug,
+      description: brands.description,
+      logoUrl: brands.logoUrl,
+      status: brands.status,
+    })
+    .from(brands)
+    .where(eq(brands.status, "ACTIVE"))
+    .orderBy(asc(brands.name));
 }
 
 export async function getCategoryBySlug(slug: string) {
@@ -361,7 +441,15 @@ export async function getCategoryBySlug(slug: string) {
 }
 
 export async function homepageData() {
-  const [tree, featured, lookbookRows] = await Promise.all([
+  const cached = cacheGet<Awaited<ReturnType<typeof loadHomepage>>>("homepage");
+  if (cached) return cached;
+  const data = await loadHomepage();
+  cacheSet("homepage", data, 45_000);
+  return data;
+}
+
+async function loadHomepage() {
+  const [tree, featured, lookbookRows, editorial] = await Promise.all([
     listCategoriesTree(),
     listProducts({ featured: "true", page: 1, limit: 8, sort: "newest" }),
     pool
@@ -371,6 +459,7 @@ export async function homepageData() {
       )
       .then(([rows]) => rows as Array<{ id: number; slug: string; title: string; coverImageUrl: string | null; videoUrl: string | null }>)
       .catch(() => [] as Array<{ id: number; slug: string; title: string; coverImageUrl: string | null; videoUrl: string | null }>),
+    getEditorial().catch(() => null),
   ]);
   return {
     categories: tree,
@@ -378,5 +467,42 @@ export async function homepageData() {
     featured: featured.items,
     newest: featured.items,
     lookbooks: lookbookRows,
+    editorial,
+    commerce: storefrontCommerce(),
+  };
+}
+
+export function storefrontCommerce() {
+  const online = isOnlinePaymentEnabled();
+  return {
+    currency: "MYR",
+    payments: [
+      {
+        id: "COD" as const,
+        available: true,
+        label: "Cash on delivery",
+        note: "Pay in cash when your order arrives. Available on every order.",
+      },
+      {
+        id: "ONLINE" as const,
+        available: online,
+        label: "Pay online",
+        note: online
+          ? "Cards, UPI, and netbanking at checkout."
+          : "Choose pay online at checkout when the gateway is enabled. Cash on delivery is always available.",
+      },
+    ],
+    shipping: {
+      eta: "2–5 business days",
+      dispatch: "24–48 hours",
+      freeOver: env.FREE_SHIPPING_MIN,
+      flat: env.SHIPPING_FLAT,
+      note: "Tracked dispatch worldwide. Remote areas may take a little longer.",
+    },
+    returns: {
+      days: 7,
+      note: "Unused items with tags attached. Start a return from your order page.",
+    },
+    packaging: "Premium packaging on every order.",
   };
 }

@@ -86,7 +86,21 @@ export async function listInventory(filter?: "low" | "out" | "all", q?: string) 
      ORDER BY availableStock ASC, p.name ASC`,
     params,
   );
-  return rows;
+  return (rows as Array<Record<string, unknown>>).map((row) => {
+    const stock = Number(row.stock ?? 0);
+    const reservedStock = Number(row.reservedStock ?? 0);
+    const availableStock = Number(row.availableStock ?? stock - reservedStock);
+    const price = toMoney(row.price as string | number);
+    return {
+      ...row,
+      stock,
+      reservedStock,
+      availableStock,
+      reorderLevel: Number(row.reorderLevel ?? 0),
+      price,
+      value: toMoney(Math.max(0, availableStock) * price),
+    };
+  });
 }
 
 export async function adjustStock(adminId: number, input: z.infer<typeof adjustSchema>, ip?: string) {
@@ -173,11 +187,11 @@ export async function listTransactions(filters: {
 export async function inventoryAnalytics() {
   const [rows] = await pool.query(`
     SELECT
-      COALESCE(SUM(i.stock), 0) AS totalStock,
+      COALESCE(SUM(GREATEST(i.stock - i.reserved_stock, 0)), 0) AS totalStock,
       SUM(CASE WHEN (i.stock - i.reserved_stock) > i.reorder_level THEN 1 ELSE 0 END) AS healthyStock,
       SUM(CASE WHEN (i.stock - i.reserved_stock) > 0 AND (i.stock - i.reserved_stock) <= i.reorder_level THEN 1 ELSE 0 END) AS lowStock,
       SUM(CASE WHEN (i.stock - i.reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock,
-      COALESCE(SUM(i.stock * v.price), 0) AS inventoryValue
+      COALESCE(SUM(GREATEST(i.stock - i.reserved_stock, 0) * v.price), 0) AS inventoryValue
     FROM inventory i
     INNER JOIN product_variants v ON v.id = i.variant_id
     INNER JOIN products p ON p.id = v.product_id

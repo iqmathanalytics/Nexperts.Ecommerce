@@ -2,53 +2,55 @@ import Image from "next/image";
 import Link from "next/link";
 import { fetchPublicApi } from "@/lib/server-api";
 import { ProductGrid } from "@/components/store/ProductCard";
-import { MEN_HERO, MEN_TILES } from "@/lib/editorial";
+import { CampaignHero } from "@/components/store/CampaignHero";
+import { DEFAULT_EDITORIAL, MEN_HERO_VIDEO, MEN_TILES, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
+import { categoryHref, withShopGender } from "@/lib/shop";
 import type { ProductCard } from "@/lib/types";
 
-export const revalidate = 120;
+export const revalidate = 300;
+
+const MEN_NAV = [
+  { href: categoryHref("tops", "MEN"), label: "Shirts" },
+  { href: categoryHref("bottoms", "MEN"), label: "Trousers" },
+  { href: categoryHref("outerwear", "MEN"), label: "Jackets" },
+  { href: "/products?gender=MEN&sort=newest", label: "New in" },
+];
 
 export default async function MenHubPage() {
-  const products = await fetchPublicApi<ProductCard[]>("/products?gender=MEN&sort=newest&limit=12", 120).catch(
-    () => [] as ProductCard[],
-  );
+  const [products, editorialRaw] = await Promise.all([
+    fetchPublicApi<ProductCard[]>("/products?gender=MEN&sort=newest&limit=12", 300).catch(() => [] as ProductCard[]),
+    fetchPublicApi<StorefrontEditorial>("/editorial", 300).catch(() => DEFAULT_EDITORIAL),
+  ]);
   const list = Array.isArray(products) ? products : [];
+  const editorial = mergeEditorial(editorialRaw);
+  const tiles = (editorial.menTiles.length ? editorial.menTiles : MEN_TILES).map((l) => ({
+    ...l,
+    href: withShopGender(l.href, "MEN"),
+  }));
 
   return (
-    <div className="bg-white text-ink">
-      <section className="relative flex min-h-[62vh] items-end overflow-hidden bg-surface-muted md:min-h-[78vh]">
-        <Image src={MEN_HERO} alt="Man" fill priority quality={60} className="object-cover object-[center_18%]" sizes="100vw" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
-        <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 pb-12 md:px-8">
-          <p className="nexperts-mark animate-rise text-[10px] text-white/80">Nexperts</p>
-          <h1 className="animate-rise-delay-1 mt-2 font-display text-5xl font-semibold text-white md:text-7xl">Man</h1>
-          <p className="animate-rise-delay-2 mt-3 max-w-md text-sm text-white/80">
-            Tailored essentials, knits, and seasonal layers.
-          </p>
-        </div>
-      </section>
+    <div className="bg-background text-ink">
+      <link rel="preload" as="image" href={MEN_HERO_VIDEO.poster} />
+      <CampaignHero
+        video={MEN_HERO_VIDEO}
+        image={editorial.menHero}
+        kicker="Man"
+        title={editorial.menHeadline === "Man" ? "Essentials" : editorial.menHeadline}
+        subtitle={editorial.menSubhead}
+        actions={[{ href: "/products?gender=MEN", label: "Shop man", variant: "solid" }]}
+        links={MEN_NAV}
+      />
 
-      <div className="mx-auto max-w-[1400px] px-4 py-10 md:px-8">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {MEN_TILES.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="shrink-0 border border-line px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition hover:border-ink"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
-          {MEN_TILES.map((l) => (
+      <div className="mx-auto max-w-[1400px] px-4 py-16 md:px-8">
+        <div className="grid gap-3 md:grid-cols-4">
+          {tiles.map((l) => (
             <Link key={l.href} href={l.href} className="group relative aspect-[3/4] overflow-hidden bg-surface-muted">
               <Image
                 src={l.image}
                 alt={l.label}
                 fill
-                quality={70}
-                className="object-cover object-[center_12%] transition duration-500 group-hover:scale-[1.04]"
+                quality={55}
+                className="object-cover object-top transition duration-500 group-hover:scale-[1.02]"
                 sizes="25vw"
               />
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">

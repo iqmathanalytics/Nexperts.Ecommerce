@@ -30,14 +30,14 @@ export function OrderTracking({
 }) {
   if (status === "CANCELLED") {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+      <div className="rounded-[1.8rem] border border-danger/20 bg-surface p-5 md:p-8">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-700">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-danger/10 text-danger">
             <XCircle className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-lg font-semibold text-red-900">Order cancelled</p>
-            <p className="mt-1 text-sm text-red-800">This order was cancelled and will not be shipped.</p>
+            <p className="font-display text-2xl font-medium italic text-ink">Order cancelled</p>
+            <p className="mt-1 text-sm text-muted">This order was cancelled and will not be shipped.</p>
           </div>
         </div>
         {history.length > 0 ? <TrackingTimeline history={history} /> : null}
@@ -53,11 +53,11 @@ export function OrderTracking({
   );
 
   return (
-    <div className="rounded-2xl border border-line bg-white p-5 md:p-6">
+    <div className="rounded-[1.8rem] border border-line bg-surface p-5 md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Package tracking</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">{headline.title}</h2>
+          <h2 className="mt-2 font-display text-3xl font-medium italic tracking-tight text-ink">{headline.title}</h2>
           <p className="mt-1 max-w-xl text-sm text-muted">{headline.subtitle}</p>
         </div>
         <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-ink">

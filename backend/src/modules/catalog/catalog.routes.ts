@@ -4,8 +4,10 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { success } from "../../utils/http";
 import { requireAdmin, requirePermission } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
+import { uploadImage } from "../../utils/storage";
 import * as catalog from "./catalog.service";
 import * as adminCatalog from "./adminCatalog.service";
+import * as adminMerch from "./adminMerch.service";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 8 } });
 
@@ -31,7 +33,8 @@ catalogRouter.get(
 catalogRouter.get(
   "/products/:slug",
   asyncHandler(async (req, res) => {
-    res.json(success(await catalog.getProductBySlug(String(req.params.slug))));
+    const lite = req.query.lite === "1" || req.query.lite === "true";
+    res.json(success(await catalog.getProductBySlug(String(req.params.slug), { lite })));
   }),
 );
 
@@ -61,6 +64,22 @@ catalogRouter.get(
   "/home",
   asyncHandler(async (_req, res) => {
     res.json(success(await catalog.homepageData()));
+  }),
+);
+
+catalogRouter.get(
+  "/editorial",
+  asyncHandler(async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+    res.json(success(await adminMerch.getEditorial()));
+  }),
+);
+
+catalogRouter.get(
+  "/commerce",
+  asyncHandler(async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json(success(catalog.storefrontCommerce()));
   }),
 );
 
@@ -114,6 +133,14 @@ adminCatalogRouter.delete(
 );
 
 adminCatalogRouter.post(
+  "/products/:id/duplicate",
+  requirePermission("product.create"),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(success(await adminCatalog.duplicateProduct(req.user!.id, Number(req.params.id), req.ip)));
+  }),
+);
+
+adminCatalogRouter.post(
   "/products/:id/status",
   requirePermission("product.update"),
   asyncHandler(async (req, res) => {
@@ -159,6 +186,28 @@ adminCatalogRouter.post(
   }),
 );
 
+adminCatalogRouter.patch(
+  "/images/:id",
+  requirePermission("product.update"),
+  validate(adminCatalog.imageMetaSchema),
+  asyncHandler(async (req, res) => {
+    res.json(success(await adminCatalog.updateImageMeta(req.user!.id, Number(req.params.id), req.body)));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/media",
+  requireAdmin,
+  upload.single("image"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { code: "NO_FILE", message: "Image required" } });
+    const folder = ["products", "categories", "brands", "collections", "lookbooks", "merch"].includes(String(req.body.folder))
+      ? String(req.body.folder)
+      : "merch";
+    res.json(success(await uploadImage(req.file, folder)));
+  }),
+);
+
 adminCatalogRouter.get(
   "/categories",
   requirePermission("category.manage"),
@@ -192,6 +241,27 @@ adminCatalogRouter.delete(
   asyncHandler(async (req, res) => {
     await adminCatalog.archiveCategory(req.user!.id, Number(req.params.id));
     res.json(success({ ok: true }));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/categories/:id/restore",
+  requirePermission("category.manage"),
+  asyncHandler(async (req, res) => {
+    await adminCatalog.restoreCategory(req.user!.id, Number(req.params.id));
+    res.json(success({ ok: true }));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/categories/:id/image",
+  requirePermission("category.manage"),
+  upload.single("image"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { code: "NO_FILE", message: "Image required" } });
+    const stored = await uploadImage(req.file, "categories");
+    await adminCatalog.updateCategoryImage(req.user!.id, Number(req.params.id), stored.url);
+    res.json(success(stored));
   }),
 );
 
@@ -237,9 +307,132 @@ adminCatalogRouter.post(
   upload.single("logo"),
   asyncHandler(async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, error: { code: "NO_FILE", message: "Logo required" } });
-    const { uploadImage } = await import("../../utils/storage");
     const stored = await uploadImage(req.file, "brands");
     await adminCatalog.updateBrandLogo(req.user!.id, Number(req.params.id), stored.url);
     res.json(success(stored));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/brands/:id/hero",
+  requirePermission("brand.manage"),
+  upload.single("image"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { code: "NO_FILE", message: "Image required" } });
+    const stored = await uploadImage(req.file, "brands");
+    await adminCatalog.updateBrandHero(req.user!.id, Number(req.params.id), stored.url);
+    res.json(success(stored));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/brands/:id/restore",
+  requirePermission("brand.manage"),
+  asyncHandler(async (req, res) => {
+    await adminCatalog.restoreBrand(req.user!.id, Number(req.params.id));
+    res.json(success({ ok: true }));
+  }),
+);
+
+adminCatalogRouter.get(
+  "/editorial",
+  requirePermission("settings.manage"),
+  asyncHandler(async (_req, res) => {
+    res.json(success(await adminMerch.getEditorial()));
+  }),
+);
+
+adminCatalogRouter.put(
+  "/editorial",
+  requirePermission("settings.manage"),
+  validate(adminMerch.editorialSchema),
+  asyncHandler(async (req, res) => {
+    res.json(success(await adminMerch.saveEditorial(req.user!.id, req.body)));
+  }),
+);
+
+adminCatalogRouter.get(
+  "/collections",
+  requirePermission("category.manage"),
+  asyncHandler(async (_req, res) => {
+    res.json(success(await adminMerch.listCollectionsAdmin()));
+  }),
+);
+
+adminCatalogRouter.get(
+  "/collections/:id",
+  requirePermission("category.manage"),
+  asyncHandler(async (req, res) => {
+    res.json(success(await adminMerch.getCollectionAdmin(Number(req.params.id))));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/collections",
+  requirePermission("category.manage"),
+  validate(adminMerch.collectionSchema),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(success(await adminMerch.createCollection(req.user!.id, req.body)));
+  }),
+);
+
+adminCatalogRouter.put(
+  "/collections/:id",
+  requirePermission("category.manage"),
+  validate(adminMerch.collectionSchema),
+  asyncHandler(async (req, res) => {
+    res.json(success(await adminMerch.updateCollection(req.user!.id, Number(req.params.id), req.body)));
+  }),
+);
+
+adminCatalogRouter.delete(
+  "/collections/:id",
+  requirePermission("category.manage"),
+  asyncHandler(async (req, res) => {
+    await adminMerch.archiveCollection(req.user!.id, Number(req.params.id));
+    res.json(success({ ok: true }));
+  }),
+);
+
+adminCatalogRouter.get(
+  "/lookbooks",
+  requirePermission("brand.manage"),
+  asyncHandler(async (_req, res) => {
+    res.json(success(await adminMerch.listLookbooksAdmin()));
+  }),
+);
+
+adminCatalogRouter.get(
+  "/lookbooks/:id",
+  requirePermission("brand.manage"),
+  asyncHandler(async (req, res) => {
+    res.json(success(await adminMerch.getLookbookAdmin(Number(req.params.id))));
+  }),
+);
+
+adminCatalogRouter.post(
+  "/lookbooks",
+  requirePermission("brand.manage"),
+  validate(adminMerch.lookbookSchema),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(success(await adminMerch.createLookbook(req.user!.id, req.body)));
+  }),
+);
+
+adminCatalogRouter.put(
+  "/lookbooks/:id",
+  requirePermission("brand.manage"),
+  validate(adminMerch.lookbookSchema),
+  asyncHandler(async (req, res) => {
+    res.json(success(await adminMerch.updateLookbook(req.user!.id, Number(req.params.id), req.body)));
+  }),
+);
+
+adminCatalogRouter.delete(
+  "/lookbooks/:id",
+  requirePermission("brand.manage"),
+  asyncHandler(async (req, res) => {
+    await adminMerch.archiveLookbook(req.user!.id, Number(req.params.id));
+    res.json(success({ ok: true }));
   }),
 );

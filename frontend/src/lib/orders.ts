@@ -90,6 +90,22 @@ export function trackingHeadline(status: string): { title: string; subtitle: str
   }
 }
 
+export function expectedDeliveryWindow(createdAt: string) {
+  const start = new Date(createdAt);
+  const from = new Date(start);
+  from.setDate(from.getDate() + 2);
+  const to = new Date(start);
+  to.setDate(to.getDate() + 4);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-MY", { day: "numeric", month: "short" });
+  return `${fmt(from)} – ${fmt(to)}`;
+}
+
+export function paymentLabel(method?: string) {
+  if (method === "ONLINE") return "Pay online";
+  return "Cash on delivery";
+}
+
 export function friendlyHistoryLabel(toStatus: string): string {
   switch (toStatus) {
     case "PENDING":

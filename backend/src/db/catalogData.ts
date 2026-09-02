@@ -19,8 +19,30 @@ export const CLOTHING_BRANDS = [
   "UrbanThread",
 ];
 
-const img = (id: string, w = 1200, h = 1600) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=top&w=${w}&h=${h}&q=85`;
+const portraitH = (w: number) => Math.round((w * 4) / 3);
+
+/** Full-figure Unsplash model shots — 3:4 crop from the figure, not the face. */
+export const u = (id: string, w = 1200) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=entropy&w=${w}&h=${portraitH(w)}&q=85`;
+
+/** Full-figure Pexels model shots. */
+export const px = (id: number, w = 1200) =>
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=${w}&h=${portraitH(w)}`;
+
+export const CATEGORY_IMAGES: Record<string, string> = {
+  Dresses: px(31808831),
+  "Casual Dresses": u("photo-1572804013309-59a88b7e92f1"),
+  "Evening Dresses": px(31132239),
+  "Party Dresses": px(985635),
+  "Maxi Dresses": u("photo-1539008835657-9e8e9680c956"),
+  "Midi Dresses": u("photo-1496747611176-843222e1e57c"),
+  "Mini Dresses": px(2043590),
+  Tops: px(1926769),
+  Bottoms: px(6764007),
+  "Ethnic Wear": px(20410887),
+  "Ethnic Dresses": px(20410887),
+  Outerwear: px(3317434),
+};
 
 export const CATALOG: Array<{
   name: string;
@@ -55,11 +77,11 @@ export const CATALOG: Array<{
     fit: "Relaxed",
     description:
       "A refined day dress in soft linen with clean seams and a fluid silhouette. Designed for warm days, work lunches, and weekend ease — elevated everyday wear.",
-    image: img("photo-1483985988355-763728e1935b"),
-    image2: img("photo-1490481651871-ab68de25d43d"),
-    image3: img("photo-1515886657613-9f3515b0c78f"),
+    image: u("photo-1572804013309-59a88b7e92f1"),
+    image2: u("photo-1496747611176-843222e1e57c"),
+    image3: px(1852382),
     care: "Cold gentle wash. Line dry. Steam, do not wring. Iron on linen setting.",
-    origin: "Designed in Mumbai · Fabric sourced from Portugal",
+    origin: "Designed in-house · Fabric sourced in Europe",
     styling: "Wear with leather sandals by day, or a structured blazer after hours.",
     model: "Model is 175 cm and wears size S",
   },
@@ -76,8 +98,8 @@ export const CATALOG: Array<{
     fit: "Tailored",
     description:
       "A structured shirt dress with a clean collar line and soft waist definition. Polished enough for the office, easy enough for travel days.",
-    image: img("photo-1525507119028-ed4c629a60a3"),
-    image2: img("photo-1485230895905-ec40ba36b9bc"),
+    image: px(1926769),
+    image2: px(1036623),
   },
   {
     name: "Lumina Silk Column Gown",
@@ -92,11 +114,11 @@ export const CATALOG: Array<{
     fit: "Column",
     description:
       "An evening column gown with a luminous satin finish and architectural drape. Made for black-tie dinners, gallery nights, and formal celebrations.",
-    image: img("photo-1566174053879-31528523f8ae"),
-    image2: img("photo-1595777457583-95e059d581b8"),
-    image3: img("photo-1509631179647-0177331693ae"),
+    image: px(31132239),
+    image2: px(31808831),
+    image3: u("photo-1595777457583-95e059d581b8"),
     care: "Dry clean only. Store hanging. Avoid direct sunlight.",
-    origin: "Atelier-finished in India",
+    origin: "Studio-finished",
     styling: "Pair with strappy heels and a slim clutch. Skip heavy jewellery — the drape is the statement.",
     model: "Model is 178 cm and wears size S",
   },
@@ -113,8 +135,8 @@ export const CATALOG: Array<{
     fit: "Sculpted",
     description:
       "A deep evening gown with a refined neckline and floor-length fall. Quiet luxury for formal nights — precise, elegant, and timeless.",
-    image: img("photo-1572804013309-59a88b7e92f1"),
-    image2: img("photo-1509631179647-0177331693ae"),
+    image: u("photo-1595777457583-95e059d581b8"),
+    image2: px(31132239),
   },
   {
     name: "NovaGlow Sequin Cocktail Dress",
@@ -129,8 +151,8 @@ export const CATALOG: Array<{
     fit: "Body-skimming",
     description:
       "A statement cocktail dress with fine sequin detailing and a modern cut. Made to catch the light — for parties, receptions, and nights out.",
-    image: img("photo-1539008835657-9e8e9680c956"),
-    image2: img("photo-1515886657613-9f3515b0c78f"),
+    image: u("photo-1765229282269-25312995d4bb"),
+    image2: u("photo-1765229280816-f8e55ac050e8"),
   },
   {
     name: "Lumina Flared Party Dress",
@@ -145,8 +167,8 @@ export const CATALOG: Array<{
     fit: "Flared",
     description:
       "A flared party dress with a graceful skirt and clean bodice. Movement-friendly and camera-ready without looking overdone.",
-    image: img("photo-1524504388940-b1c1722653e1"),
-    image2: img("photo-1487222477894-8943e31ef7b2"),
+    image: px(985635),
+    image2: u("photo-1572804013309-59a88b7e92f1"),
   },
   {
     name: "CloudSoft Resort Maxi",
@@ -161,11 +183,11 @@ export const CATALOG: Array<{
     fit: "Flowing",
     description:
       "A resort maxi with easy movement and a soft hand-feel. Ideal for vacations, brunches, and warm-weather evenings.",
-    image: img("photo-1496747611176-843222e1e57c"),
-    image2: img("photo-1469334031218-e382a71b716b"),
-    image3: img("photo-1515372039744-b8f02a3ae446"),
+    image: u("photo-1539008835657-9e8e9680c956"),
+    image2: u("photo-1496747611176-843222e1e57c"),
+    image3: px(20410887),
     care: "Hand wash cold. Do not tumble dry. Steam to release travel creases.",
-    origin: "Woven viscose · Made for Indian humidity",
+    origin: "Woven viscose · Made for tropical humidity",
     styling: "Belt the waist for structure, or wear loose with flat sandals.",
     model: "Model is 174 cm and wears size S",
   },
@@ -182,8 +204,8 @@ export const CATALOG: Array<{
     fit: "Easy",
     description:
       "A washed linen maxi with a long, airy line and understated polish. Premium resort dressing for heat and humidity.",
-    image: img("photo-1502716119720-b23a93e5fe1b"),
-    image2: img("photo-1550639525-c97d455acf70"),
+    image: u("photo-1496747611176-843222e1e57c"),
+    image2: u("photo-1539008835657-9e8e9680c956"),
   },
   {
     name: "Petal Soft Cotton Midi",
@@ -198,8 +220,8 @@ export const CATALOG: Array<{
     fit: "Soft A-line",
     description:
       "A mid-length cotton dress with a soft A-line and quiet detailing. Day-to-dinner versatility with a premium finish.",
-    image: img("photo-1485230895905-ec40ba36b9bc"),
-    image2: img("photo-1483985988355-763728e1935b"),
+    image: u("photo-1572804013309-59a88b7e92f1"),
+    image2: px(20410887),
   },
   {
     name: "SilkRoad Tailored Midi Dress",
@@ -214,8 +236,8 @@ export const CATALOG: Array<{
     fit: "Tailored",
     description:
       "A tailored midi with a precise hem and refined waist. Designed for meetings, dinners, and polished city days.",
-    image: img("photo-1550639525-c97d455acf70"),
-    image2: img("photo-1502716119720-b23a93e5fe1b"),
+    image: px(31808831),
+    image2: px(31132239),
   },
   {
     name: "UrbanThread Wrap Mini",
@@ -230,8 +252,8 @@ export const CATALOG: Array<{
     fit: "Wrap",
     description:
       "A modern wrap mini with a clean neckline and flattering tie waist. Sharp, confident, and ready for evening plans.",
-    image: img("photo-1469334031218-e382a71b716b"),
-    image2: img("photo-1525507119028-ed4c629a60a3"),
+    image: px(2043590),
+    image2: px(794062),
   },
   {
     name: "NovaGlow Skater Mini Dress",
@@ -246,8 +268,8 @@ export const CATALOG: Array<{
     fit: "Skater",
     description:
       "A skater mini with a defined waist and flared skirt. Light structure, smooth finish, and strong occasion presence.",
-    image: img("photo-1515886657613-9f3515b0c78f"),
-    image2: img("photo-1524504388940-b1c1722653e1"),
+    image: px(794062),
+    image2: px(2043590),
   },
   {
     name: "Petal Embroidered Anarkali",
@@ -262,8 +284,8 @@ export const CATALOG: Array<{
     fit: "Flared anarkali",
     description:
       "A festive anarkali with delicate embroidery and a graceful flare. Designed for celebrations, family gatherings, and formal ethnic occasions.",
-    image: img("photo-1610030469983-98e550d6193c"),
-    image2: img("photo-1581044777550-4cfa60707c03"),
+    image: px(20410887),
+    image2: px(985635),
   },
   {
     name: "SilkRoad Festive Kurta Set",
@@ -278,8 +300,8 @@ export const CATALOG: Array<{
     fit: "Straight",
     description:
       "A refined kurta silhouette in an art-silk blend with festive depth. Wear it for celebrations where elegance matters more than excess.",
-    image: img("photo-1603217040830-34473db521a2"),
-    image2: img("photo-1610030469983-98e550d6193c"),
+    image: px(20410887),
+    image2: u("photo-1572804013309-59a88b7e92f1"),
   },
   {
     name: "UrbanThread Silk Soft Shirt",
@@ -293,8 +315,8 @@ export const CATALOG: Array<{
     fit: "Relaxed",
     description:
       "A soft shirt with a clean collar and relaxed drape. Premium basics elevated — layer it under jackets or wear alone.",
-    image: img("photo-1596755094514-f87e34085b2c"),
-    image2: img("photo-1602810318383-e386cc2a3ccf"),
+    image: px(1926769),
+    image2: px(1852382),
   },
   {
     name: "Petal Fluid Silk Blouse",
@@ -308,8 +330,8 @@ export const CATALOG: Array<{
     fit: "Soft tailored",
     description:
       "A fluid silk-blend blouse with soft sheen and precise finishing. Pair with tailored trousers for an instantly elevated look.",
-    image: img("photo-1564257631407-4deb1f99d992"),
-    image2: img("photo-1594633312681-425c7b97ccd1"),
+    image: px(1036623),
+    image2: px(1926769),
   },
   {
     name: "CloudSoft Wide-Leg Trousers",
@@ -323,8 +345,8 @@ export const CATALOG: Array<{
     fit: "Wide-leg",
     description:
       "Wide-leg trousers with a fluid fall and clean waist finish. Comfortable structure for travel days and city dressing.",
-    image: img("photo-1594633312681-425c7b97ccd1"),
-    image2: img("photo-1506629082955-511b1aa562c8"),
+    image: px(6764007),
+    image2: px(6311392),
   },
   {
     name: "UrbanThread Tailored Trousers",
@@ -338,8 +360,8 @@ export const CATALOG: Array<{
     fit: "Straight tailored",
     description:
       "Straight tailored trousers with a sharp crease and polished waistband. Built for boardrooms, dinners, and capsule wardrobes.",
-    image: img("photo-1594938298603-c8148c4dae35"),
-    image2: img("photo-1473966968600-fa801b869a1a"),
+    image: px(6311392),
+    image2: px(6764007),
   },
   {
     name: "Lumina Cashmere-Feel Coat",
@@ -353,8 +375,8 @@ export const CATALOG: Array<{
     fit: "Longline",
     description:
       "A longline coat with a soft hand-feel and architectural collar. Premium outerwear for cooler evenings and travel layers.",
-    image: img("photo-1539533018447-63fcce2678e3"),
-    image2: img("photo-1548624313-0396c75e4b1a"),
+    image: px(3317434),
+    image2: px(2043590),
   },
   {
     name: "NovaGlow Structured Crop Jacket",
@@ -368,8 +390,8 @@ export const CATALOG: Array<{
     fit: "Cropped",
     description:
       "A cropped jacket with clean shoulders and modern structure. Layer over dresses or trousers for a sharp, contemporary finish.",
-    image: img("photo-1551488831-00ddcb6c6bd3"),
-    image2: img("photo-1490481651871-ab68de25d43d"),
+    image: px(291762),
+    image2: px(2043590),
   },
   {
     name: "UrbanThread Oxford Shirt",
@@ -383,11 +405,11 @@ export const CATALOG: Array<{
     fit: "Regular",
     description:
       "A crisp oxford with a clean collar and garment-washed ease. Built as a wardrobe constant — office, travel, or weekend.",
-    image: img("photo-1593030761757-71fae45fa0e7"),
-    image2: img("photo-1602810318383-e386cc2a3ccf"),
-    image3: img("photo-1488161628813-04466f872be2"),
+    image: px(1043474),
+    image2: u("photo-1488161628813-04466f872be2"),
+    image3: u("photo-1617137968427-85924c800a22"),
     care: "Machine wash cold. Hang dry. Iron while slightly damp.",
-    origin: "Woven cotton · Finished in India",
+    origin: "Woven cotton · Studio finished",
     styling: "Wear open over a tee, or tucked into tailored trousers.",
     model: "Model is 185 cm and wears size M",
   },
@@ -403,10 +425,10 @@ export const CATALOG: Array<{
     fit: "Slim",
     description:
       "A fine-gauge merino crew with a quiet drape and year-round weight. Layer under a coat or wear alone.",
-    image: img("photo-1617127365659-c47fa864d8bc"),
-    image2: img("photo-1552374196-1ab2a1c593e8"),
+    image: px(1183266),
+    image2: px(842811),
     care: "Hand wash or dry clean. Lay flat to dry.",
-    origin: "Merino yarn · Knit in India",
+    origin: "Merino yarn · Studio knit",
     styling: "Pair with wide trousers and leather loafers.",
     model: "Model is 183 cm and wears size M",
   },
@@ -422,10 +444,10 @@ export const CATALOG: Array<{
     fit: "Longline",
     description:
       "A longline overcoat with a structured shoulder and soft hand. The winter layer that finishes every look.",
-    image: img("photo-1617137968427-85924c800a22"),
-    image2: img("photo-1507003211169-0a1dd7228f2d"),
+    image: px(842811),
+    image2: u("photo-1617137968427-85924c800a22"),
     care: "Dry clean only. Brush between wears. Store on a wide hanger.",
-    origin: "Wool blend · Tailored in India",
+    origin: "Wool blend · Studio tailored",
     styling: "Wear over a knit and trousers, or over a full suit.",
     model: "Model is 186 cm and wears size M",
   },
@@ -441,11 +463,31 @@ export const CATALOG: Array<{
     fit: "Tapered",
     description:
       "Tapered chinos with a clean crease and easy stretch. Desk to dinner without a wardrobe change.",
-    image: img("photo-1473966968600-fa801b869a1a"),
-    image2: img("photo-1501196354995-cbb51c65aaea"),
+    image: u("photo-1488161628813-04466f872be2"),
+    image2: u("photo-1617137968427-85924c800a22"),
     care: "Machine wash cold. Tumble low. Steam to restore the crease.",
-    origin: "Cotton twill · Made in India",
+    origin: "Cotton twill · Studio made",
     styling: "Pair with the Oxford shirt and loafers.",
     model: "Model is 185 cm and wears size M",
+  },
+  {
+    name: "UrbanThread Balloon Sleeve Sale Set",
+    category: "Tops",
+    extraCategory: "Bottoms",
+    brand: "UrbanThread",
+    gender: "WOMEN",
+    price: 1299,
+    mrp: 2499,
+    sku: "NX-WS-025",
+    fabric: "Cotton-blend poplin",
+    fit: "Oversized top · A-line mini",
+    description:
+      "A monochrome off-shoulder balloon-sleeve blouse with a flared peplum and matching black mini skirt, finished with a slim belt and gold buckle. A high-contrast sale look for warm days and city evenings.",
+    image: "/products/urbanthread-balloon-sleeve-set.jpg",
+    image2: px(13076542),
+    care: "Cold gentle wash. Hang dry. Steam sleeves — do not iron the volume.",
+    origin: "Designed in-house · Cotton blend",
+    styling: "Keep jewellery minimal; let the sleeves and gold buckle lead.",
+    model: "Model wears size S",
   },
 ];

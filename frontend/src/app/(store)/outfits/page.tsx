@@ -74,8 +74,8 @@ export default function OutfitBuilderPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {canvas.map((p) => (
-                <button key={p.id} type="button" onClick={() => remove(p.id)} className="relative aspect-[3/4] overflow-hidden bg-surface">
-                  {p.imageUrl ? <Image src={p.imageUrl} alt={p.name} fill className="object-cover object-top" sizes="200px" /> : null}
+                <button key={p.id} type="button" onClick={() => remove(p.id)} className="relative aspect-[2/3] overflow-hidden bg-surface">
+                  {p.imageUrl ? <Image src={p.imageUrl} alt={p.name} fill className="object-cover object-center" sizes="200px" /> : null}
                   <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-[10px] text-white">{p.name}</span>
                 </button>
               ))}
@@ -115,8 +115,8 @@ export default function OutfitBuilderPage() {
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
         {(catalog.data?.data ?? []).map((p) => (
           <button key={p.id} type="button" onClick={() => add(p)} className="text-left">
-            <div className="relative aspect-[3/4] overflow-hidden bg-surface-muted">
-              {p.imageUrl ? <Image src={p.imageUrl} alt="" fill className="object-cover object-top" sizes="160px" /> : null}
+            <div className="relative aspect-[2/3] overflow-hidden bg-surface-muted">
+              {p.imageUrl ? <Image src={p.imageUrl} alt="" fill className="object-cover object-center" sizes="160px" /> : null}
             </div>
             <p className="mt-2 line-clamp-1 text-xs font-medium">{p.name}</p>
             <p className="text-xs text-muted">{formatINR(p.price)}</p>

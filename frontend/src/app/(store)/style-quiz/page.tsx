@@ -14,7 +14,7 @@ const QUESTIONS = [
   {
     id: "occasion",
     label: "Where do you dress most often?",
-    options: ["Work", "Festive", "Everyday", "Evening"],
+    options: ["Work", "Festive / celebration", "Everyday", "Evening"],
   },
   {
     id: "palette",

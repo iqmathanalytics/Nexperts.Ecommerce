@@ -20,7 +20,7 @@ export function Modal({
   title?: string;
   children: ReactNode;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -37,7 +37,13 @@ export function Modal({
 
   if (typeof document === "undefined") return null;
 
-  const widths = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
+  const widths = {
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
+    full: "max-w-[min(96rem,96vw)]",
+  };
 
   return createPortal(
     <AnimatePresence>

@@ -9,8 +9,8 @@ import { useToast } from "@/components/ui/toast";
 const FAQS = [
   { q: "How do I find my size?", a: "Use the size guide on each product page. Complete the style quiz for a personalized fit profile." },
   { q: "What is your return policy?", a: "7-day returns on unused items with tags attached. Start a return from your order page." },
-  { q: "Do you ship COD?", a: "Yes — cash on delivery is available across India, plus online payment via Razorpay where enabled." },
-  { q: "How long does shipping take?", a: "Most orders arrive in 2–5 business days depending on warehouse proximity." },
+  { q: "Do you ship COD?", a: "Yes — cash on delivery is available on eligible orders, plus online payment where enabled." },
+  { q: "How long does shipping take?", a: "Most orders arrive in 2–4 business days. Remote areas typically take 3–6 days." },
 ];
 
 export default function FaqPage() {

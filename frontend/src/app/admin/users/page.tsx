@@ -44,9 +44,9 @@ export default function UsersPage() {
   }, [data?.data, q, role, status]);
 
   return (
-    <AdminPage title="Admin users">
+    <AdminPage title="Users" description="Staff accounts with roles for catalog, orders, and inventory.">
       <form
-        className="grid shrink-0 gap-2 rounded-xl bg-white p-4 md:grid-cols-3"
+        className="grid shrink-0 gap-2 rounded-2xl border border-line bg-surface-raised p-4 md:grid-cols-3"
         onSubmit={form.handleSubmit((v) => create.mutate(v))}
       >
         <Input placeholder="First name" {...form.register("firstName", { required: true })} />

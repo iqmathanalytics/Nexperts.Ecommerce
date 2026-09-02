@@ -7,9 +7,12 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatINR } from "@/lib/utils";
 import { PageState, Skeleton } from "@/components/ui/state";
+import { useStoreUi } from "@/components/store/StoreUiContext";
+import { isModifiedClick } from "@/lib/motion";
 
 export default function LookbookPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { goToProduct } = useStoreUi();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["lookbook", slug],
     queryFn: () =>
@@ -44,7 +47,7 @@ export default function LookbookPage() {
         {lb.videoUrl ? (
           <video src={lb.videoUrl} className="absolute inset-0 h-full w-full object-cover opacity-80" autoPlay muted loop playsInline />
         ) : lb.coverImageUrl ? (
-          <Image src={lb.coverImageUrl} alt="" fill priority className="object-cover opacity-80" sizes="100vw" />
+          <Image src={lb.coverImageUrl} alt="" fill priority className="object-cover object-center opacity-90" sizes="100vw" />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
         <div className="relative z-10 mx-auto flex min-h-[70vh] max-w-7xl flex-col justify-end px-4 py-16 md:px-6">
@@ -58,10 +61,19 @@ export default function LookbookPage() {
         <h2 className="font-display text-3xl font-semibold">Shop the look</h2>
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {(lb.items ?? []).map((item) => (
-            <Link key={item.productId} href={`/products/${item.slug}`} className="group border border-line bg-surface">
-              <div className="relative aspect-[3/4] overflow-hidden bg-surface-muted">
+            <Link
+              key={item.productId}
+              href={`/products/${item.slug}`}
+              onClick={(e) => {
+                if (isModifiedClick(e)) return;
+                e.preventDefault();
+                goToProduct({ href: `/products/${item.slug}`, name: item.name, imageUrl: item.imageUrl });
+              }}
+              className="group border border-line bg-surface"
+            >
+              <div className="relative aspect-[2/3] overflow-hidden bg-surface-muted">
                 {item.imageUrl ? (
-                  <Image src={item.imageUrl} alt="" fill className="object-cover object-top transition duration-500 group-hover:scale-105" sizes="33vw" />
+                  <Image src={item.imageUrl} alt="" fill className="object-cover object-center" sizes="33vw" />
                 ) : null}
               </div>
               <div className="p-4">
