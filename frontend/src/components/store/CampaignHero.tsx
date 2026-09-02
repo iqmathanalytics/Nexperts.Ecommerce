@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export type CampaignHeroAction = {
@@ -21,13 +20,11 @@ export type CampaignHeroVideo = {
 
 function FilmPane({
   video,
-  muted,
   reduceMotion,
   fallbackImage,
   eager,
 }: {
   video: CampaignHeroVideo;
-  muted: boolean;
   reduceMotion: boolean;
   fallbackImage?: string;
   eager?: boolean;
@@ -38,7 +35,7 @@ function FilmPane({
   useEffect(() => {
     const el = ref.current;
     if (!el || reduceMotion) return;
-    el.muted = muted;
+    el.muted = true;
     const play = () => el.play().catch(() => undefined);
     play();
     const onVisible = () => {
@@ -46,7 +43,7 @@ function FilmPane({
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [muted, reduceMotion, video.src]);
+  }, [reduceMotion, video.src]);
 
   return (
     <div className="hero-film">
@@ -62,7 +59,7 @@ function FilmPane({
           ref={ref}
           className="hero-film-media"
           autoPlay
-          muted={muted}
+          muted
           loop
           playsInline
           preload={eager ? "metadata" : "none"}
@@ -98,7 +95,6 @@ export function CampaignHero({
   children?: ReactNode;
 }) {
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [muted, setMuted] = useState(true);
   const films = videos?.length ? videos : video ? [video] : [];
   const split = films.length > 1;
 
@@ -111,7 +107,6 @@ export function CampaignHero({
   }, []);
 
   const lines = title.split("\n");
-  const showFilm = films.length > 0 && !reduceMotion;
   const still = image || films[0]?.poster;
 
   return (
@@ -122,7 +117,6 @@ export function CampaignHero({
             <FilmPane
               key={film.src}
               video={film}
-              muted={muted}
               reduceMotion={reduceMotion}
               fallbackImage={i === 0 ? image : film.poster}
               eager={i === 0}
@@ -185,17 +179,6 @@ export function CampaignHero({
           ) : null}
         </div>
       </div>
-
-      {showFilm ? (
-        <button
-          type="button"
-          onClick={() => setMuted((v) => !v)}
-          className="btn-store absolute right-5 top-[calc(var(--store-chrome)+0.65rem)] z-20 inline-flex h-10 w-10 items-center justify-center border border-white bg-black/55 text-white hover:bg-white hover:text-[#1c1915] md:right-6"
-          aria-label={muted ? "Unmute film" : "Mute film"}
-        >
-          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-        </button>
-      ) : null}
     </section>
   );
 }
