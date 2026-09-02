@@ -42,8 +42,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.pexels.com" />
         <link rel="dns-prefetch" href="https://images.pexels.com" />
-        <link rel="preconnect" href="https://assets.mixkit.co" />
-        <link rel="dns-prefetch" href="https://assets.mixkit.co" />
         {apiOrigin ? <link rel="preconnect" href={apiOrigin} /> : null}
       </head>
       <body className="min-h-full bg-background font-sans text-ink antialiased [color:var(--ink)]">

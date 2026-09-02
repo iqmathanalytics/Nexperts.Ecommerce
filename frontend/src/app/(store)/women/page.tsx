@@ -33,7 +33,6 @@ export default async function WomenHubPage() {
 
   return (
     <div className="bg-background text-ink">
-      <link rel="preload" as="image" href={WOMEN_HERO_VIDEO.poster} />
       <CampaignHero
         video={WOMEN_HERO_VIDEO}
         image={editorial.womenHero}

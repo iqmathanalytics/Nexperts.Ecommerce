@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { HERO_VIDEO } from "@/lib/editorial";
 import { SITE_NAME } from "@/lib/utils";
 
 const LETTERS = SITE_NAME.toUpperCase().split("");
 const HOLD_MS = 800;
 const REDUCED_HOLD_MS = 320;
-const MAX_WAIT_MS = 1400;
-const REDUCED_MAX_WAIT_MS = 700;
 const INTRO_KEY = "nx-intro-v4";
 
 function wait(ms: number) {
@@ -19,27 +16,17 @@ function wait(ms: number) {
   });
 }
 
-function warmHeroPoster() {
-  const poster = new Image();
-  poster.src = HERO_VIDEO.poster;
-  poster.decoding = "async";
-}
-
-async function holdUntilReady(reduce: boolean) {
-  const hold = reduce ? REDUCED_HOLD_MS : HOLD_MS;
-  const max = reduce ? REDUCED_MAX_WAIT_MS : MAX_WAIT_MS;
-  warmHeroPoster();
-  await Promise.race([wait(hold), wait(max)]);
-}
-
 export function OpeningScreen() {
   const [visible, setVisible] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Prefetch hubs only on home so Mixkit preload hints never leak onto auth pages.
+    if (pathname !== "/") return;
     router.prefetch("/women");
     router.prefetch("/men");
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     try {
@@ -52,7 +39,7 @@ export function OpeningScreen() {
     setVisible(true);
     let cancelled = false;
 
-    void holdUntilReady(reduce).then(() => {
+    void wait(reduce ? REDUCED_HOLD_MS : HOLD_MS).then(() => {
       if (cancelled) return;
       setVisible(false);
       try {

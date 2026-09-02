@@ -12,8 +12,9 @@ export default async function HomePage() {
     const featured = Array.isArray(home.featured) ? home.featured : ([] as ProductCard[]);
     return (
       <>
-        <link rel="preload" as="image" href={HERO_VIDEO.poster} />
-        <link rel="preload" as="video" href={HERO_VIDEO.src} type="video/mp4" />
+        {/* Poster only — browsers reject link preload as="video". */}
+        <link rel="preconnect" href="https://assets.mixkit.co" />
+        <link rel="preload" as="image" href={HERO_VIDEO.poster} fetchPriority="high" />
         <HomePageView
           data={{
             ...home,

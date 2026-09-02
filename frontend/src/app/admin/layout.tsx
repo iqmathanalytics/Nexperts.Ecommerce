@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/state";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { adminPageMeta } from "@/lib/adminNav";
 import { SITE_NAME } from "@/lib/utils";
+import { clearSessionGate } from "@/lib/sessionGate";
 
 const SIDEBAR_KEY = "admin-sidebar-open";
 
@@ -31,6 +32,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const logout = useMutation({
     mutationFn: () => api("/admin/auth/logout", { method: "POST" }),
     onSuccess: () => {
+      clearSessionGate("admin");
       qc.removeQueries({ queryKey: ["admin-me"] });
       qc.clear();
       router.replace("/admin/login");
@@ -38,7 +40,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (!isLogin && me.isError) router.replace("/admin/login");
+    if (!isLogin && me.isError) {
+      clearSessionGate("admin");
+      router.replace("/admin/login");
+    }
   }, [isLogin, me.isError, router]);
 
   useEffect(() => {

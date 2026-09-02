@@ -24,11 +24,13 @@ function FilmPane({
   muted,
   reduceMotion,
   fallbackImage,
+  eager,
 }: {
   video: CampaignHeroVideo;
   muted: boolean;
   reduceMotion: boolean;
   fallbackImage?: string;
+  eager?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const still = fallbackImage || video.poster;
@@ -63,7 +65,7 @@ function FilmPane({
           muted={muted}
           loop
           playsInline
-          preload="auto"
+          preload={eager ? "metadata" : "none"}
           poster={video.poster}
           aria-label={video.alt}
         >
@@ -123,6 +125,7 @@ export function CampaignHero({
               muted={muted}
               reduceMotion={reduceMotion}
               fallbackImage={i === 0 ? image : film.poster}
+              eager={i === 0}
             />
           ))}
         </div>

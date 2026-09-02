@@ -15,19 +15,21 @@ Legacy service `nexperts-api` is left unchanged.
 
 ## Frontend on Cloudflare
 
-Deployed Worker: **https://nexperts-store.quorentanalytics.workers.dev**
+Deployed Worker (Nexperts AI Cloudflare account): **https://nexperts-store.twilight-waterfall-5fc9.workers.dev**
 
-Local deploy (already logged in via Wrangler):
+Local deploy (Wrangler logged in as `info@nexpertsai.com`):
 
 ```
 cd frontend
 npm run deploy
 ```
 
+`npm run deploy` loads `frontend/.env.production` into the process env so it **overrides** `.env.local` (which keeps localhost for local `next dev`). Do not use `deploy:raw` for production unless those process env vars are already set.
+
 Env in `frontend/.env.production`:
 
 - `NEXT_PUBLIC_API_URL=https://nexperts-ecommerce-api.onrender.com/api/v1`
-- `NEXT_PUBLIC_SITE_URL=https://nexperts-store.quorentanalytics.workers.dev`
+- `NEXT_PUBLIC_SITE_URL=https://nexperts-store.twilight-waterfall-5fc9.workers.dev`
 
 Render `FRONTEND_URL` / `ADMIN_FRONTEND_URL` must match the store URL exactly.
 ## Database on TiDB Cloud

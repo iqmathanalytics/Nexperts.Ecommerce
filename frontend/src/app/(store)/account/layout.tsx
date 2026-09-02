@@ -16,8 +16,9 @@ import {
 import { api } from "@/lib/api";
 import type { User } from "@/lib/types";
 import { PageState, Spinner } from "@/components/ui/state";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { loginUrl } from "@/lib/auth";
+import { clearSessionGate } from "@/lib/sessionGate";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -40,14 +41,22 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const qc = useQueryClient();
-  const me = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User }>("/auth/me"), retry: false });
+  const me = useQuery({ queryKey: ["me"], queryFn: () => api<{ user: User | null }>("/auth/me"), retry: false });
   const logout = useMutation({
     mutationFn: () => api("/auth/logout", { method: "POST" }),
     onSuccess: () => {
+      clearSessionGate("customer");
       qc.clear();
       router.push("/");
     },
   });
+
+  const user = me.data?.data.user ?? null;
+  const signedOut = me.isError || (me.isSuccess && !user);
+
+  useEffect(() => {
+    if (signedOut) clearSessionGate("customer");
+  }, [signedOut]);
 
   if (me.isLoading)
     return (
@@ -55,7 +64,8 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         <Spinner />
       </div>
     );
-  if (me.isError)
+
+  if (signedOut || !user) {
     return (
       <PageState title="Please sign in">
         <Link href={loginUrl(path)} className="btn-store rounded-full bg-[#1c1915] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white hover:bg-[#2a2620]">
@@ -63,8 +73,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         </Link>
       </PageState>
     );
-
-  const user = me.data?.data.user;
+  }
 
   return (
     <div className="bg-background text-ink">

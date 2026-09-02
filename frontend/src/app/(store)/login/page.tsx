@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { Suspense, useState } from "react";
 import { safeNextPath } from "@/lib/auth";
+import { setSessionGate } from "@/lib/sessionGate";
 import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
 import { WOMEN_HERO } from "@/lib/editorial";
 
@@ -27,6 +28,7 @@ function LoginForm() {
   const login = useMutation({
     mutationFn: (body: z.infer<typeof schema>) => api("/auth/login", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: async () => {
+      setSessionGate("customer");
       const { readGuestCart, clearGuestCart } = await import("@/lib/guestCart");
       const guest = readGuestCart();
       if (guest.length) {

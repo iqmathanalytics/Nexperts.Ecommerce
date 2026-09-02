@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { Suspense, useState } from "react";
 import { safeNextPath } from "@/lib/auth";
+import { setSessionGate } from "@/lib/sessionGate";
 import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
 import { MEN_HERO } from "@/lib/editorial";
 
@@ -33,6 +34,7 @@ function RegisterForm() {
   const mutate = useMutation({
     mutationFn: (body: z.infer<typeof schema>) => api("/auth/register", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
+      setSessionGate("customer");
       qc.invalidateQueries({ queryKey: ["me"] });
       router.push(next);
     },

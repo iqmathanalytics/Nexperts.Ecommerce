@@ -30,7 +30,6 @@ export default async function MenHubPage() {
 
   return (
     <div className="bg-background text-ink">
-      <link rel="preload" as="image" href={MEN_HERO_VIDEO.poster} />
       <CampaignHero
         video={MEN_HERO_VIDEO}
         image={editorial.menHero}

@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Lock, Package, ShieldCheck, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { SESSION_GATES, setSessionGate } from "@/lib/sessionGate";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
@@ -29,29 +30,44 @@ export default function AdminLogin() {
   const router = useRouter();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [gateReady, setGateReady] = useState(false);
+  const [hasGate, setHasGate] = useState(false);
   const form = useForm<LoginBody>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } });
+
+  useEffect(() => {
+    setHasGate(document.cookie.includes(`${SESSION_GATES.admin}=`));
+    setGateReady(true);
+  }, []);
 
   const session = useQuery({
     queryKey: ["admin-me"],
     queryFn: () => api<{ user: User }>("/admin/auth/me"),
     retry: false,
+    enabled: gateReady && hasGate,
   });
 
   const login = useMutation({
     mutationFn: (body: LoginBody) =>
       api<{ user: User; permissions: string[] }>("/admin/auth/login", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: (res) => {
+      setSessionGate("admin");
       qc.setQueryData(["admin-me"], { data: { user: res.data.user } });
       router.replace("/admin");
     },
     onError: (e: Error) => setError(e.message || "Unable to sign in. Please try again."),
   });
 
-  useEffect(() => {
-    if (session.isSuccess && session.data.data.user) router.replace("/admin");
-  }, [router, session.data, session.isSuccess]);
+  const hasUser = Boolean(session.data?.data?.user);
 
-  if (session.isPending || session.isSuccess) {
+  useEffect(() => {
+    if (session.isSuccess && hasUser) {
+      setSessionGate("admin");
+      router.replace("/admin");
+    }
+  }, [router, session.isSuccess, hasUser]);
+
+  // Wait for gate cookie check; only spin when restoring an existing session or redirecting after login.
+  if (!gateReady || (hasGate && session.isPending) || (session.isSuccess && hasUser) || login.isSuccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" />
