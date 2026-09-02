@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
@@ -8,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CatalogInner } from "@/components/store/Catalog";
 import { ProductGrid } from "@/components/store/ProductCard";
+import { PageHero } from "@/components/store/PageHero";
 import { PageState, Spinner } from "@/components/ui/state";
 import { categoryHref, inferCategoryGender, shopGenderLabel } from "@/lib/shop";
 import type { ProductCard } from "@/lib/types";
@@ -42,66 +42,31 @@ function CategoryInner() {
 
   const category = cat.data.data;
   const childHref = (childSlug: string) => categoryHref(childSlug, gender);
+  const kicker = gender ? `${shopGenderLabel(gender)} · Clothing` : "Clothing category";
 
   return (
     <div className="bg-background text-ink">
-      {category.imageUrl ? (
-        <div className="relative min-h-[52svh] overflow-hidden bg-brand md:min-h-[62svh]">
-          <Image
-            src={category.imageUrl}
-            alt={category.name}
-            fill
-            priority
-            quality={70}
-            sizes="100vw"
-            className="object-cover object-top"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
-          <div className="absolute inset-x-0 bottom-0 mx-auto max-w-7xl px-4 pb-10 md:pb-14">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/70">
-              {gender ? `${shopGenderLabel(gender)} · Clothing` : "Clothing category"}
-            </p>
-            <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-white md:text-6xl">{category.name}</h1>
-            {category.description ? <p className="mt-3 max-w-2xl text-sm text-white/80">{category.description}</p> : null}
-            {category.children.length > 0 ? (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {category.children.map((child) => (
-                  <Link
-                    key={child.id}
-                    href={childHref(child.slug)}
-                    className="btn-store border border-white/70 bg-black/45 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white hover:bg-white hover:text-[#1c1915]"
-                  >
-                    {child.name}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
+      <PageHero
+        image={category.imageUrl}
+        kicker={kicker}
+        title={category.name}
+        subtitle={category.description}
+        focal={slug.includes("ethnic") || slug.includes("dress") ? "upper" : "center"}
+      >
+        {category.children.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {category.children.map((child) => (
+              <Link
+                key={child.id}
+                href={childHref(child.slug)}
+                className="btn-store border border-white/70 bg-black/45 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white hover:bg-white hover:text-[#1c1915]"
+              >
+                {child.name}
+              </Link>
+            ))}
           </div>
-        </div>
-      ) : (
-        <div className="border-b border-line bg-surface">
-          <div className="mx-auto max-w-7xl px-4 py-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
-              {gender ? `${shopGenderLabel(gender)} · Clothing` : "Clothing category"}
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">{category.name}</h1>
-            {category.description ? <p className="mt-3 max-w-2xl text-muted">{category.description}</p> : null}
-            {category.children.length > 0 ? (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {category.children.map((child) => (
-                  <Link
-                    key={child.id}
-                    href={childHref(child.slug)}
-                    className="rounded-md border border-line px-3 py-1.5 text-sm text-muted transition hover:border-ink hover:text-ink"
-                  >
-                    {child.name}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      )}
+        ) : null}
+      </PageHero>
       {gender ? (
         <CatalogInner forcedCategory={slug} forcedGender={gender} hideHeading />
       ) : (

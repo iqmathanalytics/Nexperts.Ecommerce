@@ -1,5 +1,5 @@
 import { pool } from "./index";
-import { CATALOG, CATEGORY_IMAGES, SIZES, px, u } from "./catalogData";
+import { CATALOG, CATEGORY_IMAGES, SIZES, heroU } from "./catalogData";
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -131,19 +131,19 @@ async function main() {
   }
 
   await tryQuery("UPDATE collections SET image_url = ? WHERE slug = ?", [
-    u("photo-1539008835657-9e8e9680c956"),
+    heroU("photo-1572804013427-4d7ca7268217"),
     "summer-linen-edit",
   ]);
   await tryQuery("UPDATE collections SET image_url = ? WHERE slug = ?", [
-    u("photo-1572804013309-59a88b7e92f1"),
+    heroU("photo-1610030469983-98e550d6193c"),
     "festive-glow",
   ]);
   await tryQuery("UPDATE lookbooks SET cover_image_url = ? WHERE slug = ?", [
-    px(31808831),
+    heroU("photo-1595777457583-95e059d581b8"),
     "petal-resort-2026",
   ]);
   await tryQuery("UPDATE brands SET hero_image_url = ? WHERE name = ?", [
-    u("photo-1595777457583-95e059d581b8"),
+    heroU("photo-1595777457583-95e059d581b8"),
     "Petal",
   ]);
   await tryQuery("DELETE FROM settings WHERE `key` = ?", ["storefront.editorial"]);

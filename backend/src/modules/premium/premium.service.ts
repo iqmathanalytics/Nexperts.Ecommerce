@@ -191,7 +191,7 @@ export async function seasonalCollection(season: string) {
       .limit(1);
     if (!col) {
       const fallback = await listProducts({ page: 1, limit: 24, sort: "newest", isNew: "true" });
-      return { name: `${season} edit`, description: `Curated ${season} pieces`, products: fallback.items };
+      return { name: `${season} edit`, description: `Curated ${season} pieces`, imageUrl: null, products: fallback.items };
     }
     const links = await db
       .select()
@@ -201,10 +201,10 @@ export async function seasonalCollection(season: string) {
     const all = await listProducts({ page: 1, limit: 48, sort: "newest" });
     const idSet = new Set(links.map((l) => l.productId));
     const productsList = idSet.size ? all.items.filter((p) => idSet.has(p.id)) : all.items;
-    return { name: col.name, description: col.description, products: productsList };
+    return { name: col.name, description: col.description, imageUrl: col.imageUrl ?? null, products: productsList };
   } catch {
     const fallback = await listProducts({ page: 1, limit: 24, sort: "newest" });
-    return { name: `${season} edit`, description: `Curated ${season} pieces`, products: fallback.items };
+    return { name: `${season} edit`, description: `Curated ${season} pieces`, imageUrl: null, products: fallback.items };
   }
 }
 

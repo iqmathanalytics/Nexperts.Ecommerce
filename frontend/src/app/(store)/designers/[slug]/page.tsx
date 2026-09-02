@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { ProductGrid } from "@/components/store/ProductCard";
+import { PageHero } from "@/components/store/PageHero";
 import { PageState, Skeleton } from "@/components/ui/state";
 import type { ProductCard } from "@/lib/types";
 
@@ -34,16 +35,13 @@ export default function DesignerPage() {
 
   return (
     <div>
-      <section className="relative flex min-h-[50vh] items-end bg-ink text-white">
-        {brand.heroImageUrl ? (
-          <Image src={brand.heroImageUrl} alt="" fill className="object-cover object-center opacity-90" sizes="100vw" priority />
-        ) : null}
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-16 md:px-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">Designer</p>
-          <h1 className="mt-3 font-display text-5xl font-semibold md:text-6xl">{brand.name}</h1>
-          <p className="mt-4 max-w-xl text-sm text-white/75">{brand.lookbookBio || brand.description}</p>
-        </div>
-      </section>
+      <PageHero
+        image={brand.heroImageUrl}
+        kicker="Designer"
+        title={brand.name}
+        subtitle={brand.lookbookBio || brand.description}
+        focal="center"
+      />
       <div className="mx-auto max-w-7xl px-4 py-14 md:px-6">
         <h2 className="font-display text-3xl font-semibold">Collection</h2>
         <div className="mt-8">

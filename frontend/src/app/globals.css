@@ -267,6 +267,26 @@ select {
   }
 }
 
+/* Full-bleed category / lookbook / designer heroes */
+.category-hero {
+  width: 100%;
+  min-height: clamp(28rem, 64svh, 44rem);
+  height: clamp(28rem, 64svh, 44rem);
+}
+.category-hero-media {
+  object-fit: cover;
+  object-position: center 36%;
+}
+@media (max-width: 767px) {
+  .category-hero {
+    min-height: clamp(24rem, 58svh, 34rem);
+    height: clamp(24rem, 58svh, 34rem);
+  }
+  .category-hero-media {
+    object-position: center 26%;
+  }
+}
+
 .font-display {
   font-family: var(--font-display), serif;
 }

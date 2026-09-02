@@ -47,28 +47,28 @@ export const DRESS_EDITS = [
     href: "/category/evening-dresses?gender=WOMEN",
     label: "Evening",
     title: "After dark",
-    image: px(31132239, 900),
+    image: u("photo-1566174053879-31528523f8ae", 900),
   },
   {
     href: "/category/maxi-dresses?gender=WOMEN",
     label: "Maxi",
     title: "Long line",
-    image: u("photo-1539008835657-9e8e9680c956", 900),
+    image: u("photo-1572804013427-4d7ca7268217", 900),
   },
   {
     href: "/category/casual-dresses?gender=WOMEN",
     label: "Day",
     title: "Everyday silk",
-    image: u("photo-1572804013309-59a88b7e92f1", 900),
+    image: u("photo-1515372039744-b8f02a3ae446", 900),
   },
 ];
 
 export const WOMEN_TILES = [
-  { href: "/category/dresses?gender=WOMEN", label: "Dresses", image: px(31808831, 800) },
-  { href: "/category/tops?gender=WOMEN", label: "Tops", image: px(1926769, 800) },
-  { href: "/category/bottoms?gender=WOMEN", label: "Trousers", image: px(6764007, 800) },
+  { href: "/category/dresses?gender=WOMEN", label: "Dresses", image: u("photo-1595777457583-95e059d581b8", 800) },
+  { href: "/category/tops?gender=WOMEN", label: "Tops", image: px(7679720, 800) },
+  { href: "/category/bottoms?gender=WOMEN", label: "Trousers", image: u("photo-1594633312681-425c7b97ccd1", 800) },
   { href: "/category/ethnic-wear?gender=WOMEN", label: "Heritage", image: u("photo-1610030469983-98e550d6193c", 800) },
-  { href: "/category/outerwear?gender=WOMEN", label: "Outerwear", image: px(3317434, 800) },
+  { href: "/category/outerwear?gender=WOMEN", label: "Outerwear", image: px(7671166, 800) },
 ];
 
 export const MEN_TILES = [

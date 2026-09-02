@@ -20,6 +20,7 @@ export const CLOTHING_BRANDS = [
 ];
 
 const portraitH = (w: number) => Math.round((w * 4) / 3);
+const heroH = (w: number) => Math.round((w * 9) / 16);
 
 /** Full-figure Unsplash model shots — 3:4 crop from the figure, not the face. */
 export const u = (id: string, w = 1200) =>
@@ -29,19 +30,27 @@ export const u = (id: string, w = 1200) =>
 export const px = (id: number, w = 1200) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=${w}&h=${portraitH(w)}`;
 
+/** Cinematic 16:9 heroes for category / campaign banners. */
+export const heroU = (id: string, w = 1800) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=entropy&w=${w}&h=${heroH(w)}&q=85`;
+
+export const heroPx = (id: number, w = 1800) =>
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=${w}&h=${heroH(w)}`;
+
+/** Topic-matched category heroes — landscape so full silhouettes fit the banner. */
 export const CATEGORY_IMAGES: Record<string, string> = {
-  Dresses: px(31808831),
-  "Casual Dresses": u("photo-1572804013309-59a88b7e92f1"),
-  "Evening Dresses": px(31132239),
-  "Party Dresses": px(985635),
-  "Maxi Dresses": u("photo-1539008835657-9e8e9680c956"),
-  "Midi Dresses": u("photo-1496747611176-843222e1e57c"),
-  "Mini Dresses": px(2043590),
-  Tops: px(1926769),
-  Bottoms: px(6764007),
-  "Ethnic Wear": u("photo-1610030469983-98e550d6193c"),
-  "Ethnic Dresses": u("photo-1583391733956-3750e0ff4e8b"),
-  Outerwear: px(3317434),
+  Dresses: heroU("photo-1595777457583-95e059d581b8"),
+  "Casual Dresses": heroU("photo-1515372039744-b8f02a3ae446"),
+  "Evening Dresses": heroU("photo-1566174053879-31528523f8ae"),
+  "Party Dresses": heroU("photo-1515886657613-9f3515b0c78f"),
+  "Maxi Dresses": heroU("photo-1572804013427-4d7ca7268217"),
+  "Midi Dresses": heroU("photo-1496747611176-843222e1e57c"),
+  "Mini Dresses": heroU("photo-1509631179647-0177331693ae"),
+  Tops: heroPx(7679720),
+  Bottoms: heroU("photo-1594633312681-425c7b97ccd1"),
+  "Ethnic Wear": heroU("photo-1610030469983-98e550d6193c"),
+  "Ethnic Dresses": heroU("photo-1583391733956-3750e0ff4e8b"),
+  Outerwear: heroPx(7671166),
 };
 
 export const CATALOG: Array<{

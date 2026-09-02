@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { ProductGrid } from "@/components/store/ProductCard";
+import { PageHero } from "@/components/store/PageHero";
 import { PageState, ProductCardSkeleton } from "@/components/ui/state";
 import type { ProductCard } from "@/lib/types";
 
@@ -12,7 +13,9 @@ export default function SeasonalCollectionPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["seasonal", season],
     queryFn: () =>
-      api<{ name: string; description: string | null; products: ProductCard[] }>(`/collections/seasonal/${season}`),
+      api<{ name: string; description: string | null; imageUrl?: string | null; products: ProductCard[] }>(
+        `/collections/seasonal/${season}`,
+      ),
   });
 
   if (isLoading) {
@@ -29,13 +32,19 @@ export default function SeasonalCollectionPage() {
 
   if (isError || !data?.data) return <PageState title="Collection not found" />;
 
+  const collection = data.data;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted">Seasonal</p>
-      <h1 className="mt-3 font-display text-4xl font-semibold capitalize md:text-6xl">{data.data.name || season}</h1>
-      {data.data.description ? <p className="mt-4 max-w-2xl text-sm text-muted">{data.data.description}</p> : null}
-      <div className="mt-12">
-        <ProductGrid products={data.data.products ?? []} />
+    <div className="bg-background text-ink">
+      <PageHero
+        image={collection.imageUrl}
+        kicker="Seasonal"
+        title={collection.name || String(season)}
+        subtitle={collection.description}
+        focal="upper"
+      />
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
+        <ProductGrid products={collection.products ?? []} />
       </div>
     </div>
   );
