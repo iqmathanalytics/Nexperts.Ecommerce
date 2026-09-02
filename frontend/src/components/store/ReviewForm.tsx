@@ -26,7 +26,14 @@ export function ReviewForm({ eligible, productId, onSuccess, onError }: ReviewFo
   const qc = useQueryClient();
   const defaultOrderId = eligible.length === 1 ? eligible[0]!.orderId : 0;
   const form = useForm({
-    defaultValues: { orderId: defaultOrderId, productId: productId ?? 0, rating: 5, title: "", comment: "" },
+    defaultValues: {
+      orderId: defaultOrderId,
+      productId: productId ?? 0,
+      rating: 5,
+      title: "",
+      comment: "",
+      fitFeedback: "TRUE" as "SMALL" | "TRUE" | "LARGE",
+    },
   });
   const selectedOrderId = Number(form.watch("orderId"));
   const orderItems = productId
@@ -39,13 +46,19 @@ export function ReviewForm({ eligible, productId, onSuccess, onError }: ReviewFo
   }, [eligible, form, productId]);
 
   const submit = useMutation({
-    mutationFn: (body: { productId: number; orderId: number; rating: number; title: string; comment: string }) =>
-      api("/reviews", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: {
+      productId: number;
+      orderId: number;
+      rating: number;
+      title: string;
+      comment: string;
+      fitFeedback?: "SMALL" | "TRUE" | "LARGE";
+    }) => api("/reviews", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-reviews"] });
       qc.invalidateQueries({ queryKey: ["review-eligible"] });
       qc.invalidateQueries({ queryKey: ["product"] });
-      form.reset({ orderId: 0, productId: productId ?? 0, rating: 5, title: "", comment: "" });
+      form.reset({ orderId: 0, productId: productId ?? 0, rating: 5, title: "", comment: "", fitFeedback: "TRUE" });
       onSuccess?.("Review submitted. It will appear after approval.");
     },
     onError: (e: Error) => onError?.(e.message),
@@ -75,6 +88,7 @@ export function ReviewForm({ eligible, productId, onSuccess, onError }: ReviewFo
           rating: Number(v.rating),
           title: v.title,
           comment: v.comment,
+          fitFeedback: v.fitFeedback,
         });
       })}
     >
@@ -116,6 +130,11 @@ export function ReviewForm({ eligible, productId, onSuccess, onError }: ReviewFo
             {n} stars
           </option>
         ))}
+      </Select>
+      <Select {...form.register("fitFeedback")}>
+        <option value="TRUE">True to size</option>
+        <option value="SMALL">Runs small</option>
+        <option value="LARGE">Runs large</option>
       </Select>
       <Input placeholder="Review title" {...form.register("title", { required: true, minLength: 3 })} />
       <Textarea placeholder="Share your experience (min 10 characters)" {...form.register("comment", { required: true, minLength: 10 })} />

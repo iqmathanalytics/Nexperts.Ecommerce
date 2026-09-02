@@ -15,7 +15,9 @@
     "db:migrate:prod": "node dist/db/migrate.js",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed:prod": "node dist/db/seed.js",
+    "db:ensure-admin": "tsx src/db/ensureAdmin.ts",
     "db:reset-catalog": "tsx src/db/resetCatalog.ts",
+    "db:refresh-media": "tsx src/db/refreshCatalogMedia.ts",
     "db:studio": "drizzle-kit studio",
     "test": "tsx --test src/**/*.test.ts"
   },

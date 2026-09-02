@@ -1,20 +1,55 @@
 @import "tailwindcss";
 
+/* Zara/H&M/Uniqlo-inspired: clean paper, black ink, sparse Nexperts accent */
 :root {
-  --background: #f6f7f9;
-  --foreground: #0f1419;
+  --background: #ffffff;
+  --foreground: #000000;
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --ink: #0f1419;
-  --muted: #3f4a57;
-  --line: #d0d5dd;
-  --brand: #f0b800;
-  --brand-deep: #d9a600;
-  --brand-soft: #fff4cc;
-  --brand-text: #7a5a00;
-  --link: #0f1419;
-  --accent: #f0b800;
-  --hero-veil: linear-gradient(180deg, rgba(15, 20, 25, 0.2) 0%, rgba(15, 20, 25, 0.45) 40%, rgba(15, 20, 25, 0.82) 100%);
+  --surface-muted: #f4f4f4;
+  --ink: #000000;
+  --muted: #737373;
+  --line: #e5e5e5;
+  --brand: #111111;
+  --brand-deep: #000000;
+  --brand-soft: #f5f5f5;
+  --brand-text: #111111;
+  --link: #000000;
+  --accent: #b8963e;
+  --success: #1f6b45;
+  --danger: #c41e3a;
+  --focus: rgba(0, 0, 0, 0.2);
+  --hero-veil: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.05) 0%,
+    rgba(0, 0, 0, 0.25) 50%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --surface: #111111;
+  --surface-raised: #171717;
+  --surface-muted: #1a1a1a;
+  --ink: #f5f5f5;
+  --muted: #a3a3a3;
+  --line: #2a2a2a;
+  --brand: #f5f5f5;
+  --brand-deep: #ffffff;
+  --brand-soft: #1a1a1a;
+  --brand-text: #f5f5f5;
+  --link: #f5f5f5;
+  --accent: #d4b56a;
+  --focus: rgba(245, 245, 245, 0.22);
+  --hero-veil: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.4) 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -22,6 +57,7 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-muted);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
@@ -30,43 +66,24 @@
   --color-brand-soft: var(--brand-soft);
   --color-brand-text: var(--brand-text);
   --color-link: var(--link);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
   --font-mono: var(--font-geist-mono);
 }
 
-@keyframes gold-sheen {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
-}
-
 .hero-wordmark {
-  background-image: linear-gradient(
-    105deg,
-    #8c6914 0%,
-    #e8c56a 18%,
-    #fff4cc 38%,
-    #c9a227 55%,
-    #f6e7b2 72%,
-    #d4af37 88%,
-    #9a7318 100%
-  );
-  background-size: 220% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 8px 28px rgba(212, 175, 55, 0.28));
-  animation: gold-sheen 7s ease-in-out infinite alternate;
+  font-family: var(--font-display), serif;
+  color: #fff;
+  letter-spacing: 0.12em;
 }
 
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(22px);
+    transform: translateY(18px);
   }
   to {
     opacity: 1;
@@ -79,27 +96,42 @@
     transform: scale(1.02);
   }
   to {
-    transform: scale(1.1);
+    transform: scale(1.08);
   }
 }
 
 @keyframes hero-kenburns-b {
   from {
-    transform: scale(1.1);
+    transform: scale(1.08);
   }
   to {
     transform: scale(1.02);
   }
 }
 
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .animate-hero-kenburns-a {
   transform-origin: center top;
-  animation: hero-kenburns-a 5s ease-out forwards;
+  animation: hero-kenburns-a 8s ease-out forwards;
 }
 
 .animate-hero-kenburns-b {
   transform-origin: center top;
-  animation: hero-kenburns-b 5s ease-out forwards;
+  animation: hero-kenburns-b 8s ease-out forwards;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-muted) 25%, #fafafa 50%, var(--surface-muted) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
 html {
@@ -111,6 +143,7 @@ body {
   background: var(--background);
   color: var(--ink);
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -126,28 +159,113 @@ select {
 
 ::placeholder {
   color: var(--muted);
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .animate-rise {
-  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-rise-delay-1 {
-  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 
 .animate-rise-delay-2 {
-  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
 }
 
 .animate-rise-delay-3 {
-  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
 }
 
 .animate-hero-media {
   transform-origin: center top;
-  animation: hero-kenburns-a 5s ease-out forwards;
+  animation: hero-kenburns-a 8s ease-out forwards;
+}
+
+.font-display {
+  font-family: var(--font-display), serif;
+}
+
+.nexperts-mark {
+  font-family: var(--font-display), serif;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+@keyframes marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-reverse {
+  animation: marquee-reverse 22s linear infinite;
+}
+
+@keyframes sale-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-sale-pulse {
+  animation: sale-pulse 1.8s ease-in-out infinite;
+}
+
+.offer-shimmer {
+  background: linear-gradient(110deg, transparent 20%, rgba(184, 150, 62, 0.35) 45%, transparent 70%);
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 3.2s ease-in-out infinite;
+}
+
+@keyframes card-shine {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
+.group:hover .card-shine {
+  animation: card-shine 0.85s ease;
+}
+
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -158,7 +276,11 @@ select {
   .animate-hero-media,
   .animate-hero-kenburns-a,
   .animate-hero-kenburns-b,
-  .hero-wordmark {
+  .skeleton,
+  .animate-marquee,
+  .animate-marquee-reverse,
+  .animate-sale-pulse,
+  .offer-shimmer {
     animation: none;
   }
 }

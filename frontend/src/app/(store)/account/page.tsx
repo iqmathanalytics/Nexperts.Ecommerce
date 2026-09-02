@@ -19,15 +19,19 @@ export default function AccountHome() {
     { href: "/account/orders", title: "Orders", text: `${orders.data?.data.length ?? 0} placed` },
     { href: "/account/wishlist", title: "Wishlist", text: `${wishlist.data?.data.items.length ?? 0} saved` },
     { href: "/account/reviews", title: "Reviews", text: `${reviews.data?.data.length ?? 0} submitted` },
+    { href: "/account/loyalty", title: "Loyalty", text: "Points and rewards" },
+    { href: "/outfits", title: "Outfits", text: "Saved mood boards" },
+    { href: "/style-quiz", title: "Style prefs", text: "Fit and style quiz" },
+    { href: "/referrals", title: "Referrals", text: "Give ₹20, get ₹20" },
   ];
 
   return (
     <div>
-      <h1 className="text-3xl font-semibold text-ink">Hello, {user?.firstName}</h1>
-      <p className="mt-2 text-muted">Manage your profile, password, addresses, orders, wishlist and reviews.</p>
+      <h1 className="font-display text-4xl font-semibold text-ink">Hello, {user?.firstName}</h1>
+      <p className="mt-2 text-muted">Manage profile, orders, loyalty, and style preferences.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {cards.map((c) => (
-          <Link key={c.href} href={c.href} className="rounded-xl border border-line bg-white p-5 text-ink hover:border-ink">
+          <Link key={c.href} href={c.href} className="border border-line bg-surface p-5 text-ink transition hover:border-ink">
             <p className="font-medium text-ink">{c.title}</p>
             <p className="mt-1 text-sm text-muted">{c.text}</p>
           </Link>

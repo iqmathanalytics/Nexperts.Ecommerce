@@ -1,25 +1,49 @@
 "use client";
 
-import { startTransition, useCallback, useMemo } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PageState, Spinner } from "@/components/ui/state";
+import { PageState, ProductCardSkeleton } from "@/components/ui/state";
 import type { CategoryNode, ProductCard } from "@/lib/types";
 
-function visiblePages(current: number, total: number) {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const set = new Set([1, total, current, current - 1, current + 1, current - 2, current + 2]);
-  return [...set].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-b border-line py-4">
+      <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpen((v) => !v)}>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink">{title}</span>
+        <ChevronDown className={`h-4 w-4 text-muted transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-3">{children}</div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?: string; hideHeading?: boolean }) {
   const params = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const [accum, setAccum] = useState<ProductCard[]>([]);
+
+  const currentPage = Number(params.get("page") ?? 1);
 
   const apiQuery = useMemo(() => {
     const q = new URLSearchParams(params.toString());
@@ -27,12 +51,19 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
     return q;
   }, [params, forcedCategory]);
 
+  const filterKey = useMemo(() => {
+    const q = new URLSearchParams(apiQuery.toString());
+    q.delete("page");
+    return q.toString();
+  }, [apiQuery]);
+
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ["products", pathname, apiQuery.toString()],
     queryFn: () => api<ProductCard[]>(`/products?${apiQuery.toString()}`),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
+
   const cats = useQuery({
     queryKey: ["categories"],
     queryFn: () => api<CategoryNode[]>("/categories"),
@@ -43,6 +74,19 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
     queryFn: () => api<Array<{ name: string; slug: string }>>("/brands"),
     staleTime: 10 * 60_000,
   });
+
+  // Reset accumulation when filters change
+  useEffect(() => {
+    setAccum([]);
+  }, [filterKey]);
+
+  const products = useMemo(() => {
+    const pageItems = data?.data ?? [];
+    if (currentPage === 1) return pageItems;
+    const map = new Map<number, ProductCard>();
+    [...accum, ...pageItems].forEach((p) => map.set(p.id, p));
+    return [...map.values()];
+  }, [data?.data, accum, currentPage]);
 
   const pushParams = useCallback(
     (update: (next: URLSearchParams) => void) => {
@@ -73,8 +117,13 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
     });
   }
 
+  function loadMore() {
+    const nextPage = currentPage + 1;
+    setAccum(products);
+    setFilter("page", String(nextPage));
+  }
+
   const meta = data?.meta;
-  const currentPage = Number(params.get("page") ?? 1);
   const categoryValue = params.get("category") ?? forcedCategory ?? "";
   const flatCats = (cats.data?.data ?? []).flatMap((c) => [
     { ...c, label: c.name },
@@ -91,18 +140,19 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
       params.get("inStock") ||
       (params.get("sort") && params.get("sort") !== "relevance"),
   );
+  const brandColors = ["#1a1a1a", "#8b7355", "#c4a35a", "#5c6b4a", "#6b4c3b", "#2c3e50"];
 
   return (
     <div className="bg-background text-ink">
       {!hideHeading ? (
         <section className="border-b border-line bg-surface">
-          <div className="mx-auto max-w-7xl px-4 py-10 md:py-14">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ink/70">Clothing</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-ink md:text-5xl">
-              {pathname === "/search" ? "Search clothing" : "Shop clothing"}
+          <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted">Clothing</p>
+            <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink md:text-6xl">
+              {pathname === "/search" ? "Search" : "Shop"}
             </h1>
             <p className="mt-3 max-w-xl text-sm text-muted md:text-base">
-              Filter by category, brand, size availability, and price — then bag your look.
+              Filter by category, brand, and price — then bag your look.
             </p>
           </div>
         </section>
@@ -110,12 +160,12 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
 
       {!forcedCategory && (cats.data?.data?.length ?? 0) > 0 ? (
         <div className="border-b border-line bg-surface">
-          <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-4">
+          <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-4 md:px-6">
             <button
               type="button"
               onClick={() => setFilter("category", "")}
-              className={`shrink-0 rounded-md border px-3 py-2 text-sm transition ${
-                !categoryValue ? "border-ink bg-ink text-white font-semibold" : "border-line text-muted hover:border-ink hover:text-ink"
+              className={`shrink-0 border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                !categoryValue ? "border-ink bg-ink text-white" : "border-line text-muted hover:border-ink hover:text-ink"
               }`}
             >
               All
@@ -125,10 +175,8 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
                 key={c.id}
                 type="button"
                 onClick={() => setFilter("category", c.slug)}
-                className={`shrink-0 rounded-md border px-3 py-2 text-sm transition ${
-                  categoryValue === c.slug
-                    ? "border-ink bg-ink text-white font-semibold"
-                    : "border-line text-muted hover:border-ink hover:text-ink"
+                className={`shrink-0 border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                  categoryValue === c.slug ? "border-ink bg-ink text-white" : "border-line text-muted hover:border-ink hover:text-ink"
                 }`}
               >
                 {c.name}
@@ -138,18 +186,18 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[260px_1fr]">
-        <aside className="space-y-4 rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-center justify-between">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-8 md:px-6 lg:grid-cols-[240px_1fr]">
+        <aside className="h-fit lg:sticky lg:top-24">
+          <div className="flex items-center justify-between pb-2">
             <p className="text-sm font-semibold">Filters</p>
             {hasFilters ? (
-              <button type="button" onClick={clearFilters} className="text-xs font-semibold text-ink underline-offset-2 hover:underline">
-                Clear all
+              <button type="button" onClick={clearFilters} className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted underline-offset-2 hover:underline">
+                Clear
               </button>
             ) : null}
           </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Search</p>
+
+          <FilterSection title="Search">
             <Input
               key={`q-${params.get("q") ?? ""}`}
               defaultValue={params.get("q") ?? ""}
@@ -159,88 +207,95 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
               }}
               onBlur={(e) => setFilter("q", e.target.value)}
             />
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Category</p>
-            <Select value={categoryValue} onChange={(e) => setFilter("category", e.target.value)} disabled={Boolean(forcedCategory)}>
-              <option value="">All</option>
-              {flatCats.map((c) => (
-                <option key={c.id} value={c.slug}>
-                  {c.label}
-                </option>
+          </FilterSection>
+
+          {!forcedCategory ? (
+            <FilterSection title="Category">
+              <Select value={categoryValue} onChange={(e) => setFilter("category", e.target.value)}>
+                <option value="">All</option>
+                {flatCats.map((c) => (
+                  <option key={c.id} value={c.slug}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
+            </FilterSection>
+          ) : null}
+
+          <FilterSection title="Brand">
+            <div className="flex flex-wrap gap-2">
+              {(brands.data?.data ?? []).map((b, i) => {
+                const active = params.get("brand") === b.slug;
+                return (
+                  <button
+                    key={b.slug}
+                    type="button"
+                    onClick={() => setFilter("brand", active ? "" : b.slug)}
+                    className={`inline-flex items-center gap-2 border px-2.5 py-1.5 text-xs transition ${
+                      active ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
+                    }`}
+                  >
+                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: brandColors[i % brandColors.length] }} />
+                    {b.name}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+
+          <FilterSection title="Gender">
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["", "All"],
+                ["WOMEN", "Women"],
+                ["MEN", "Men"],
+                ["UNISEX", "Unisex"],
+              ].map(([v, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setFilter("gender", v)}
+                  className={`border px-3 py-1.5 text-xs transition ${
+                    (params.get("gender") ?? "") === v ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
+                  }`}
+                >
+                  {label}
+                </button>
               ))}
-            </Select>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Gender</p>
-            <Select value={params.get("gender") ?? ""} onChange={(e) => setFilter("gender", e.target.value)}>
-              <option value="">All</option>
-              <option value="MEN">Men</option>
-              <option value="WOMEN">Women</option>
-              <option value="UNISEX">Unisex</option>
-            </Select>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Brand</p>
-            <Select value={params.get("brand") ?? ""} onChange={(e) => setFilter("brand", e.target.value)}>
-              <option value="">All</option>
-              {(brands.data?.data ?? []).map((b) => (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              key={`min-${params.get("minPrice") ?? ""}`}
-              type="number"
-              placeholder="Min ₹"
-              defaultValue={params.get("minPrice") ?? ""}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setFilter("minPrice", e.currentTarget.value);
-              }}
-              onBlur={(e) => setFilter("minPrice", e.target.value)}
-            />
-            <Input
-              key={`max-${params.get("maxPrice") ?? ""}`}
-              type="number"
-              placeholder="Max ₹"
-              defaultValue={params.get("maxPrice") ?? ""}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setFilter("maxPrice", e.currentTarget.value);
-              }}
-              onBlur={(e) => setFilter("maxPrice", e.target.value)}
-            />
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Rating</p>
-            <Select value={params.get("minRating") ?? ""} onChange={(e) => setFilter("minRating", e.target.value)}>
-              <option value="">Any</option>
-              <option value="4">4+</option>
-              <option value="3">3+</option>
-            </Select>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Availability</p>
+            </div>
+          </FilterSection>
+
+          <FilterSection title="Price" defaultOpen={false}>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                key={`min-${params.get("minPrice") ?? ""}`}
+                type="number"
+                placeholder="Min ₹"
+                defaultValue={params.get("minPrice") ?? ""}
+                onBlur={(e) => setFilter("minPrice", e.target.value)}
+              />
+              <Input
+                key={`max-${params.get("maxPrice") ?? ""}`}
+                type="number"
+                placeholder="Max ₹"
+                defaultValue={params.get("maxPrice") ?? ""}
+                onBlur={(e) => setFilter("maxPrice", e.target.value)}
+              />
+            </div>
+          </FilterSection>
+
+          <FilterSection title="Availability" defaultOpen={false}>
             <Select value={params.get("inStock") ?? ""} onChange={(e) => setFilter("inStock", e.target.value)}>
               <option value="">All</option>
               <option value="true">In stock</option>
               <option value="false">Out of stock</option>
             </Select>
-          </div>
-          <Button type="button" variant="outline" className="w-full" onClick={clearFilters}>
-            Reset filters
-          </Button>
+          </FilterSection>
         </aside>
 
         <div>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            {hideHeading ? (
-              <p className="text-sm text-muted">Filter and sort this collection</p>
-            ) : (
-              <p className="text-sm text-muted">{meta ? `${meta.total} products` : "Loading catalog…"}</p>
-            )}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">{meta ? `${meta.total} pieces` : "Loading…"}</p>
             <Select value={params.get("sort") ?? "relevance"} onChange={(e) => setFilter("sort", e.target.value)} className="w-52">
               <option value="relevance">Relevance</option>
               <option value="newest">Newest</option>
@@ -251,34 +306,23 @@ export function CatalogInner({ forcedCategory, hideHeading }: { forcedCategory?:
               <option value="discount">Discount</option>
             </Select>
           </div>
-          <div className={isFetching && !isLoading ? "opacity-70 transition-opacity" : "transition-opacity"}>
+
+          <div className={isFetching && !isLoading ? "opacity-70 transition-opacity" : ""}>
             {isLoading ? (
-              <div className="flex justify-center py-20">
-                <Spinner />
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
               </div>
             ) : null}
             {isError ? <PageState title="Could not load products" /> : null}
-            {data ? <ProductGrid products={data.data} /> : null}
-            {meta && meta.totalPages > 1 ? (
-              <div className="mt-8 flex justify-center gap-2">
-                {visiblePages(currentPage, meta.totalPages).map((p, idx, arr) => {
-                  const prev = arr[idx - 1];
-                  const showGap = prev != null && p - prev > 1;
-                  return (
-                    <span key={p} className="flex items-center gap-2">
-                      {showGap ? <span className="px-1 text-muted">…</span> : null}
-                      <button
-                        type="button"
-                        onClick={() => setFilter("page", String(p))}
-                        className={`h-9 w-9 rounded-md text-sm font-semibold ${
-                          currentPage === p ? "bg-ink text-white" : "border border-line bg-surface text-ink"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    </span>
-                  );
-                })}
+            {!isLoading && !isError ? <ProductGrid products={products} /> : null}
+
+            {meta && currentPage < meta.totalPages ? (
+              <div className="mt-12 flex justify-center">
+                <Button variant="outline" onClick={loadMore} disabled={isFetching}>
+                  {isFetching ? "Loading…" : "Load more"}
+                </Button>
               </div>
             ) : null}
           </div>

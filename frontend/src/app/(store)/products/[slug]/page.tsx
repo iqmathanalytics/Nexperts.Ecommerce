@@ -1,19 +1,33 @@
 "use client";
 
+import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Heart } from "lucide-react";
-import { api } from "@/lib/api";
+import { motion } from "framer-motion";
+import { api, ApiRequestError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { PageState, Spinner, Toast } from "@/components/ui/state";
+import {
+  Breadcrumbs,
+  FitFeedbackChip,
+  PageState,
+  ProductCardSkeleton,
+  QuantitySpinner,
+  Skeleton,
+  StarRating,
+} from "@/components/ui/state";
+import { ProductGallery } from "@/components/store/ProductGallery";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { ReviewForm, type ReviewEligible } from "@/components/store/ReviewForm";
+import { SizeGuideModal } from "@/components/store/SizeGuideModal";
+import { ScarcityBanner } from "@/components/store/ScarcityBanner";
 import { formatINR } from "@/lib/utils";
 import type { ProductCard } from "@/lib/types";
 import { useSession } from "@/hooks/useSession";
 import { loginUrl } from "@/lib/auth";
-import { ApiRequestError } from "@/lib/api";
+import { useToast } from "@/components/ui/toast";
+import { useStoreUi } from "@/components/store/StoreUiContext";
 
 type Variant = {
   id: number;
@@ -43,7 +57,15 @@ type Product = {
   variants: Variant[];
   rating: number;
   reviewCount: number;
-  reviews: Array<{ id: number; rating: number; title: string; comment: string; firstName: string; createdAt: string }>;
+  reviews: Array<{
+    id: number;
+    rating: number;
+    title: string;
+    comment: string;
+    firstName: string;
+    createdAt: string;
+    fitFeedback?: string | null;
+  }>;
   related: ProductCard[];
 };
 
@@ -51,15 +73,49 @@ export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const { push } = useToast();
+  const { openMiniCart, pulseCart } = useStoreUi();
   const { isAuthenticated } = useSession();
   const [qty, setQty] = useState(1);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [variantId, setVariantId] = useState<number | null>(null);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["product", slug],
     queryFn: () => api<Product>(`/products/${slug}`),
   });
   const product = data?.data;
+
+  const fit = useQuery({
+    queryKey: ["fit", product?.id],
+    queryFn: () =>
+      api<{ small: number; true: number; large: number; label: string }>(`/products/${product!.id}/fit-data`).catch(() => ({
+        data: { small: 0, true: 0, large: 0, label: "True to size" },
+      })),
+    enabled: Boolean(product?.id),
+    retry: false,
+  });
+
+  const presence = useQuery({
+    queryKey: ["presence", product?.id],
+    queryFn: async () => {
+      await api(`/products/${product!.id}/presence`, { method: "POST", body: "{}" }).catch(() => null);
+      return api<{ viewers: number }>(`/products/${product!.id}/presence`).catch(() => ({ data: { viewers: 0 } }));
+    },
+    enabled: Boolean(product?.id),
+    retry: false,
+    refetchInterval: 30_000,
+  });
+
+  const ugc = useQuery({
+    queryKey: ["ugc", product?.id],
+    queryFn: () =>
+      api<Array<{ id: number; imageUrl: string; caption: string | null }>>(`/products/${product!.id}/ugc`).catch(() => ({ data: [] })),
+    enabled: Boolean(product?.id),
+    retry: false,
+  });
+
   const eligible = useQuery({
     queryKey: ["review-eligible", product?.id],
     queryFn: () => api<ReviewEligible[]>(`/reviews/eligible?productId=${product!.id}`),
@@ -71,34 +127,38 @@ export default function ProductPage() {
     enabled: isAuthenticated,
     retry: false,
   });
-  const [variantId, setVariantId] = useState<number | null>(null);
-  const [activeImageId, setActiveImageId] = useState<number | null>(null);
+
   const variant = useMemo(() => {
     if (!product) return null;
     return product.variants.find((v) => v.id === (variantId ?? product.variants.find((x) => x.isDefault)?.id)) ?? product.variants[0];
   }, [product, variantId]);
-  const image =
-    product?.images.find((i) => i.id === activeImageId) ??
-    product?.images.find((i) => i.variantId === variant?.id) ??
-    product?.images.find((i) => i.isPrimary) ??
-    product?.images[0];
+
   const wishItem = useMemo(
     () => (product ? (wishlist.data?.data.items ?? []).find((item) => item.productId === product.id) : undefined),
     [product, wishlist.data?.data.items],
   );
-  const isWishlisted = Boolean(wishItem);
+
+  useEffect(() => {
+    setQty(1);
+  }, [variant?.id]);
 
   const addCart = useMutation({
     mutationFn: () => api("/cart/items", { method: "POST", body: JSON.stringify({ variantId: variant!.id, quantity: qty }) }),
-    onSuccess: () => { setMsg("Added to cart"); setErr(null); qc.invalidateQueries({ queryKey: ["cart"] }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cart"] });
+      push("Added to bag");
+      pulseCart();
+      openMiniCart();
+    },
     onError: (e: Error) => {
       if (e instanceof ApiRequestError && e.status === 401) {
         router.push(loginUrl(`/products/${slug}`));
         return;
       }
-      setErr(e.message);
+      push(e.message, "error");
     },
   });
+
   const wish = useMutation({
     mutationFn: async () => {
       if (wishItem) {
@@ -109,8 +169,7 @@ export default function ProductPage() {
       return "saved" as const;
     },
     onSuccess: (action) => {
-      setMsg(action === "removed" ? "Removed from wishlist" : "Saved to wishlist");
-      setErr(null);
+      push(action === "removed" ? "Removed from wishlist" : "Saved to wishlist");
       qc.invalidateQueries({ queryKey: ["wishlist"] });
     },
     onError: (e: Error) => {
@@ -118,8 +177,18 @@ export default function ProductPage() {
         router.push(loginUrl(`/products/${slug}`));
         return;
       }
-      setErr(e.message);
+      push(e.message, "error");
     },
+  });
+
+  const waitlist = useMutation({
+    mutationFn: () =>
+      api("/waitlist", {
+        method: "POST",
+        body: JSON.stringify({ variantId: variant!.id, email: waitlistEmail }),
+      }),
+    onSuccess: () => push("We'll email you when it's back"),
+    onError: (e: Error) => push(e.message, "error"),
   });
 
   function requireSignIn() {
@@ -128,112 +197,125 @@ export default function ProductPage() {
     return false;
   }
 
-  if (isLoading) return <div className="flex justify-center py-24"><Spinner /></div>;
+  if (isLoading) {
+    return (
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 md:grid-cols-2 md:px-6">
+        <Skeleton className="aspect-[3/4] w-full" />
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-10 w-3/4" />
+          <Skeleton className="h-6 w-1/3" />
+          <ProductCardSkeleton />
+        </div>
+      </div>
+    );
+  }
   if (isError || !product || !variant) return <PageState title="Product not found" />;
 
+  const viewers = presence.data?.data?.viewers ?? 0;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 text-ink">
-      {msg ? <div className="mb-4"><Toast message={msg} /></div> : null}
-      {err ? <div className="mb-4"><Toast message={err} tone="error" /></div> : null}
-      <div className="grid gap-10 md:grid-cols-2 md:gap-14">
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-2xl bg-[#f0eee9]">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image.url}
-                alt={product.name}
-                className="aspect-[3/4] w-full object-cover object-[center_top]"
-              />
-            ) : (
-              <div className="aspect-[3/4]" />
-            )}
-          </div>
-          {product.images.length > 1 ? (
-            <div className="flex gap-2 overflow-x-auto">
-              {product.images.map((img) => (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() => setActiveImageId(img.id)}
-                  className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-lg border transition ${
-                    image?.id === img.id ? "border-ink" : "border-line opacity-80 hover:opacity-100"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt="" className="h-full w-full object-cover object-[center_top]" />
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div>
+    <div className="mx-auto max-w-7xl px-4 py-8 text-ink md:px-6">
+      <Breadcrumbs
+        items={[
+          { label: "Shop", href: "/products" },
+          ...(product.brand ? [{ label: product.brand.name, href: `/designers/${product.brand.slug}` }] : []),
+          { label: product.name },
+        ]}
+      />
+
+      <div className="mt-8 grid items-start gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16">
+        <ProductGallery images={product.images} name={product.name} />
+
+        <div className="lg:sticky lg:top-28">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
             {product.brand?.name}
             {product.gender ? ` · ${product.gender === "UNISEX" ? "Unisex" : product.gender === "MEN" ? "Men" : "Women"}` : ""}
           </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink md:text-4xl">{product.name}</h1>
-          <p className="mt-2 text-sm text-muted">
-            SKU {variant.sku}
-            {product.reviewCount > 0 ? ` · ${product.rating.toFixed(1)} ★ (${product.reviewCount} reviews)` : " · New arrival"}
-          </p>
+          <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight md:text-5xl">{product.name}</h1>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {product.reviewCount > 0 ? (
+              <>
+                <StarRating value={product.rating} />
+                <span className="text-sm text-muted">
+                  {product.rating.toFixed(1)} · {product.reviewCount} reviews
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-muted">New arrival</span>
+            )}
+            {fit.data?.data?.label ? <FitFeedbackChip fit={fit.data.data.label.includes("small") ? "SMALL" : fit.data.data.label.includes("large") ? "LARGE" : "TRUE"} /> : null}
+          </div>
+
+          {viewers > 0 ? <p className="mt-3 text-xs text-muted">{viewers} people are looking at this</p> : null}
+
           <div className="mt-5 flex items-baseline gap-3">
-            <span className="text-3xl font-semibold tracking-tight text-ink">{formatINR(variant.price)}</span>
+            <span className="text-3xl font-semibold tracking-tight">{formatINR(variant.price)}</span>
             {variant.mrp > variant.price ? <span className="text-muted line-through">{formatINR(variant.mrp)}</span> : null}
             {variant.discountPercent > 0 ? (
-              <span className="rounded-sm bg-brand-soft px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">
+              <span className="bg-brand-soft px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-brand-text">
                 {variant.discountPercent}% off
               </span>
             ) : null}
           </div>
+
           <p className="mt-6 text-sm leading-7 text-muted">{product.description}</p>
+
+          {variant.inStock && variant.available <= 5 ? <ScarcityBanner available={variant.available} className="mt-5" /> : null}
+
           <div className="mt-6 space-y-2">
-            <p className="text-sm font-medium">Size</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Size</p>
+              <button type="button" onClick={() => setSizeOpen(true)} className="text-[11px] font-semibold uppercase tracking-[0.14em] underline-offset-4 hover:underline">
+                Size guide
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {product.variants.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setVariantId(v.id)}
-                  className={`rounded-md border px-3 py-1.5 text-sm transition ${
-                    v.id === variant.id ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
-                  }`}
-                >
-                  {v.name}
-                </button>
-              ))}
+              {product.variants.map((v) => {
+                const sizeLabel = v.attributes?.size ?? v.attributes?.Size ?? v.name;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    disabled={!v.inStock}
+                    onClick={() => setVariantId(v.id)}
+                    className={`min-w-14 border px-3 py-2 text-sm transition ${
+                      v.id === variant.id ? "border-ink bg-ink text-white" : "border-line hover:border-ink disabled:opacity-40"
+                    }`}
+                  >
+                    {sizeLabel}
+                    <span className="mt-0.5 block text-[10px] opacity-70">{v.inStock ? `${v.available}` : "—"}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-          <p className={`mt-4 text-sm ${variant.inStock ? "text-emerald-700" : "text-red-600"}`}>
-            {variant.inStock ? `${variant.available} in stock` : "Out of stock"}
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div className="flex items-center rounded-md border border-line">
-              <button
-                type="button"
-                className="px-3 py-2 disabled:opacity-40"
-                disabled={qty <= 1}
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                aria-label="Decrease quantity"
-              >
-                -
-              </button>
-              <span className="w-8 text-center">{qty}</span>
-              <button
-                type="button"
-                className="px-3 py-2 disabled:opacity-40"
-                disabled={!variant.inStock || qty >= variant.available}
-                onClick={() => setQty((q) => Math.min(variant.available, q + 1))}
-                aria-label="Increase quantity"
-              >
-                +
-              </button>
+
+          {!variant.inStock ? (
+            <div className="mt-6 border border-line bg-surface p-4">
+              <p className="text-sm font-medium">Join the waitlist</p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={waitlistEmail}
+                  onChange={(e) => setWaitlistEmail(e.target.value)}
+                  placeholder="Email"
+                  className="h-11 flex-1 border border-line bg-background px-3 text-sm outline-none focus:border-ink"
+                />
+                <Button disabled={!waitlistEmail || waitlist.isPending} onClick={() => waitlist.mutate()}>
+                  Notify me
+                </Button>
+              </div>
             </div>
-            <Button disabled={!variant.inStock || addCart.isPending} onClick={() => requireSignIn() && addCart.mutate()}>
-              {addCart.isPending ? "Adding…" : "Add to cart"}
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <QuantitySpinner value={qty} max={Math.max(1, variant.available)} onChange={setQty} />
+            <Button className="min-w-40" disabled={!variant.inStock || addCart.isPending} onClick={() => requireSignIn() && addCart.mutate()}>
+              {addCart.isPending ? "Adding…" : "Add to bag"}
             </Button>
             <Button
-              variant="secondary"
+              variant="brand"
               disabled={!variant.inStock || addCart.isPending}
               onClick={() => {
                 if (!requireSignIn()) return;
@@ -242,75 +324,129 @@ export default function ProductPage() {
             >
               Buy now
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={wish.isPending}
-              onClick={() => requireSignIn() && wish.mutate()}
-              aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-              title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-            >
-              <Heart className={`h-5 w-5 ${isWishlisted ? "fill-ink text-ink" : ""}`} />
-            </Button>
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={wish.isPending}
+                onClick={() => requireSignIn() && wish.mutate()}
+                aria-label={wishItem ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <Heart className={`h-5 w-5 ${wishItem ? "fill-ink text-ink" : ""}`} />
+              </Button>
+            </motion.div>
+          </div>
+
+          <div className="mt-10 divide-y divide-line border-y border-line">
+            <details className="group open:bg-transparent" open>
+              <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
+                Composition & care
+              </summary>
+              <dl className="space-y-2 pb-5 text-sm">
+                {Object.entries(product.specifications ?? {})
+                  .filter(([k]) => !["Styling", "Model"].includes(k))
+                  .map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-6">
+                      <dt className="text-muted">{k}</dt>
+                      <dd className="max-w-[60%] text-right">{v}</dd>
+                    </div>
+                  ))}
+                {!Object.keys(product.specifications ?? {}).length ? (
+                  <p className="text-muted">See product label for fabric details.</p>
+                ) : null}
+              </dl>
+            </details>
+            {product.specifications?.Styling ? (
+              <details>
+                <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
+                  How to wear
+                </summary>
+                <p className="pb-5 text-sm leading-7 text-muted">{product.specifications.Styling}</p>
+              </details>
+            ) : null}
+            {product.specifications?.Model ? (
+              <details>
+                <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
+                  Fit & model
+                </summary>
+                <p className="pb-5 text-sm leading-7 text-muted">{product.specifications.Model}. Use the size guide for body measurements.</p>
+              </details>
+            ) : null}
+            <details>
+              <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
+                Shipping
+              </summary>
+              <p className="pb-5 text-sm leading-7 text-muted">{product.shippingInfo ?? "2–5 business days across India."}</p>
+            </details>
+            <details>
+              <summary className="cursor-pointer list-none py-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
+                Returns
+              </summary>
+              <p className="pb-5 text-sm leading-7 text-muted">{product.returnInfo ?? "7-day returns on unused items with tags."}</p>
+            </details>
           </div>
         </div>
       </div>
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
-        <div className="rounded-xl border border-line bg-white p-5">
-          <h2 className="font-semibold text-ink">Specifications</h2>
-          <dl className="mt-3 space-y-1 text-sm">
-            {Object.entries(product.specifications ?? {}).map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-4"><dt className="text-muted">{k}</dt><dd className="text-ink">{v}</dd></div>
-            ))}
-          </dl>
-        </div>
-        <div className="rounded-xl border border-line bg-white p-5">
-          <h2 className="font-semibold text-ink">Shipping</h2>
-          <p className="mt-3 text-sm text-muted">{product.shippingInfo}</p>
-        </div>
-        <div className="rounded-xl border border-line bg-white p-5">
-          <h2 className="font-semibold text-ink">Returns</h2>
-          <p className="mt-3 text-sm text-muted">{product.returnInfo}</p>
-        </div>
-      </div>
-      <section className="mt-12">
-        <h2 className="mb-4 text-2xl font-semibold text-ink">Reviews</h2>
-        {isAuthenticated && (eligible.data?.data?.length ?? 0) > 0 ? (
-          <div className="mb-8">
-            <h3 className="mb-3 text-sm font-medium text-ink">Write a review</h3>
-            <ReviewForm
-              eligible={eligible.data!.data}
-              productId={product.id}
-              onSuccess={(m) => { setMsg(m); setErr(null); eligible.refetch(); qc.invalidateQueries({ queryKey: ["product", slug] }); }}
-              onError={setErr}
-            />
-          </div>
-        ) : isAuthenticated ? (
-          <p className="mb-6 text-sm text-muted">You can review this product after it is delivered from your order.</p>
-        ) : (
-          <p className="mb-6 text-sm text-muted">
-            <button type="button" className="text-ink font-semibold hover:underline" onClick={() => router.push(loginUrl(`/products/${slug}`))}>
-              Sign in
-            </button>{" "}
-            to review products you purchased.
-          </p>
-        )}
-        {product.reviews.length === 0 ? <p className="text-sm text-muted">No reviews yet.</p> : (
-          <div className="space-y-3">
-            {product.reviews.map((r) => (
-              <div key={r.id} className="rounded-xl border border-line bg-white p-4">
-                <p className="font-medium">{r.title} · {r.rating}/5</p>
-                <p className="mt-1 text-sm text-muted">{r.comment}</p>
-                <p className="mt-2 text-xs text-muted">{r.firstName}</p>
+
+      {(ugc.data?.data?.length ?? 0) > 0 ? (
+        <section className="mt-16">
+          <h2 className="font-display text-3xl font-semibold">Worn by you</h2>
+          <div className="mt-6 flex gap-3 overflow-x-auto">
+            {ugc.data!.data.map((u) => (
+              <div key={u.id} className="relative h-48 w-36 shrink-0 overflow-hidden bg-surface-muted">
+                <Image src={u.imageUrl} alt={u.caption ?? ""} fill className="object-cover" sizes="144px" />
               </div>
             ))}
           </div>
-        )}
+        </section>
+      ) : null}
+
+      <section className="mt-16">
+        <h2 className="font-display text-3xl font-semibold">Reviews</h2>
+        {isAuthenticated && (eligible.data?.data?.length ?? 0) > 0 ? (
+          <div className="mt-6 max-w-xl">
+            <ReviewForm
+              eligible={eligible.data!.data}
+              productId={product.id}
+              onSuccess={(m) => {
+                push(m);
+                eligible.refetch();
+                qc.invalidateQueries({ queryKey: ["product", slug] });
+              }}
+              onError={(m) => push(m, "error")}
+            />
+          </div>
+        ) : null}
+        <div className="mt-8 space-y-3">
+          {product.reviews.length === 0 ? (
+            <p className="text-sm text-muted">No reviews yet.</p>
+          ) : (
+            product.reviews.map((r) => (
+              <div key={r.id} className="border border-line bg-surface p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StarRating value={r.rating} />
+                  {r.fitFeedback ? <FitFeedbackChip fit={r.fitFeedback} /> : null}
+                </div>
+                <p className="mt-3 font-medium">{r.title}</p>
+                <p className="mt-1 text-sm text-muted">{r.comment}</p>
+                <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-muted">{r.firstName}</p>
+              </div>
+            ))
+          )}
+        </div>
       </section>
-      <section className="mt-12">
-        <h2 className="mb-4 font-serif text-2xl">Related products</h2>
+
+      <section className="mt-16">
+        <h2 className="mb-6 font-display text-3xl font-semibold">You may also like</h2>
         <ProductGrid products={product.related} />
       </section>
+
+      <SizeGuideModal
+        open={sizeOpen}
+        onClose={() => setSizeOpen(false)}
+        brandName={product.brand?.name}
+        fitHint={fit.data?.data?.label ? `Customers say this ${fit.data.data.label.toLowerCase()}.` : null}
+      />
     </div>
   );
 }

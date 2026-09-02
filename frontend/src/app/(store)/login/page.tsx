@@ -24,8 +24,19 @@ function LoginForm() {
   const form = useForm({ resolver: zodResolver(schema) });
   const login = useMutation({
     mutationFn: (body: z.infer<typeof schema>) => api("/auth/login", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      const { readGuestCart, clearGuestCart } = await import("@/lib/guestCart");
+      const guest = readGuestCart();
+      if (guest.length) {
+        try {
+          await api("/cart/merge", { method: "POST", body: JSON.stringify({ items: guest.map((g) => ({ variantId: g.variantId, quantity: g.quantity })) }) });
+          clearGuestCart();
+        } catch {
+          /* merge best-effort */
+        }
+      }
       qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["cart"] });
       router.push(next);
     },
     onError: (e: Error) => setError(e.message),

@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS brands (
   slug VARCHAR(180) NOT NULL,
   description TEXT NULL,
   logo_url VARCHAR(500) NULL,
+  lookbook_bio TEXT NULL,
+  hero_image_url VARCHAR(500) NULL,
   status ENUM('ACTIVE','ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
   seo_title VARCHAR(180) NULL,
   seo_description VARCHAR(320) NULL,
@@ -362,6 +364,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   rating INT NOT NULL,
   title VARCHAR(180) NOT NULL,
   comment TEXT NOT NULL,
+  fit_feedback ENUM('SMALL','TRUE','LARGE') NULL,
   status ENUM('PENDING','APPROVED','REJECTED','HIDDEN') NOT NULL DEFAULT 'PENDING',
   is_verified TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -423,3 +426,196 @@ CREATE TABLE IF NOT EXISTS order_counters (
   last_number INT NOT NULL DEFAULT 0,
   UNIQUE KEY order_counters_year_unique (year)
 );
+
+-- Wave 3: Premium fashion features
+
+CREATE TABLE IF NOT EXISTS collections (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  slug VARCHAR(200) NOT NULL,
+  season ENUM('spring','summer','festive','winter','all') NOT NULL DEFAULT 'all',
+  description TEXT NULL,
+  image_url VARCHAR(500) NULL,
+  status ENUM('ACTIVE','ARCHIVED','DRAFT') NOT NULL DEFAULT 'ACTIVE',
+  seo_title VARCHAR(180) NULL,
+  seo_description VARCHAR(320) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY collections_slug_unique (slug),
+  KEY collections_season_idx (season),
+  KEY collections_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS collection_products (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  collection_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY collection_product_unique (collection_id, product_id),
+  KEY collection_products_collection_idx (collection_id),
+  KEY collection_products_product_idx (product_id)
+);
+
+CREATE TABLE IF NOT EXISTS lookbooks (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  brand_id BIGINT UNSIGNED NULL,
+  slug VARCHAR(200) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  cover_image_url VARCHAR(800) NULL,
+  video_url VARCHAR(800) NULL,
+  status ENUM('ACTIVE','ARCHIVED','DRAFT') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY lookbooks_slug_unique (slug),
+  KEY lookbooks_brand_idx (brand_id),
+  KEY lookbooks_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS lookbook_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  lookbook_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  hotspot_x DECIMAL(5,2) NULL,
+  hotspot_y DECIMAL(5,2) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY lookbook_items_lookbook_idx (lookbook_id),
+  KEY lookbook_items_product_idx (product_id)
+);
+
+CREATE TABLE IF NOT EXISTS style_preferences (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  preferred_size VARCHAR(20) NULL,
+  length_delta_cm INT NOT NULL DEFAULT 0,
+  fit_preference ENUM('slim','regular','oversized') NOT NULL DEFAULT 'regular',
+  quiz_answers JSON NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY style_preferences_user_unique (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS saved_outfits (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  share_slug VARCHAR(80) NOT NULL,
+  cover_image_url VARCHAR(800) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY saved_outfits_share_slug_unique (share_slug),
+  KEY saved_outfits_user_idx (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS saved_outfit_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  outfit_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  variant_id BIGINT UNSIGNED NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY saved_outfit_items_outfit_idx (outfit_id),
+  KEY saved_outfit_items_product_idx (product_id)
+);
+
+CREATE TABLE IF NOT EXISTS loyalty_accounts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  balance INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY loyalty_accounts_user_unique (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS loyalty_transactions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  account_id BIGINT UNSIGNED NOT NULL,
+  points INT NOT NULL,
+  type ENUM('EARN','REDEEM','ADJUST') NOT NULL,
+  reason VARCHAR(255) NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY loyalty_tx_account_idx (account_id),
+  KEY loyalty_tx_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS product_fit_stats (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  small_count INT NOT NULL DEFAULT 0,
+  true_count INT NOT NULL DEFAULT 0,
+  large_count INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY product_fit_stats_product_unique (product_id)
+);
+
+CREATE TABLE IF NOT EXISTS waitlist_entries (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  variant_id BIGINT UNSIGNED NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(30) NULL,
+  notified_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY waitlist_variant_email_unique (variant_id, email),
+  KEY waitlist_variant_idx (variant_id)
+);
+
+CREATE TABLE IF NOT EXISTS product_presence (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  viewers INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY product_presence_product_unique (product_id)
+);
+
+CREATE TABLE IF NOT EXISTS ugc_photos (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  image_url VARCHAR(800) NOT NULL,
+  caption VARCHAR(500) NULL,
+  status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY ugc_photos_product_idx (product_id),
+  KEY ugc_photos_status_idx (status)
+);
+
+CREATE TABLE IF NOT EXISTS referrals (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  referrer_user_id BIGINT UNSIGNED NOT NULL,
+  code VARCHAR(40) NOT NULL,
+  reward_amount DECIMAL(12,2) NOT NULL DEFAULT 100.00,
+  referred_user_id BIGINT UNSIGNED NULL,
+  status ENUM('ACTIVE','CLAIMED','EXPIRED') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY referrals_code_unique (code),
+  KEY referrals_referrer_idx (referrer_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS order_tracking_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  status VARCHAR(40) NOT NULL,
+  message VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY order_tracking_order_idx (order_id),
+  KEY order_tracking_created_idx (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS consent_records (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  type VARCHAR(60) NOT NULL,
+  granted TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY consent_records_user_idx (user_id),
+  KEY consent_records_type_idx (type)
+);
+
+-- Upgrade paths for existing databases (ignored if column already exists — see migrate.ts)
+ALTER TABLE brands ADD COLUMN lookbook_bio TEXT NULL;
+ALTER TABLE brands ADD COLUMN hero_image_url VARCHAR(500) NULL;
+ALTER TABLE reviews ADD COLUMN fit_feedback ENUM('SMALL','TRUE','LARGE') NULL;

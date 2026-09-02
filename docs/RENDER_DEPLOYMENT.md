@@ -71,7 +71,7 @@ Then update Render env vars **`FRONTEND_URL`** and **`ADMIN_FRONTEND_URL`** to m
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@nexperts.com | Admin@12345 |
+| Admin | admin@nexpertsacademy.com | admin@123 |
 | Customer | customer@nexperts.com | Customer@12345 |
 
 ## Troubleshooting

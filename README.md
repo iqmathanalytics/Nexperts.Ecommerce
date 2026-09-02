@@ -48,7 +48,7 @@ API health: http://localhost:4000/health
 
 | Role | Email | Password |
 |---|---|---|
-| Super admin | admin@nexperts.com | Admin@12345 |
+| Super admin | admin@nexpertsacademy.com | admin@123 |
 | Inventory manager | inventory@nexperts.com | Admin@12345 |
 | Order manager | orders@nexperts.com | Admin@12345 |
 | Customer | customer@nexperts.com | Customer@12345 |

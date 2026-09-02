@@ -3,6 +3,9 @@ import path from "node:path";
 import mysql from "mysql2/promise";
 import { env } from "../config/env";
 
+/** MySQL errno for "Duplicate column name" — safe to ignore on re-migrate. */
+const IGNORE_ERRNOS = new Set([1060, 1061]);
+
 async function main() {
   const sqlPath = path.join(__dirname, "../../../database/schema.sql");
   const raw = fs.readFileSync(sqlPath, "utf8");
@@ -12,11 +15,24 @@ async function main() {
     .filter((s) => s.length > 0 && !s.startsWith("--"));
 
   const conn = await mysql.createConnection(env.DATABASE_URL);
+  let applied = 0;
+  let skipped = 0;
   for (const stmt of statements) {
-    await conn.query(stmt);
+    try {
+      await conn.query(stmt);
+      applied++;
+    } catch (err) {
+      const errno = (err as { errno?: number }).errno;
+      if (errno && IGNORE_ERRNOS.has(errno)) {
+        skipped++;
+        continue;
+      }
+      await conn.end();
+      throw err;
+    }
   }
   await conn.end();
-  console.log(`Applied ${statements.length} SQL statements from schema.sql`);
+  console.log(`Applied ${applied} SQL statements from schema.sql (${skipped} skipped as already present)`);
   process.exit(0);
 }
 

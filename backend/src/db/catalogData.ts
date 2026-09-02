@@ -19,8 +19,8 @@ export const CLOTHING_BRANDS = [
   "UrbanThread",
 ];
 
-const img = (id: string, w = 1200, h = 1500) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&h=${h}&q=85`;
+const img = (id: string, w = 1200, h = 1600) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=top&w=${w}&h=${h}&q=85`;
 
 export const CATALOG: Array<{
   name: string;
@@ -32,10 +32,15 @@ export const CATALOG: Array<{
   mrp: number;
   image: string;
   image2: string;
+  image3?: string;
   sku: string;
   description: string;
   fabric: string;
   fit: string;
+  care?: string;
+  origin?: string;
+  styling?: string;
+  model?: string;
 }> = [
   {
     name: "Petal Linen Day Dress",
@@ -52,6 +57,11 @@ export const CATALOG: Array<{
       "A refined day dress in soft linen with clean seams and a fluid silhouette. Designed for warm days, work lunches, and weekend ease — elevated everyday wear.",
     image: img("photo-1483985988355-763728e1935b"),
     image2: img("photo-1490481651871-ab68de25d43d"),
+    image3: img("photo-1515886657613-9f3515b0c78f"),
+    care: "Cold gentle wash. Line dry. Steam, do not wring. Iron on linen setting.",
+    origin: "Designed in Mumbai · Fabric sourced from Portugal",
+    styling: "Wear with leather sandals by day, or a structured blazer after hours.",
+    model: "Model is 175 cm and wears size S",
   },
   {
     name: "UrbanThread Poplin Shirt Dress",
@@ -84,6 +94,11 @@ export const CATALOG: Array<{
       "An evening column gown with a luminous satin finish and architectural drape. Made for black-tie dinners, gallery nights, and formal celebrations.",
     image: img("photo-1566174053879-31528523f8ae"),
     image2: img("photo-1595777457583-95e059d581b8"),
+    image3: img("photo-1509631179647-0177331693ae"),
+    care: "Dry clean only. Store hanging. Avoid direct sunlight.",
+    origin: "Atelier-finished in India",
+    styling: "Pair with strappy heels and a slim clutch. Skip heavy jewellery — the drape is the statement.",
+    model: "Model is 178 cm and wears size S",
   },
   {
     name: "SilkRoad Midnight Evening Gown",
@@ -148,6 +163,11 @@ export const CATALOG: Array<{
       "A resort maxi with easy movement and a soft hand-feel. Ideal for vacations, brunches, and warm-weather evenings.",
     image: img("photo-1496747611176-843222e1e57c"),
     image2: img("photo-1469334031218-e382a71b716b"),
+    image3: img("photo-1515372039744-b8f02a3ae446"),
+    care: "Hand wash cold. Do not tumble dry. Steam to release travel creases.",
+    origin: "Woven viscose · Made for Indian humidity",
+    styling: "Belt the waist for structure, or wear loose with flat sandals.",
+    model: "Model is 174 cm and wears size S",
   },
   {
     name: "SilkRoad Linen Maxi Dress",
@@ -350,5 +370,82 @@ export const CATALOG: Array<{
       "A cropped jacket with clean shoulders and modern structure. Layer over dresses or trousers for a sharp, contemporary finish.",
     image: img("photo-1551488831-00ddcb6c6bd3"),
     image2: img("photo-1490481651871-ab68de25d43d"),
+  },
+  {
+    name: "UrbanThread Oxford Shirt",
+    category: "Tops",
+    brand: "UrbanThread",
+    gender: "MEN",
+    price: 2299,
+    mrp: 3199,
+    sku: "NX-MN-021",
+    fabric: "Egyptian cotton oxford",
+    fit: "Regular",
+    description:
+      "A crisp oxford with a clean collar and garment-washed ease. Built as a wardrobe constant — office, travel, or weekend.",
+    image: img("photo-1593030761757-71fae45fa0e7"),
+    image2: img("photo-1602810318383-e386cc2a3ccf"),
+    image3: img("photo-1488161628813-04466f872be2"),
+    care: "Machine wash cold. Hang dry. Iron while slightly damp.",
+    origin: "Woven cotton · Finished in India",
+    styling: "Wear open over a tee, or tucked into tailored trousers.",
+    model: "Model is 185 cm and wears size M",
+  },
+  {
+    name: "CloudSoft Merino Crew",
+    category: "Tops",
+    brand: "CloudSoft",
+    gender: "MEN",
+    price: 2799,
+    mrp: 3899,
+    sku: "NX-MN-022",
+    fabric: "Fine merino knit",
+    fit: "Slim",
+    description:
+      "A fine-gauge merino crew with a quiet drape and year-round weight. Layer under a coat or wear alone.",
+    image: img("photo-1617127365659-c47fa864d8bc"),
+    image2: img("photo-1552374196-1ab2a1c593e8"),
+    care: "Hand wash or dry clean. Lay flat to dry.",
+    origin: "Merino yarn · Knit in India",
+    styling: "Pair with wide trousers and leather loafers.",
+    model: "Model is 183 cm and wears size M",
+  },
+  {
+    name: "Lumina Wool Overcoat",
+    category: "Outerwear",
+    brand: "Lumina",
+    gender: "MEN",
+    price: 11999,
+    mrp: 15999,
+    sku: "NX-MN-023",
+    fabric: "Wool-cashmere blend",
+    fit: "Longline",
+    description:
+      "A longline overcoat with a structured shoulder and soft hand. The winter layer that finishes every look.",
+    image: img("photo-1617137968427-85924c800a22"),
+    image2: img("photo-1507003211169-0a1dd7228f2d"),
+    care: "Dry clean only. Brush between wears. Store on a wide hanger.",
+    origin: "Wool blend · Tailored in India",
+    styling: "Wear over a knit and trousers, or over a full suit.",
+    model: "Model is 186 cm and wears size M",
+  },
+  {
+    name: "UrbanThread Tailored Chinos",
+    category: "Bottoms",
+    brand: "UrbanThread",
+    gender: "MEN",
+    price: 2599,
+    mrp: 3499,
+    sku: "NX-MN-024",
+    fabric: "Stretch cotton twill",
+    fit: "Tapered",
+    description:
+      "Tapered chinos with a clean crease and easy stretch. Desk to dinner without a wardrobe change.",
+    image: img("photo-1473966968600-fa801b869a1a"),
+    image2: img("photo-1501196354995-cbb51c65aaea"),
+    care: "Machine wash cold. Tumble low. Steam to restore the crease.",
+    origin: "Cotton twill · Made in India",
+    styling: "Pair with the Oxford shirt and loafers.",
+    model: "Model is 185 cm and wears size M",
   },
 ];

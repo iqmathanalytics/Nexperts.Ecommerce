@@ -6,8 +6,10 @@ const nextConfig: NextConfig = {
     root: path.join(__dirname),
   },
   images: {
-    formats: ["image/avif", "image/webp"],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    loader: "custom",
+    loaderFile: "./src/lib/imageLoader.ts",
+    qualities: [50, 60, 70, 75],
+    deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [64, 96, 128, 256, 384],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -15,11 +17,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.r2.dev" },
       { protocol: "https", hostname: "*.r2.cloudflarestorage.com" },
     ],
+    minimumCacheTTL: 60 * 60 * 24 * 7,
   },
   experimental: {
-    optimizePackageImports: ["lucide-react", "recharts"],
+    optimizePackageImports: ["lucide-react", "recharts", "framer-motion"],
   },
-  output: "standalone",
 };
 
 export default nextConfig;

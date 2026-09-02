@@ -15,6 +15,7 @@ catalogRouter.get(
   "/products",
   asyncHandler(async (req, res) => {
     const data = await catalog.listProducts(catalog.productQuerySchema.parse(req.query));
+    res.setHeader("Cache-Control", "public, max-age=30");
     res.json(success(data.items, { page: data.page, limit: data.limit, total: data.total, totalPages: data.totalPages }));
   }),
 );
@@ -37,6 +38,7 @@ catalogRouter.get(
 catalogRouter.get(
   "/categories",
   asyncHandler(async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=300");
     res.json(success(await catalog.listCategoriesTree()));
   }),
 );

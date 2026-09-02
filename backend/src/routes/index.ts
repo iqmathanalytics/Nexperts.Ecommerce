@@ -10,10 +10,13 @@ import {
   orderRouter,
   reviewRouter,
 } from "../modules/commerce.routes";
+import { premiumRouter } from "../modules/premium/premium.routes";
 
 export const api = Router();
 
 api.use("/auth", authRouter);
+// Premium routes first so /products/featured and /products/search win over /products/:slug
+api.use(premiumRouter);
 api.use(catalogRouter);
 api.use("/cart", cartRouter);
 api.use("/wishlist", wishlistRouter);

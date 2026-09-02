@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ToastProvider } from "@/components/ui/toast";
+import { StoreUiProvider } from "@/components/store/StoreUiContext";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -10,8 +12,8 @@ export function Providers({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30_000,
-            gcTime: 5 * 60_000,
+            staleTime: 60_000,
+            gcTime: 10 * 60_000,
             retry: 1,
             refetchOnWindowFocus: false,
             refetchOnReconnect: true,
@@ -24,7 +26,11 @@ export function Providers({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <ErrorBoundary>{children}</ErrorBoundary>
+      <ErrorBoundary>
+        <ToastProvider>
+          <StoreUiProvider>{children}</StoreUiProvider>
+        </ToastProvider>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

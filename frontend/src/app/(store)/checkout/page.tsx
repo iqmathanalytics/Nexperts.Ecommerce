@@ -46,8 +46,9 @@ export default function CheckoutPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
-  const [paymentMethod] = useState<"COD">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
   const [error, setError] = useState<string | null>(null);
+  const [shippingEta, setShippingEta] = useState<string | null>(null);
   const addresses = useQuery({ queryKey: ["addresses"], queryFn: () => api<Address[]>("/addresses") });
   const quote = useQuery({
     queryKey: ["quote", appliedCoupon],
@@ -224,6 +225,32 @@ export default function CheckoutPage() {
             <div>
               <p className="font-medium">Standard shipping {q && q.shipping === 0 ? "(Free)" : ""}</p>
               <p className="mt-2 text-sm text-muted">Delivered in 2–5 business days. Free above ₹999.</p>
+              {selectedAddress?.postalCode ? (
+                <button
+                  type="button"
+                  className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] underline-offset-4 hover:underline"
+                  onClick={async () => {
+                    try {
+                      const res = await api<{ warehouses: Array<{ name: string; etaDate: string; businessDays: number }> }>(
+                        "/shipping-estimate",
+                        { method: "POST", body: JSON.stringify({ pincode: selectedAddress.postalCode }) },
+                      );
+                      const wh = res.data.warehouses[0];
+                      setShippingEta(wh ? `${wh.etaDate} · ${wh.businessDays} business days from ${wh.name}` : null);
+                    } catch {
+                      setShippingEta(null);
+                    }
+                  }}
+                >
+                  Estimate delivery for {selectedAddress.postalCode}
+                </button>
+              ) : null}
+              {shippingEta ? <p className="mt-2 text-sm text-ink">{shippingEta}</p> : null}
+              {q && q.total >= 3000 ? (
+                <p className="mt-4 border border-line bg-surface-muted/50 p-3 text-sm text-muted">
+                  Pay in 3 installments of {formatINR(Math.ceil(q.total / 3))} (display only — settle via Razorpay when enabled).
+                </p>
+              ) : null}
               <div className="mt-4 flex gap-2">
                 <Button variant="outline" onClick={() => setStep(0)}>Back</Button>
                 <Button onClick={goNext}>Continue to coupon</Button>
@@ -247,8 +274,21 @@ export default function CheckoutPage() {
           )}
           {step === 3 && (
             <div className="space-y-3">
-              <p className="text-sm font-medium">Cash on Delivery</p>
-              <p className="text-sm text-muted">Pay when your order arrives. Online payment will be added in a future update.</p>
+              <p className="text-sm font-medium">Payment method</p>
+              <label className="flex cursor-pointer items-start gap-3 border border-line p-4">
+                <input type="radio" checked={paymentMethod === "COD"} onChange={() => setPaymentMethod("COD")} />
+                <span>
+                  <span className="font-medium">Cash on Delivery</span>
+                  <span className="mt-1 block text-sm text-muted">Pay when your order arrives.</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 border border-line p-4">
+                <input type="radio" checked={paymentMethod === "ONLINE"} onChange={() => setPaymentMethod("ONLINE")} />
+                <span>
+                  <span className="font-medium">Pay online (Razorpay)</span>
+                  <span className="mt-1 block text-sm text-muted">UPI, cards, and netbanking when configured on the server.</span>
+                </span>
+              </label>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
                 <Button onClick={goNext}>Review order</Button>
@@ -275,8 +315,14 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <p className="font-medium">Payment</p>
-                <p className="mt-1 text-muted">Cash on Delivery</p>
+                <p className="mt-1 text-muted">{paymentMethod === "COD" ? "Cash on Delivery" : "Online (Razorpay)"}</p>
               </div>
+              {shippingEta ? (
+                <div>
+                  <p className="font-medium">ETA</p>
+                  <p className="mt-1 text-muted">{shippingEta}</p>
+                </div>
+              ) : null}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(3)}>Back</Button>
                 <Button disabled={place.isPending || !addressId} onClick={() => place.mutate()}>Place order</Button>

@@ -6,9 +6,15 @@ import {
   addresses,
   brands,
   categories,
+  collectionProducts,
+  collections,
   coupons,
   inventory,
   inventoryTransactions,
+  lookbookItems,
+  lookbooks,
+  loyaltyAccounts,
+  loyaltyTransactions,
   orderItems,
   orderStatusHistory,
   orders,
@@ -65,9 +71,32 @@ async function insertId<T extends { insertId: number }>(result: [T, unknown]) {
 }
 
 async function seed() {
-  const [existing] = await db.select().from(users).where(eq(users.email, "admin@nexperts.com")).limit(1);
-  if (existing) {
-    console.log("Seed skipped — admin already exists");
+  const ADMIN_EMAIL = "admin@nexpertsacademy.com";
+  const ADMIN_PASSWORD = "admin@123";
+  const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+
+  // Always ensure the primary admin login works (fresh seed or existing DB)
+  const [academyAdmin] = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
+  if (academyAdmin) {
+    await db.update(users).set({ passwordHash: adminHash, status: "ACTIVE" }).where(eq(users.id, academyAdmin.id));
+    console.log(`Updated admin password for ${ADMIN_EMAIL}`);
+  }
+
+  const [legacyAdmin] = await db.select().from(users).where(eq(users.email, "admin@nexperts.com")).limit(1);
+  if (legacyAdmin && !academyAdmin) {
+    // Migrate legacy seed admin email → academy login
+    await db
+      .update(users)
+      .set({ email: ADMIN_EMAIL, passwordHash: adminHash, status: "ACTIVE" })
+      .where(eq(users.id, legacyAdmin.id));
+    console.log(`Migrated admin@nexperts.com → ${ADMIN_EMAIL}`);
+  }
+
+  const [existing] = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
+  const roleRows = await db.select().from(roles).limit(1);
+  if (existing && roleRows.length) {
+    console.log("Seed skipped — catalog already exists");
+    console.log(`Admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
     await pool.end();
     return;
   }
@@ -87,16 +116,29 @@ async function seed() {
     }
   }
 
-  const adminHash = await bcrypt.hash("Admin@12345", 12);
   const customerHash = await bcrypt.hash("Customer@12345", 12);
+  const staffHash = await bcrypt.hash("Admin@12345", 12);
 
-  const adminId = await insertId(await db.insert(users).values({ email: "admin@nexperts.com", passwordHash: adminHash, firstName: "Asha", lastName: "Mehta", phone: "9876500001" }));
+  let adminId: number;
+  if (existing) {
+    adminId = existing.id;
+  } else {
+    adminId = await insertId(
+      await db.insert(users).values({
+        email: ADMIN_EMAIL,
+        passwordHash: adminHash,
+        firstName: "Asha",
+        lastName: "Mehta",
+        phone: "9876500001",
+      }),
+    );
+  }
   await db.insert(userRoles).values({ userId: adminId, roleId: roleIds.get("SUPER_ADMIN")! });
 
-  const invMgr = await insertId(await db.insert(users).values({ email: "inventory@nexperts.com", passwordHash: adminHash, firstName: "Rahul", lastName: "Iyer", phone: "9876500002" }));
+  const invMgr = await insertId(await db.insert(users).values({ email: "inventory@nexperts.com", passwordHash: staffHash, firstName: "Rahul", lastName: "Iyer", phone: "9876500002" }));
   await db.insert(userRoles).values({ userId: invMgr, roleId: roleIds.get("INVENTORY_MANAGER")! });
 
-  const orderMgr = await insertId(await db.insert(users).values({ email: "orders@nexperts.com", passwordHash: adminHash, firstName: "Neha", lastName: "Kapoor", phone: "9876500003" }));
+  const orderMgr = await insertId(await db.insert(users).values({ email: "orders@nexperts.com", passwordHash: staffHash, firstName: "Neha", lastName: "Kapoor", phone: "9876500003" }));
   await db.insert(userRoles).values({ userId: orderMgr, roleId: roleIds.get("ORDER_MANAGER")! });
 
   const customerId = await insertId(await db.insert(users).values({ email: "customer@nexperts.com", passwordHash: customerHash, firstName: "Arjun", lastName: "Shah", phone: "9876511111" }));
@@ -184,7 +226,10 @@ async function seed() {
         Category: item.category,
         Fabric: item.fabric,
         Fit: item.fit,
-        Care: "Gentle wash · Dry clean recommended for evening wear",
+        Care: item.care ?? "Gentle wash · Dry clean recommended for evening wear",
+        Origin: item.origin ?? "Designed for India",
+        Styling: item.styling ?? "Style with Nexperts essentials.",
+        Model: item.model ?? "True to size",
       },
       shippingInfo: "Ships within 24–48 hours. Free shipping on orders above ₹999. Premium packaging on every order.",
       returnInfo: "7-day easy returns on unused items with tags attached.",
@@ -197,10 +242,15 @@ async function seed() {
     if (linkedCats.length) {
       await db.insert(productCategories).values(linkedCats.map((categoryId) => ({ productId: pid, categoryId })));
     }
-    await db.insert(productImages).values([
-      { productId: pid, url: item.image, storageKey: `catalog/${item.sku}-1.jpg`, alt: item.name, sortOrder: 0, isPrimary: true },
-      { productId: pid, url: item.image2, storageKey: `catalog/${item.sku}-2.jpg`, alt: `${item.name} alternate`, sortOrder: 1, isPrimary: false },
-    ]);
+    await db.insert(productImages).values(
+      [
+        { productId: pid, url: item.image, storageKey: `catalog/${item.sku}-1.jpg`, alt: item.name, sortOrder: 0, isPrimary: true },
+        { productId: pid, url: item.image2, storageKey: `catalog/${item.sku}-2.jpg`, alt: `${item.name} alternate`, sortOrder: 1, isPrimary: false },
+        item.image3
+          ? { productId: pid, url: item.image3, storageKey: `catalog/${item.sku}-3.jpg`, alt: `${item.name} detail`, sortOrder: 2, isPrimary: false }
+          : null,
+      ].filter((row): row is NonNullable<typeof row> => Boolean(row)),
+    );
     let defaultVid = 0;
     for (const [index, size] of SIZES.entries()) {
       const vid = await insertId(await db.insert(productVariants).values({
@@ -296,14 +346,76 @@ async function seed() {
   await createOrder(extraIds[2]!, "DELIVERED", createdProducts[12]!, 8);
 
   await db.insert(reviews).values([
-    { productId: createdProducts[0]!.id, userId: customerId, orderId: delivered1, rating: 5, title: "Excellent daily driver", comment: "Battery lasts a full day and the display is bright outdoors. Delivery was quick.", status: "APPROVED", isVerified: true },
-    { productId: createdProducts[2]!.id, userId: extraIds[0]!, orderId: delivered1, rating: 4, title: "Great sound", comment: "Comfortable fit and clear calls. Bass is a little heavy for podcasts but music sounds rich.", status: "APPROVED", isVerified: true },
-    { productId: createdProducts[5]!.id, userId: extraIds[1]!, orderId: delivered1, rating: 5, title: "Perfect fit", comment: "The oxford shirt feels premium and washed well. Would buy another colour.", status: "APPROVED", isVerified: true },
+    { productId: createdProducts[0]!.id, userId: customerId, orderId: delivered1, rating: 5, title: "Excellent daily driver", comment: "Battery lasts a full day and the display is bright outdoors. Delivery was quick.", status: "APPROVED", isVerified: true, fitFeedback: "TRUE" },
+    { productId: createdProducts[2]!.id, userId: extraIds[0]!, orderId: delivered1, rating: 4, title: "Great sound", comment: "Comfortable fit and clear calls. Bass is a little heavy for podcasts but music sounds rich.", status: "APPROVED", isVerified: true, fitFeedback: "TRUE" },
+    { productId: createdProducts[5]!.id, userId: extraIds[1]!, orderId: delivered1, rating: 5, title: "Perfect fit", comment: "The oxford shirt feels premium and washed well. Would buy another colour.", status: "APPROVED", isVerified: true, fitFeedback: "SMALL" },
     { productId: createdProducts[10]!.id, userId: extraIds[2]!, orderId: delivered1, rating: 4, title: "Solid mat", comment: "Grippy and thick enough for home yoga. No smell after unboxing.", status: "PENDING", isVerified: true },
   ]);
 
+  // Wave 3 — collections, lookbooks, loyalty
+  const summerId = await insertId(await db.insert(collections).values({
+    name: "Summer Linen Edit",
+    slug: "summer-linen-edit",
+    season: "summer",
+    description: "Breathable linens and light silhouettes for warm days.",
+    imageUrl: "https://picsum.photos/seed/summer-collection/1200/800",
+    status: "ACTIVE",
+    seoTitle: "Summer Linen Edit | Nexperts",
+    seoDescription: "Shop the summer linen collection.",
+  }));
+  const festiveId = await insertId(await db.insert(collections).values({
+    name: "Festive Glow",
+    slug: "festive-glow",
+    season: "festive",
+    description: "Celebration-ready pieces with rich textures.",
+    imageUrl: "https://picsum.photos/seed/festive-collection/1200/800",
+    status: "ACTIVE",
+    seoTitle: "Festive Glow | Nexperts",
+    seoDescription: "Shop festive occasion wear.",
+  }));
+  const summerProducts = createdProducts.slice(0, 6);
+  const festiveProducts = createdProducts.slice(6, 12);
+  await db.insert(collectionProducts).values([
+    ...summerProducts.map((p, i) => ({ collectionId: summerId, productId: p.id, sortOrder: i })),
+    ...festiveProducts.map((p, i) => ({ collectionId: festiveId, productId: p.id, sortOrder: i })),
+  ]);
+
+  const petalBrandId = brandIds.get("Petal");
+  const lookbookId = await insertId(await db.insert(lookbooks).values({
+    brandId: petalBrandId ?? null,
+    slug: "petal-resort-2026",
+    title: "Petal Resort 2026",
+    description: "Sun-washed layers and soft dresses from Petal.",
+    coverImageUrl: "https://picsum.photos/seed/petal-lookbook/1400/900",
+    status: "ACTIVE",
+  }));
+  await db.insert(lookbookItems).values(
+    createdProducts.slice(0, 4).map((p, i) => ({
+      lookbookId,
+      productId: p.id,
+      sortOrder: i,
+      hotspotX: String(20 + i * 15),
+      hotspotY: String(30 + i * 10),
+    })),
+  );
+
+  if (petalBrandId) {
+    await db.update(brands).set({
+      lookbookBio: "Petal designs quiet luxury for everyday rituals.",
+      heroImageUrl: "https://picsum.photos/seed/petal-hero/1600/900",
+    }).where(eq(brands.id, petalBrandId));
+  }
+
+  const loyaltyId = await insertId(await db.insert(loyaltyAccounts).values({ userId: customerId, balance: 500 }));
+  await db.insert(loyaltyTransactions).values({
+    accountId: loyaltyId,
+    points: 500,
+    type: "EARN",
+    reason: "Welcome bonus",
+  });
+
   console.log("Seed complete");
-  console.log("Admin: admin@nexperts.com / Admin@12345");
+  console.log("Admin: admin@nexpertsacademy.com / admin@123");
   console.log("Customer: customer@nexperts.com / Customer@12345");
   await pool.end();
   process.exit(0);

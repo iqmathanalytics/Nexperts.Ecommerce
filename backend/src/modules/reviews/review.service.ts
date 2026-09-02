@@ -11,6 +11,7 @@ export const reviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   title: z.string().min(3).max(180),
   comment: z.string().min(10).max(2000),
+  fitFeedback: z.enum(["SMALL", "TRUE", "LARGE"]).optional(),
 });
 
 export async function listEligibleReviews(userId: number, productId?: number) {
@@ -75,7 +76,21 @@ export async function createReview(userId: number, input: z.infer<typeof reviewS
     .where(and(eq(reviews.userId, userId), eq(reviews.productId, input.productId), eq(reviews.orderId, input.orderId)))
     .limit(1);
   if (existing) throw new AppError("ALREADY_REVIEWED", "You already reviewed this product for this order", 409);
-  const result = await db.insert(reviews).values({ ...input, userId, status: "PENDING", isVerified: true });
+  const result = await db.insert(reviews).values({
+    productId: input.productId,
+    orderId: input.orderId,
+    rating: input.rating,
+    title: input.title,
+    comment: input.comment,
+    fitFeedback: input.fitFeedback,
+    userId,
+    status: "PENDING",
+    isVerified: true,
+  });
+  if (input.fitFeedback) {
+    const { updateFitStats } = await import("../premium/premium.service");
+    await updateFitStats(input.productId, input.fitFeedback);
+  }
   return { id: Number(result[0].insertId), ...input, status: "PENDING" };
 }
 

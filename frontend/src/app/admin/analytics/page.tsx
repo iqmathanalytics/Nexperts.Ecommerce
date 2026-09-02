@@ -137,8 +137,59 @@ export default function AnalyticsPage() {
               <HorizontalBars data={i?.slowMoving ?? []} color="#64748b" />
             </ChartCard>
           </div>
+
+          <PremiumAnalyticsBlock />
         </>
       )}
+    </div>
+  );
+}
+
+function PremiumAnalyticsBlock() {
+  const premium = useQuery({
+    queryKey: ["premium-analytics"],
+    queryFn: () =>
+      api<{
+        revenueByBrand: Array<{ brand: string; revenue: string | number }>;
+        mostWishlisted: Array<{ name: string; wishes: number }>;
+        fitTrends: Array<{ productId: number; smallCount: number; trueCount: number; largeCount: number }>;
+        funnel: Array<{ event_type: string; c: number }>;
+      }>("/admin/analytics/premium"),
+    retry: false,
+  });
+  const p = premium.data?.data;
+  if (premium.isError || !p) return null;
+  return (
+    <div className="space-y-4 pt-4">
+      <h2 className="text-lg font-semibold">Premium insights</h2>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Revenue by designer">
+          <HorizontalBars
+            data={(p.revenueByBrand ?? []).map((r) => ({
+              name: r.brand || "Unbranded",
+              units: Math.round(Number(r.revenue) || 0),
+            }))}
+          />
+        </ChartCard>
+        <ChartCard title="Most wishlisted">
+          <HorizontalBars
+            data={(p.mostWishlisted ?? []).map((r) => ({ name: r.name, units: Number(r.wishes) || 0 }))}
+          />
+        </ChartCard>
+      </div>
+      <ChartCard title="Fit feedback trends">
+        <div className="space-y-2 text-sm">
+          {(p.fitTrends ?? []).slice(0, 8).map((f) => (
+            <div key={f.productId} className="flex justify-between border-b border-slate-100 py-2">
+              <span>Product #{f.productId}</span>
+              <span className="text-slate-500">
+                S {f.smallCount} · T {f.trueCount} · L {f.largeCount}
+              </span>
+            </div>
+          ))}
+          {!p.fitTrends?.length ? <p className="text-slate-500">No fit data yet.</p> : null}
+        </div>
+      </ChartCard>
     </div>
   );
 }

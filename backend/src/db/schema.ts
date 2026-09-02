@@ -140,6 +140,8 @@ export const brands = mysqlTable(
     slug: varchar("slug", { length: 180 }).notNull(),
     description: text("description"),
     logoUrl: varchar("logo_url", { length: 500 }),
+    lookbookBio: text("lookbook_bio"),
+    heroImageUrl: varchar("hero_image_url", { length: 500 }),
     status: mysqlEnum("status", ["ACTIVE", "ARCHIVED"]).notNull().default("ACTIVE"),
     seoTitle: varchar("seo_title", { length: 180 }),
     seoDescription: varchar("seo_description", { length: 320 }),
@@ -503,6 +505,7 @@ export const reviews = mysqlTable(
     rating: int("rating").notNull(),
     title: varchar("title", { length: 180 }).notNull(),
     comment: text("comment").notNull(),
+    fitFeedback: mysqlEnum("fit_feedback", ["SMALL", "TRUE", "LARGE"]),
     status: mysqlEnum("status", ["PENDING", "APPROVED", "REJECTED", "HIDDEN"]).notNull().default("PENDING"),
     isVerified: boolean("is_verified").notNull().default(true),
     ...timestamps,
@@ -579,6 +582,260 @@ export const orderCounters = mysqlTable("order_counters", {
   year: int("year").notNull(),
   lastNumber: int("last_number").notNull().default(0),
 }, (t) => [uniqueIndex("order_counters_year_unique").on(t.year)]);
+
+// Wave 3 — Premium fashion features
+
+export const collections = mysqlTable(
+  "collections",
+  {
+    id: id(),
+    name: varchar("name", { length: 180 }).notNull(),
+    slug: varchar("slug", { length: 200 }).notNull(),
+    season: mysqlEnum("season", ["spring", "summer", "festive", "winter", "all"]).notNull().default("all"),
+    description: text("description"),
+    imageUrl: varchar("image_url", { length: 500 }),
+    status: mysqlEnum("status", ["ACTIVE", "ARCHIVED", "DRAFT"]).notNull().default("ACTIVE"),
+    seoTitle: varchar("seo_title", { length: 180 }),
+    seoDescription: varchar("seo_description", { length: 320 }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("collections_slug_unique").on(t.slug),
+    index("collections_season_idx").on(t.season),
+    index("collections_status_idx").on(t.status),
+  ],
+);
+
+export const collectionProducts = mysqlTable(
+  "collection_products",
+  {
+    id: id(),
+    collectionId: bigint("collection_id", { mode: "number", unsigned: true }).notNull(),
+    productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+    sortOrder: int("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("collection_product_unique").on(t.collectionId, t.productId),
+    index("collection_products_collection_idx").on(t.collectionId),
+    index("collection_products_product_idx").on(t.productId),
+  ],
+);
+
+export const lookbooks = mysqlTable(
+  "lookbooks",
+  {
+    id: id(),
+    brandId: bigint("brand_id", { mode: "number", unsigned: true }),
+    slug: varchar("slug", { length: 200 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    coverImageUrl: varchar("cover_image_url", { length: 800 }),
+    videoUrl: varchar("video_url", { length: 800 }),
+    status: mysqlEnum("status", ["ACTIVE", "ARCHIVED", "DRAFT"]).notNull().default("ACTIVE"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("lookbooks_slug_unique").on(t.slug),
+    index("lookbooks_brand_idx").on(t.brandId),
+    index("lookbooks_status_idx").on(t.status),
+  ],
+);
+
+export const lookbookItems = mysqlTable(
+  "lookbook_items",
+  {
+    id: id(),
+    lookbookId: bigint("lookbook_id", { mode: "number", unsigned: true }).notNull(),
+    productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+    sortOrder: int("sort_order").notNull().default(0),
+    hotspotX: decimal("hotspot_x", { precision: 5, scale: 2 }),
+    hotspotY: decimal("hotspot_y", { precision: 5, scale: 2 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("lookbook_items_lookbook_idx").on(t.lookbookId),
+    index("lookbook_items_product_idx").on(t.productId),
+  ],
+);
+
+export const stylePreferences = mysqlTable(
+  "style_preferences",
+  {
+    id: id(),
+    userId: bigint("user_id", { mode: "number", unsigned: true }).notNull(),
+    preferredSize: varchar("preferred_size", { length: 20 }),
+    lengthDeltaCm: int("length_delta_cm").notNull().default(0),
+    fitPreference: mysqlEnum("fit_preference", ["slim", "regular", "oversized"]).notNull().default("regular"),
+    quizAnswers: json("quiz_answers").$type<Record<string, unknown>>(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [uniqueIndex("style_preferences_user_unique").on(t.userId)],
+);
+
+export const savedOutfits = mysqlTable(
+  "saved_outfits",
+  {
+    id: id(),
+    userId: bigint("user_id", { mode: "number", unsigned: true }).notNull(),
+    name: varchar("name", { length: 150 }).notNull(),
+    shareSlug: varchar("share_slug", { length: 80 }).notNull(),
+    coverImageUrl: varchar("cover_image_url", { length: 800 }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("saved_outfits_share_slug_unique").on(t.shareSlug),
+    index("saved_outfits_user_idx").on(t.userId),
+  ],
+);
+
+export const savedOutfitItems = mysqlTable(
+  "saved_outfit_items",
+  {
+    id: id(),
+    outfitId: bigint("outfit_id", { mode: "number", unsigned: true }).notNull(),
+    productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+    variantId: bigint("variant_id", { mode: "number", unsigned: true }),
+    sortOrder: int("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("saved_outfit_items_outfit_idx").on(t.outfitId),
+    index("saved_outfit_items_product_idx").on(t.productId),
+  ],
+);
+
+export const loyaltyAccounts = mysqlTable(
+  "loyalty_accounts",
+  {
+    id: id(),
+    userId: bigint("user_id", { mode: "number", unsigned: true }).notNull(),
+    balance: int("balance").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("loyalty_accounts_user_unique").on(t.userId)],
+);
+
+export const loyaltyTransactions = mysqlTable(
+  "loyalty_transactions",
+  {
+    id: id(),
+    accountId: bigint("account_id", { mode: "number", unsigned: true }).notNull(),
+    points: int("points").notNull(),
+    type: mysqlEnum("type", ["EARN", "REDEEM", "ADJUST"]).notNull(),
+    reason: varchar("reason", { length: 255 }).notNull(),
+    orderId: bigint("order_id", { mode: "number", unsigned: true }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("loyalty_tx_account_idx").on(t.accountId),
+    index("loyalty_tx_created_idx").on(t.createdAt),
+  ],
+);
+
+export const productFitStats = mysqlTable(
+  "product_fit_stats",
+  {
+    id: id(),
+    productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+    smallCount: int("small_count").notNull().default(0),
+    trueCount: int("true_count").notNull().default(0),
+    largeCount: int("large_count").notNull().default(0),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [uniqueIndex("product_fit_stats_product_unique").on(t.productId)],
+);
+
+export const waitlistEntries = mysqlTable(
+  "waitlist_entries",
+  {
+    id: id(),
+    variantId: bigint("variant_id", { mode: "number", unsigned: true }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 30 }),
+    notifiedAt: timestamp("notified_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("waitlist_variant_email_unique").on(t.variantId, t.email),
+    index("waitlist_variant_idx").on(t.variantId),
+  ],
+);
+
+export const productPresence = mysqlTable(
+  "product_presence",
+  {
+    id: id(),
+    productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+    viewers: int("viewers").notNull().default(0),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [uniqueIndex("product_presence_product_unique").on(t.productId)],
+);
+
+export const ugcPhotos = mysqlTable(
+  "ugc_photos",
+  {
+    id: id(),
+    productId: bigint("product_id", { mode: "number", unsigned: true }).notNull(),
+    userId: bigint("user_id", { mode: "number", unsigned: true }).notNull(),
+    imageUrl: varchar("image_url", { length: 800 }).notNull(),
+    caption: varchar("caption", { length: 500 }),
+    status: mysqlEnum("status", ["PENDING", "APPROVED", "REJECTED"]).notNull().default("PENDING"),
+    ...timestamps,
+  },
+  (t) => [
+    index("ugc_photos_product_idx").on(t.productId),
+    index("ugc_photos_status_idx").on(t.status),
+  ],
+);
+
+export const referrals = mysqlTable(
+  "referrals",
+  {
+    id: id(),
+    referrerUserId: bigint("referrer_user_id", { mode: "number", unsigned: true }).notNull(),
+    code: varchar("code", { length: 40 }).notNull(),
+    rewardAmount: decimal("reward_amount", { precision: 12, scale: 2 }).notNull().default("100.00"),
+    referredUserId: bigint("referred_user_id", { mode: "number", unsigned: true }),
+    status: mysqlEnum("status", ["ACTIVE", "CLAIMED", "EXPIRED"]).notNull().default("ACTIVE"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("referrals_code_unique").on(t.code),
+    index("referrals_referrer_idx").on(t.referrerUserId),
+  ],
+);
+
+export const orderTrackingEvents = mysqlTable(
+  "order_tracking_events",
+  {
+    id: id(),
+    orderId: bigint("order_id", { mode: "number", unsigned: true }).notNull(),
+    status: varchar("status", { length: 40 }).notNull(),
+    message: varchar("message", { length: 500 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("order_tracking_order_idx").on(t.orderId),
+    index("order_tracking_created_idx").on(t.createdAt),
+  ],
+);
+
+export const consentRecords = mysqlTable(
+  "consent_records",
+  {
+    id: id(),
+    userId: bigint("user_id", { mode: "number", unsigned: true }).notNull(),
+    type: varchar("type", { length: 60 }).notNull(),
+    granted: boolean("granted").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("consent_records_user_idx").on(t.userId),
+    index("consent_records_type_idx").on(t.type),
+  ],
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
   userRoles: many(userRoles),

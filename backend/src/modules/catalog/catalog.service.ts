@@ -56,7 +56,7 @@ type ProductRow = {
   created_at: Date;
 };
 
-function mapCard(row: ProductRow, imageUrl: string | null) {
+function mapCard(row: ProductRow, imageUrl: string | null, hoverImageUrl: string | null = null) {
   const price = toMoney(row.price);
   const mrp = toMoney(row.mrp);
   return {
@@ -65,6 +65,7 @@ function mapCard(row: ProductRow, imageUrl: string | null) {
     slug: row.slug,
     brand: row.brand_name ? { id: row.brand_id, name: row.brand_name, slug: row.brand_slug } : null,
     imageUrl,
+    hoverImageUrl: hoverImageUrl && hoverImageUrl !== imageUrl ? hoverImageUrl : null,
     variantId: row.variant_id,
     sku: row.sku,
     price,
@@ -194,11 +195,15 @@ export async function listProducts(raw: z.infer<typeof productQuerySchema>) {
         .orderBy(desc(productImages.isPrimary), asc(productImages.sortOrder))
     : [];
   const imageMap = new Map<number, string>();
+  const hoverMap = new Map<number, string>();
   for (const img of images) {
     if (!imageMap.has(img.productId)) imageMap.set(img.productId, img.url);
+    else if (!hoverMap.has(img.productId) && img.url !== imageMap.get(img.productId)) {
+      hoverMap.set(img.productId, img.url);
+    }
   }
   return {
-    items: list.map((row) => mapCard(row, imageMap.get(row.id) ?? null)),
+    items: list.map((row) => mapCard(row, imageMap.get(row.id) ?? null, hoverMap.get(row.id) ?? null)),
     page: query.page,
     limit: query.limit,
     total,
@@ -356,33 +361,22 @@ export async function getCategoryBySlug(slug: string) {
 }
 
 export async function homepageData() {
-  const [tree, reviewHighlight, featured, newest, popular] = await Promise.all([
+  const [tree, featured, lookbookRows] = await Promise.all([
     listCategoriesTree(),
-    db
-      .select({
-        id: reviews.id,
-        rating: reviews.rating,
-        title: reviews.title,
-        comment: reviews.comment,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        productName: products.name,
-        productSlug: products.slug,
-      })
-      .from(reviews)
-      .innerJoin(users, eq(reviews.userId, users.id))
-      .innerJoin(products, eq(reviews.productId, products.id))
-      .where(eq(reviews.status, "APPROVED"))
-      .orderBy(desc(reviews.createdAt))
-      .limit(6),
     listProducts({ featured: "true", page: 1, limit: 8, sort: "newest" }),
-    listProducts({ isNew: "true", page: 1, limit: 8, sort: "newest" }),
-    listProducts({ page: 1, limit: 8, sort: "popularity" }),
+    pool
+      .query(
+        `SELECT id, slug, title, cover_image_url AS coverImageUrl, video_url AS videoUrl
+         FROM lookbooks WHERE status = 'ACTIVE' ORDER BY created_at DESC LIMIT 8`,
+      )
+      .then(([rows]) => rows as Array<{ id: number; slug: string; title: string; coverImageUrl: string | null; videoUrl: string | null }>)
+      .catch(() => [] as Array<{ id: number; slug: string; title: string; coverImageUrl: string | null; videoUrl: string | null }>),
   ]);
   return {
     categories: tree,
-    reviews: reviewHighlight,
-    featured: featured.items.length ? featured.items : popular.items,
-    newest: newest.items,
+    reviews: [],
+    featured: featured.items,
+    newest: featured.items,
+    lookbooks: lookbookRows,
   };
 }

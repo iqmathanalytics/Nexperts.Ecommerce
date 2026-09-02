@@ -4,6 +4,7 @@ export type ProductCard = {
   slug: string;
   brand: { id: number | null; name: string; slug: string | null } | null;
   imageUrl: string | null;
+  hoverImageUrl?: string | null;
   variantId: number;
   sku: string;
   price: number;

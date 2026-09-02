@@ -15,19 +15,21 @@ Legacy service `nexperts-api` is left unchanged.
 
 ## Frontend on Cloudflare
 
-1. Create a Cloudflare Pages/Workers project for `frontend`.
-2. Build command: `npx next build` (or OpenNext: `npx @opennextjs/cloudflare build`)
-3. Set `NEXT_PUBLIC_API_URL` to the Render API URL including `/api/v1`.
-4. Set `NEXT_PUBLIC_SITE_URL` to the production domain.
+Deployed Worker: **https://nexperts-store.quorentanalytics.workers.dev**
 
-For Next.js on Cloudflare Workers, use OpenNext:
+Local deploy (already logged in via Wrangler):
 
 ```
 cd frontend
-npx @opennextjs/cloudflare build
-npx wrangler deploy
+npm run deploy
 ```
 
+Env in `frontend/.env.production`:
+
+- `NEXT_PUBLIC_API_URL=https://nexperts-ecommerce-api.onrender.com/api/v1`
+- `NEXT_PUBLIC_SITE_URL=https://nexperts-store.quorentanalytics.workers.dev`
+
+Render `FRONTEND_URL` / `ADMIN_FRONTEND_URL` must match the store URL exactly.
 ## Database on TiDB Cloud
 
 1. Create a Serverless cluster.
@@ -45,3 +47,13 @@ npx wrangler deploy
 ## CORS and cookies
 
 Production cookies use `SameSite=None; Secure`. The API `FRONTEND_URL` must match the store origin exactly.
+
+## Premium redesign notes
+
+- Run `npm run db:migrate` after pulling Wave 3 schema changes (collections, lookbooks, loyalty, fit, waitlist, GDPR tables).
+- Re-seed optionally for festive/summer collections and loyalty demo balance.
+- Optional frontend env: `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_INTERCOM_APP_ID`.
+- Online checkout: set `PAYMENT_PROVIDER=razorpay` plus `PAYMENT_KEY` / `PAYMENT_SECRET` on Render.
+- Monitoring: Sentry DSN on frontend if configured; UptimeRobot on `/health` and the Worker URL.
+- Email journeys live in `backend/src/jobs/emailJourneys.ts` — attach a Render cron to call `runEmailCronTick`.
+
