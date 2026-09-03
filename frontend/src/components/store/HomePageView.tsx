@@ -6,6 +6,7 @@ import { LookbookCarousel } from "@/components/store/LookbookCarousel";
 import { Reveal } from "@/components/store/Reveal";
 import { CampaignTile } from "@/components/store/CampaignTile";
 import { AmbientScene } from "@/components/store/AmbientScene";
+import { PromoMarquee } from "@/components/store/PromoMarquee";
 import { CAMPAIGNS, DRESS_EDITS, DEFAULT_EDITORIAL, HERO_VIDEO, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
 import { categoryHref, MEN_CATEGORY_NAV, WOMEN_CATEGORY_NAV } from "@/lib/shop";
 import type { CategoryNode, ProductCard } from "@/lib/types";
@@ -64,16 +65,10 @@ export function HomePageView({ data }: { data: HomeData }) {
         ]}
       />
 
-      <div className="overflow-hidden border-y border-line bg-brand text-white">
-        <div className="animate-marquee flex w-max gap-12 py-2.5 text-[10px] font-semibold uppercase tracking-[0.28em]">
-          {[...ticker, ...ticker].map((t, i) => (
-            <span key={`${t}-${i}`} className="opacity-85">
-              {t}
-              <span className="mx-6 text-accent">◆</span>
-            </span>
-          ))}
-        </div>
-      </div>
+      <PromoMarquee
+        items={ticker}
+        className="overflow-hidden border-y border-line bg-brand text-white"
+      />
 
       <section className="grid gap-4 p-3 md:grid-cols-2 md:p-5">
         {campaigns.slice(0, 2).map((c) => (
@@ -87,15 +82,12 @@ export function HomePageView({ data }: { data: HomeData }) {
         </div>
       ) : null}
 
-      <section className="overflow-hidden bg-accent text-ink">
-        <div className="animate-marquee-reverse flex w-max gap-10 py-3 text-[11px] font-semibold uppercase tracking-[0.22em]">
-          {[...promoCodes, ...promoCodes].map((t, i) => (
-              <span key={`${t}-${i}`} className="px-2">
-                {t}
-              </span>
-            ))}
-        </div>
-      </section>
+      <PromoMarquee
+        items={promoCodes}
+        reverse
+        className="overflow-hidden bg-accent text-ink"
+        itemClassName="px-2"
+      />
 
       {featured.length > 0 ? (
         <section className="relative overflow-hidden">

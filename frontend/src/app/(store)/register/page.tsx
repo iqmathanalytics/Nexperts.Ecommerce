@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { Suspense, useState } from "react";
-import { safeNextPath } from "@/lib/auth";
+import { DEFAULT_AFTER_LOGIN, safeNextPath } from "@/lib/auth";
 import { setSessionGate } from "@/lib/sessionGate";
 import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
 import { MEN_HERO } from "@/lib/editorial";
+import type { User } from "@/lib/types";
 
 const schema = z.object({
   firstName: z.string().min(2),
@@ -34,7 +35,7 @@ function RegisterForm() {
   const mutate = useMutation({
     mutationFn: (body: z.infer<typeof schema>) => {
       const phone = body.phone?.trim();
-      return api("/auth/register", {
+      return api<{ user: User }>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           firstName: body.firstName.trim(),
@@ -45,10 +46,11 @@ function RegisterForm() {
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       setSessionGate("customer");
-      qc.invalidateQueries({ queryKey: ["me"] });
-      router.push(next);
+      qc.setQueryData(["me"], { data: { user: res.data.user } });
+      qc.invalidateQueries({ queryKey: ["cart"] });
+      router.replace(next || DEFAULT_AFTER_LOGIN);
     },
     onError: (e: Error) => setError(e.message),
   });

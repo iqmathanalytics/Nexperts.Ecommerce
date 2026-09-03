@@ -144,7 +144,7 @@ export function GlobalLoading() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 top-0 z-[130] transition-opacity duration-100",
+        "pointer-events-none fixed inset-x-0 top-0 z-[130] transition-opacity duration-200",
         visible ? "opacity-100" : "opacity-0",
       )}
       aria-hidden={!visible}

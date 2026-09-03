@@ -34,17 +34,34 @@ export const heartPop = {
 export const easeOut = [0.22, 1, 0.36, 1] as const;
 
 export const offerModal = {
-  initial: { opacity: 0, scale: 0.86, y: 48, rotateX: 12 },
+  initial: { opacity: 0, scale: 0.84, y: 56, rotateX: 14 },
   animate: { opacity: 1, scale: 1, y: 0, rotateX: 0 },
-  exit: { opacity: 0, scale: 0.9, y: 64, rotateX: -8, filter: "blur(8px)" },
-  transition: { duration: 0.55, ease: easeOut },
+  exit: { opacity: 0, scale: 0.92, y: 40, rotateX: -6, filter: "blur(10px)" },
+  transition: { duration: 0.62, ease: easeOut },
 };
 
 export const offerDock = {
-  initial: { opacity: 0, y: 80, scale: 0.94 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: 90, scale: 0.92, filter: "blur(6px)" },
-  transition: { type: "spring" as const, stiffness: 280, damping: 26 },
+  initial: { opacity: 0, y: 88, scale: 0.92, rotate: -1.5 },
+  animate: { opacity: 1, y: 0, scale: 1, rotate: 0 },
+  exit: { opacity: 0, y: 72, scale: 0.94, filter: "blur(8px)" },
+  transition: { type: "spring" as const, stiffness: 260, damping: 24 },
+};
+
+export const offerCorner = {
+  initial: { opacity: 0, x: 48, y: 24, scale: 0.9 },
+  animate: { opacity: 1, x: 0, y: 0, scale: 1 },
+  exit: { opacity: 0, x: 36, scale: 0.92, filter: "blur(6px)" },
+  transition: { type: "spring" as const, stiffness: 300, damping: 28 },
+};
+
+export const offerStagger = {
+  initial: {},
+  animate: { transition: { staggerChildren: 0.07, delayChildren: 0.12 } },
+};
+
+export const offerItem = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.42, ease: easeOut } },
 };
 
 export function isModifiedClick(e: { metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; button: number }) {

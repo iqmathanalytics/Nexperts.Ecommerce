@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
 
 type Review = {
   id: number;
@@ -32,6 +33,7 @@ function statusLabel(status: string) {
 
 export default function ReviewsAdmin() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const dq = useDebouncedValue(q, 300);
   const [status, setStatus] = useState("");
@@ -42,11 +44,22 @@ export default function ReviewsAdmin() {
   const mod = useMutation({
     mutationFn: ({ id, status }: { id: number; status: "APPROVED" | "REJECTED" | "HIDDEN" }) =>
       api(`/admin/reviews/${id}/moderate`, { method: "POST", body: JSON.stringify({ status }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-reviews"] }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["admin-reviews"] });
+      toast.push(
+        v.status === "APPROVED" ? "Review accepted" : v.status === "REJECTED" ? "Review rejected" : "Review hidden",
+        "success",
+      );
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const del = useMutation({
     mutationFn: (id: number) => api(`/admin/reviews/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-reviews"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-reviews"] });
+      toast.push("Review deleted", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const query = dq.trim().toLowerCase();
   const rows = (data?.data ?? []).filter((r) => {

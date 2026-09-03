@@ -9,6 +9,7 @@ import { Input, Select } from "@/components/ui/input";
 import { cn, formatCompactNumber, formatDateTime, formatMoney } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminPage, AdminTableModal, DataTable, FilterBar, FormError, type DataColumn } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
 
 type Row = {
   variantId: number;
@@ -120,6 +121,7 @@ function Section({
 
 export default function InventoryPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const dq = useDebouncedValue(q, 300);
@@ -179,7 +181,9 @@ export default function InventoryPage() {
       setQty((prev) => ({ ...prev, [row.variantId]: "" }));
       qc.invalidateQueries({ queryKey: ["inv"] });
       qc.invalidateQueries({ queryKey: ["inv-tx"] });
+      toast.push(`Stock updated for ${row.sku}`, "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const allRows = stockAll.data?.data ?? [];

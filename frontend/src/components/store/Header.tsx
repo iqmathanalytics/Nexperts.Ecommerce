@@ -170,7 +170,7 @@ export function Header() {
               <Link href="/faq" className="hover:opacity-100 opacity-80">
                 Help
               </Link>
-              <Link href={isAuthenticated ? "/account" : "/login"} className="hover:opacity-100 opacity-80">
+              <Link href={isAuthenticated ? "/account/profile" : loginUrl("/account/profile")} className="hover:opacity-100 opacity-80">
                 {isAuthenticated ? "My account" : "Sign in"}
               </Link>
             </div>
@@ -262,7 +262,7 @@ export function Header() {
               ) : null}
             </motion.button>
             <Link
-              href={isAuthenticated ? "/account" : "/login"}
+              href={isAuthenticated ? "/account/profile" : loginUrl("/account/profile")}
               className={`hidden sm:inline-flex ${iconBtn}`}
               aria-label="Account"
             >
@@ -362,7 +362,11 @@ export function Header() {
             <Link href="/outfits" onClick={closeMenus} className="block border-b border-line py-4 text-sm">
               Outfit builder
             </Link>
-            <Link href={isAuthenticated ? "/account" : "/login"} onClick={closeMenus} className="block border-b border-line py-4 text-sm">
+            <Link
+              href={isAuthenticated ? "/account/profile" : loginUrl("/account/profile")}
+              onClick={closeMenus}
+              className="block border-b border-line py-4 text-sm"
+            >
               {isAuthenticated ? "My account" : "Sign in"}
             </Link>
             <Link href="/faq" onClick={closeMenus} className="block py-4 text-sm text-muted">

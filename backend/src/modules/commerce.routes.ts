@@ -50,6 +50,9 @@ reviewRouter.post("/", validate(review.reviewSchema), asyncHandler(async (req, r
 
 export const couponPublicRouter = Router();
 couponPublicRouter.use(requireCustomer);
+couponPublicRouter.get("/eligibility", asyncHandler(async (req, res) => {
+  res.json(success(await coupon.getFirstOrderOfferEligibility(req.user!.id)));
+}));
 couponPublicRouter.post("/preview", asyncHandler(async (req, res) => {
   const quote = await order.quoteCheckout(req.user!.id, String(req.body.code ?? ""));
   res.json(success(quote.coupon));

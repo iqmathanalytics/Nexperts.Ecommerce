@@ -39,11 +39,11 @@ export const upsertProductSchema = z.object({
         sku: z.string().min(2).max(80),
         name: z.string().min(1).max(150),
         attributes: z.record(z.string()).optional().nullable(),
-        price: z.number().positive(),
-        mrp: z.number().positive(),
+        price: z.coerce.number().positive(),
+        mrp: z.coerce.number().positive(),
         isDefault: z.boolean().optional(),
-        stock: z.number().int().min(0).optional(),
-        reorderLevel: z.number().int().min(0).optional(),
+        stock: z.coerce.number().int().min(0).optional(),
+        reorderLevel: z.coerce.number().int().min(0).optional(),
       }),
     )
     .min(1),
@@ -52,25 +52,25 @@ export const upsertProductSchema = z.object({
 export const categorySchema = z.object({
   name: z.string().min(2).max(150),
   slug: z.string().max(180).optional(),
-  parentId: z.number().int().positive().nullable().optional(),
+  parentId: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.number().int().positive().nullable().optional()),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().optional().nullable(),
+  imageUrl: z.preprocess((v) => (v === "" ? null : v), z.string().max(800).optional().nullable()),
   status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
-  seoTitle: z.string().max(180).optional().nullable(),
-  seoDescription: z.string().max(320).optional().nullable(),
-  sortOrder: z.number().int().optional(),
+  seoTitle: z.preprocess((v) => (v === "" ? null : v), z.string().max(180).optional().nullable()),
+  seoDescription: z.preprocess((v) => (v === "" ? null : v), z.string().max(320).optional().nullable()),
+  sortOrder: z.coerce.number().int().optional(),
 });
 
 export const brandSchema = z.object({
   name: z.string().min(2).max(150),
   slug: z.string().max(180).optional(),
   description: z.string().optional().nullable(),
-  logoUrl: z.string().optional().nullable(),
+  logoUrl: z.preprocess((v) => (v === "" ? null : v), z.string().max(800).optional().nullable()),
   lookbookBio: z.string().optional().nullable(),
-  heroImageUrl: z.string().optional().nullable(),
+  heroImageUrl: z.preprocess((v) => (v === "" ? null : v), z.string().max(800).optional().nullable()),
   status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
-  seoTitle: z.string().max(180).optional().nullable(),
-  seoDescription: z.string().max(320).optional().nullable(),
+  seoTitle: z.preprocess((v) => (v === "" ? null : v), z.string().max(180).optional().nullable()),
+  seoDescription: z.preprocess((v) => (v === "" ? null : v), z.string().max(320).optional().nullable()),
 });
 
 export const imageMetaSchema = z.object({
@@ -253,7 +253,15 @@ export async function updateProduct(adminId: number, id: number, input: z.infer<
         })
         .where(eq(productVariants.id, variantId));
       if (v.stock != null) {
-        await setStockWithAudit(adminId, variantId, v.stock, "Stock updated via product editor", ip, v.reorderLevel ?? undefined);
+        try {
+          await setStockWithAudit(adminId, variantId, v.stock, "Stock updated via product editor", ip, v.reorderLevel ?? undefined);
+        } catch (err) {
+          // Don't block product metadata saves when stock can't drop below reserved units.
+          if (!(err instanceof AppError) || err.code !== "NEGATIVE_STOCK") throw err;
+          if (v.reorderLevel != null) {
+            await db.update(inventory).set({ reorderLevel: v.reorderLevel }).where(eq(inventory.variantId, variantId));
+          }
+        }
       } else if (v.reorderLevel != null) {
         await db.update(inventory).set({ reorderLevel: v.reorderLevel }).where(eq(inventory.variantId, variantId));
       }

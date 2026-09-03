@@ -5,16 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Suspense, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
-import { Suspense, useState } from "react";
-import { safeNextPath } from "@/lib/auth";
+import { DEFAULT_AFTER_LOGIN, safeNextPath } from "@/lib/auth";
 import { setSessionGate } from "@/lib/sessionGate";
 import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
 import { WOMEN_HERO } from "@/lib/editorial";
+import type { User } from "@/lib/types";
+import { useSession } from "@/hooks/useSession";
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -23,16 +25,35 @@ function LoginForm() {
   const params = useSearchParams();
   const next = safeNextPath(params.get("next"));
   const qc = useQueryClient();
+  const { isAuthenticated, isLoading: sessionLoading } = useSession();
   const [error, setError] = useState<string | null>(null);
   const form = useForm({ resolver: zodResolver(schema) });
+
+  // Soft gate may be set from a prior visit — confirm JWT before skipping the form.
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: () => api<{ user: User | null }>("/auth/me"),
+    enabled: isAuthenticated || sessionLoading,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (me.data?.data.user) {
+      router.replace(next || DEFAULT_AFTER_LOGIN);
+    }
+  }, [me.data?.data.user, next, router]);
+
   const login = useMutation({
     mutationFn: (body: z.infer<typeof schema>) =>
-      api("/auth/login", {
+      api<{ user: User }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email: body.email.trim(), password: body.password }),
       }),
-    onSuccess: async () => {
+    onSuccess: async (res) => {
       setSessionGate("customer");
+      qc.setQueryData(["me"], { data: { user: res.data.user } });
+      router.replace(next || DEFAULT_AFTER_LOGIN);
+
       const { readGuestCart, clearGuestCart } = await import("@/lib/guestCart");
       const guest = readGuestCart();
       if (guest.length) {
@@ -46,12 +67,19 @@ function LoginForm() {
           /* merge best-effort */
         }
       }
-      qc.invalidateQueries({ queryKey: ["me"] });
-      qc.invalidateQueries({ queryKey: ["cart"] });
-      router.push(next);
+
+      await qc.invalidateQueries({ queryKey: ["cart"] });
     },
     onError: (e: Error) => setError(e.message),
   });
+
+  if (sessionLoading || me.isLoading || me.data?.data.user || login.isSuccess) {
+    return (
+      <div className="flex min-h-[50svh] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
+      </div>
+    );
+  }
 
   return (
     <AuthStage
@@ -103,7 +131,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50svh] items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

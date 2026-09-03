@@ -56,20 +56,20 @@ export const collectionSchema = z.object({
   slug: z.string().max(200).optional(),
   season: z.enum(["spring", "summer", "festive", "winter", "all"]).optional(),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().max(500).optional().nullable(),
+  imageUrl: z.preprocess((v) => (v === "" ? null : v), z.string().max(800).optional().nullable()),
   status: z.enum(["ACTIVE", "ARCHIVED", "DRAFT"]).optional(),
-  seoTitle: z.string().max(180).optional().nullable(),
-  seoDescription: z.string().max(320).optional().nullable(),
+  seoTitle: z.preprocess((v) => (v === "" ? null : v), z.string().max(180).optional().nullable()),
+  seoDescription: z.preprocess((v) => (v === "" ? null : v), z.string().max(320).optional().nullable()),
   productIds: z.array(z.number().int().positive()).optional(),
 });
 
 export const lookbookSchema = z.object({
   title: z.string().min(2).max(255),
   slug: z.string().max(200).optional(),
-  brandId: z.number().int().positive().nullable().optional(),
+  brandId: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.number().int().positive().nullable().optional()),
   description: z.string().optional().nullable(),
-  coverImageUrl: z.string().max(800).optional().nullable(),
-  videoUrl: z.string().max(800).optional().nullable(),
+  coverImageUrl: z.preprocess((v) => (v === "" ? null : v), z.string().max(800).optional().nullable()),
+  videoUrl: z.preprocess((v) => (v === "" ? null : v), z.string().max(800).optional().nullable()),
   status: z.enum(["ACTIVE", "ARCHIVED", "DRAFT"]).optional(),
   productIds: z.array(z.number().int().positive()).optional(),
 });

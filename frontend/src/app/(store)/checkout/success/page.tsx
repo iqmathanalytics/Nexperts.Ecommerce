@@ -13,6 +13,7 @@ import { expectedDeliveryWindow, paymentLabel } from "@/lib/orders";
 import { asAmount, formatAddress, type CustomerOrder } from "@/lib/orderTypes";
 import { OrderPlacedCeremony } from "@/components/store/OrderPlacedCeremony";
 import { easeOut } from "@/lib/motion";
+import { markFirstOrderOfferDone } from "@/lib/offers";
 import { splashHoldMs } from "@/lib/splash";
 
 function SuccessInner() {
@@ -30,6 +31,10 @@ function SuccessInner() {
   const pay = order?.payments?.[0];
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "60123456789";
   const [ceremony, setCeremony] = useState(!alreadyCelebrated);
+
+  useEffect(() => {
+    markFirstOrderOfferDone();
+  }, []);
 
   useEffect(() => {
     if (alreadyCelebrated) return;

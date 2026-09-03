@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
 
 type AdminUser = {
   id: number;
@@ -37,6 +38,7 @@ const emptyForm = (): UserForm => ({
 
 export default function UsersPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
@@ -61,7 +63,9 @@ export default function UsersPage() {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       form.reset(emptyForm());
       setEditingId(null);
+      toast.push("User created", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const update = useMutation({
@@ -81,7 +85,9 @@ export default function UsersPage() {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       form.reset(emptyForm());
       setEditingId(null);
+      toast.push("User saved", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const toggleStatus = useMutation({
@@ -96,7 +102,11 @@ export default function UsersPage() {
           status: u.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE",
         }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.push("User status updated", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const rows = useMemo(() => {

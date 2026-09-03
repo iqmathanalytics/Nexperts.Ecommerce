@@ -15,7 +15,9 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return res.status(err.status).json(fail(err.code, err.message));
   }
   if (err instanceof ZodError) {
-    const message = err.errors[0]?.message ?? "Validation failed";
+    const issue = err.errors[0];
+    const path = issue?.path?.length ? `${issue.path.join(".")}: ` : "";
+    const message = `${path}${issue?.message ?? "Validation failed"}`;
     return res.status(422).json(fail("VALIDATION_ERROR", message));
   }
   console.error(err);

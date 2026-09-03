@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { AdminPage, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
 import type { OfferItem, StorefrontEditorial } from "@/lib/editorial";
 
 type EditorialForm = {
@@ -40,6 +41,7 @@ const emptyOffer = (): OfferItem => ({ kicker: "", code: "", text: "", href: "/s
 
 export default function EditorialAdminPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [form, setForm] = useState<EditorialForm | null>(null);
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-editorial"],
@@ -73,7 +75,12 @@ export default function EditorialAdminPage() {
       };
       return api("/admin/editorial", { method: "PUT", body: JSON.stringify(body) });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-editorial"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-editorial"] });
+      qc.invalidateQueries({ queryKey: ["editorial"] });
+      toast.push("Editorial saved", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   if (isLoading || !form) {
@@ -103,7 +110,6 @@ export default function EditorialAdminPage() {
       }
     >
       <FormError error={save.error} />
-      {save.isSuccess ? <p className="mb-4 text-sm text-muted">Saved. Storefront cache will refresh shortly.</p> : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3 rounded-2xl border border-line bg-surface-raised p-4">

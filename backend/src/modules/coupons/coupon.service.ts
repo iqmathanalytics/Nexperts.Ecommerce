@@ -1,11 +1,18 @@
 import { z } from "zod";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { db } from "../../db";
-import { couponUsage, coupons } from "../../db/schema";
+import { couponUsage, coupons, orders } from "../../db/schema";
 import { AppError } from "../../utils/http";
 import { applyCouponDiscount, toMoney } from "../../utils/money";
 import { audit } from "../../utils/audit";
+
+/** First-order / welcome codes — once used or after any completed order, hide & block reuse. */
+export const FIRST_ORDER_COUPON_CODES = new Set(["WELCOME10"]);
+
+export function isFirstOrderCouponCode(code: string) {
+  return FIRST_ORDER_COUPON_CODES.has(code.trim().toUpperCase());
+}
 
 export const couponSchema = z.object({
   code: z.string().min(3).max(40).transform((v) => v.toUpperCase()),
@@ -50,6 +57,56 @@ export async function updateCoupon(adminId: number, id: number, input: z.infer<t
   await audit({ adminUserId: adminId, action: "COUPON_UPDATED", resource: "coupon", resourceId: id });
 }
 
+async function countNonCancelledOrders(userId: number) {
+  const rows = await db
+    .select({ used: sql<number>`count(*)` })
+    .from(orders)
+    .where(and(eq(orders.userId, userId), ne(orders.status, "CANCELLED")));
+  return Number(rows[0]?.used ?? 0);
+}
+
+async function countCouponUses(userId: number, couponId: number) {
+  const usageRows = await db
+    .select({ used: sql<number>`count(*)` })
+    .from(couponUsage)
+    .where(and(eq(couponUsage.couponId, couponId), eq(couponUsage.userId, userId)));
+  return Number(usageRows[0]?.used ?? 0);
+}
+
+/** Storefront: hide WELCOME / first-order promos after claim or first order. */
+export async function getFirstOrderOfferEligibility(userId: number) {
+  const orderCount = await countNonCancelledOrders(userId);
+  const hasCompletedOrder = orderCount > 0;
+
+  let hasClaimedWelcome = false;
+  for (const code of FIRST_ORDER_COUPON_CODES) {
+    const [coupon] = await db.select({ id: coupons.id }).from(coupons).where(eq(coupons.code, code)).limit(1);
+    if (!coupon) continue;
+    if ((await countCouponUses(userId, coupon.id)) > 0) {
+      hasClaimedWelcome = true;
+      break;
+    }
+  }
+
+  return {
+    eligibleForFirstOrderOffer: !hasCompletedOrder && !hasClaimedWelcome,
+    hasCompletedOrder,
+    hasClaimedWelcome,
+  };
+}
+
+async function assertFirstOrderEligible(userId: number, code: string) {
+  if (!isFirstOrderCouponCode(code)) return;
+  const orderCount = await countNonCancelledOrders(userId);
+  if (orderCount > 0) {
+    throw new AppError(
+      "INVALID_COUPON",
+      "This welcome offer is only for your first order",
+      400,
+    );
+  }
+}
+
 export async function previewCoupon(userId: number, code: string, subtotal: number) {
   const [coupon] = await db.select().from(coupons).where(eq(coupons.code, code.toUpperCase())).limit(1);
   if (!coupon) throw new AppError("INVALID_COUPON", "Coupon not found", 400);
@@ -59,11 +116,9 @@ export async function previewCoupon(userId: number, code: string, subtotal: numb
   if (coupon.usageLimit != null && coupon.usageCount >= coupon.usageLimit) {
     throw new AppError("INVALID_COUPON", "Coupon usage limit reached", 400);
   }
-  const usageRows = await db
-    .select({ used: sql<number>`count(*)` })
-    .from(couponUsage)
-    .where(and(eq(couponUsage.couponId, coupon.id), eq(couponUsage.userId, userId)));
-  if (Number(usageRows[0]?.used ?? 0) >= coupon.perUserLimit) throw new AppError("INVALID_COUPON", "You have already used this coupon", 400);
+  await assertFirstOrderEligible(userId, coupon.code);
+  const used = await countCouponUses(userId, coupon.id);
+  if (used >= coupon.perUserLimit) throw new AppError("INVALID_COUPON", "You have already used this coupon", 400);
   if (subtotal < toMoney(coupon.minOrderAmount)) {
     throw new AppError("INVALID_COUPON", `Minimum order amount is RM ${coupon.minOrderAmount}`, 400);
   }
@@ -105,6 +160,15 @@ export async function lockAndValidateCoupon(conn: PoolConnection, userId: number
   }
   if (coupon.usage_limit != null && coupon.usage_count >= coupon.usage_limit) {
     throw new AppError("INVALID_COUPON", "Coupon usage limit reached", 400);
+  }
+  if (isFirstOrderCouponCode(coupon.code)) {
+    const [orderRows] = await conn.query<Array<RowDataPacket & { used: number }>>(
+      "SELECT COUNT(*) AS used FROM orders WHERE user_id = ? AND status <> 'CANCELLED'",
+      [userId],
+    );
+    if (Number(orderRows[0]?.used ?? 0) > 0) {
+      throw new AppError("INVALID_COUPON", "This welcome offer is only for your first order", 400);
+    }
   }
   const [usageRows] = await conn.query<Array<RowDataPacket & { used: number }>>(
     "SELECT COUNT(*) AS used FROM coupon_usage WHERE coupon_id = ? AND user_id = ?",

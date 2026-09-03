@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Toast } from "@/components/ui/state";
+import { useToast } from "@/components/ui/toast";
 import { AdminProductImageGrid } from "@/components/admin/AdminImageField";
 
 type Variant = {
@@ -60,6 +61,7 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const toast = useToast();
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -166,8 +168,10 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
   const save = useMutation({
     mutationFn: async () => {
       const body = payload();
-      if (!body.name.trim()) throw new Error("Name is required");
-      if (body.variants.some((v) => !v.price || !v.mrp)) throw new Error("Each size needs a price and MRP");
+      if (!body.name.trim() || body.name.trim().length < 2) throw new Error("Name must be at least 2 characters");
+      if (body.variants.some((v) => !v.price || !v.mrp || v.price <= 0 || v.mrp <= 0)) {
+        throw new Error("Each size needs a price and MRP greater than 0");
+      }
       const res =
         mode === "create"
           ? await api<{ id: number }>("/admin/products", { method: "POST", body: JSON.stringify(body) })
@@ -179,18 +183,20 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
       }
       return res;
     },
-    onSuccess: (res: any) => {
+    onSuccess: () => {
       setErr(null);
-      setMsg("Saved — published products appear on the storefront immediately.");
+      setMsg(null);
       pendingImages.forEach((item) => URL.revokeObjectURL(item.preview));
       setPendingImages([]);
       qc.invalidateQueries({ queryKey: ["admin-products"] });
-      qc.invalidateQueries({ queryKey: ["admin-product", params.id] });
-      if (mode === "create") router.push(`/admin/products/${res.data.id}`);
+      qc.invalidateQueries({ queryKey: ["admin-product"] });
+      toast.push(mode === "create" ? "Product created" : "Product saved", "success");
+      router.push("/admin/products");
     },
     onError: (e: Error) => {
       setMsg(null);
       setErr(e.message);
+      toast.push(e.message, "error");
     },
   });
 
@@ -516,9 +522,14 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
       >
         {mode === "create" ? <p className="mt-2 text-xs text-muted">These photos upload when you save the product.</p> : null}
       </AdminProductImageGrid>
-      <Button onClick={() => save.mutate()} disabled={save.isPending}>
-        Save product
-      </Button>
+      <div className="flex flex-wrap items-center gap-3 pt-2">
+        <Button pending={save.isPending} onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? "Saving…" : "Save product"}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => router.push("/admin/products")} disabled={save.isPending}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }

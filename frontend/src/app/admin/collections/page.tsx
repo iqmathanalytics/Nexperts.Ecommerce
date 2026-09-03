@@ -8,6 +8,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 import { AdminProductPicker } from "@/components/admin/AdminProductPicker";
+import { useToast } from "@/components/ui/toast";
 
 type Collection = {
   id: number;
@@ -37,6 +38,7 @@ const emptyForm = {
 
 export default function CollectionsPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Collection | "new" | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -47,19 +49,37 @@ export default function CollectionsPage() {
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { ...form, slug: form.slug || undefined };
+      if (form.name.trim().length < 2) throw new Error("Name must be at least 2 characters");
+      const body = {
+        name: form.name.trim(),
+        slug: form.slug || undefined,
+        season: form.season,
+        description: form.description || null,
+        imageUrl: form.imageUrl || null,
+        seoTitle: form.seoTitle || null,
+        seoDescription: form.seoDescription || null,
+        status: form.status,
+        productIds: form.productIds,
+      };
       return editing === "new"
         ? api("/admin/collections", { method: "POST", body: JSON.stringify(body) })
         : api(`/admin/collections/${(editing as Collection).id}`, { method: "PUT", body: JSON.stringify(body) });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-collections"] });
+      toast.push(editing === "new" ? "Collection created" : "Collection saved", "success");
       setEditing(null);
+      setForm(emptyForm);
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const archive = useMutation({
     mutationFn: (id: number) => api(`/admin/collections/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-collections"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-collections"] });
+      toast.push("Collection archived", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const rows = useMemo(() => {
@@ -69,20 +89,24 @@ export default function CollectionsPage() {
   }, [data?.data, q]);
 
   async function openEdit(c: Collection) {
-    const detail = await api<Collection>(`/admin/collections/${c.id}`);
-    const row = detail.data;
-    setForm({
-      name: row.name,
-      slug: row.slug,
-      season: row.season,
-      description: row.description ?? "",
-      imageUrl: row.imageUrl ?? "",
-      seoTitle: row.seoTitle ?? "",
-      seoDescription: row.seoDescription ?? "",
-      status: row.status,
-      productIds: row.productIds ?? [],
-    });
-    setEditing(row);
+    try {
+      const detail = await api<Collection>(`/admin/collections/${c.id}`);
+      const row = detail.data;
+      setForm({
+        name: row.name,
+        slug: row.slug,
+        season: row.season,
+        description: row.description ?? "",
+        imageUrl: row.imageUrl ?? "",
+        seoTitle: row.seoTitle ?? "",
+        seoDescription: row.seoDescription ?? "",
+        status: row.status,
+        productIds: row.productIds ?? [],
+      });
+      setEditing(row);
+    } catch (e) {
+      toast.push(e instanceof Error ? e.message : "Could not open collection", "error");
+    }
   }
 
   return (
@@ -165,9 +189,14 @@ export default function CollectionsPage() {
             </Select>
           </div>
           <FormError error={save.error} />
-          <Button type="submit" disabled={save.isPending}>
-            Save
-          </Button>
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" pending={save.isPending} disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={save.isPending}>
+              Cancel
+            </Button>
+          </div>
         </form>
       </AdminDrawer>
     </AdminPage>

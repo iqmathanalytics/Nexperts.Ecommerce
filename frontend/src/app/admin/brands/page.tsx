@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { AdminImageField } from "@/components/admin/AdminImageField";
+import { useToast } from "@/components/ui/toast";
 import { mediaUrl } from "@/lib/utils";
 
 type Brand = {
@@ -36,6 +37,7 @@ const emptyForm = {
 
 export default function BrandsPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("ACTIVE");
   const [editing, setEditing] = useState<Brand | "new" | null>(null);
@@ -47,8 +49,9 @@ export default function BrandsPage() {
 
   const save = useMutation({
     mutationFn: () => {
+      if (form.name.trim().length < 2) throw new Error("Name must be at least 2 characters");
       const body = {
-        name: form.name,
+        name: form.name.trim(),
         slug: form.slug || undefined,
         description: form.description || null,
         lookbookBio: form.lookbookBio || null,
@@ -64,16 +67,27 @@ export default function BrandsPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-brands"] });
+      toast.push(editing === "new" ? "Brand created" : "Brand saved", "success");
       setEditing(null);
+      setForm(emptyForm);
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const archive = useMutation({
     mutationFn: (id: number) => api(`/admin/brands/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-brands"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-brands"] });
+      toast.push("Brand archived", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const restore = useMutation({
     mutationFn: (id: number) => api(`/admin/brands/${id}/restore`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-brands"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-brands"] });
+      toast.push("Brand restored", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const rows = useMemo(() => {
@@ -208,9 +222,14 @@ export default function BrandsPage() {
             </Select>
           </div>
           <FormError error={save.error} />
-          <Button type="submit" disabled={save.isPending}>
-            Save
-          </Button>
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" pending={save.isPending} disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={save.isPending}>
+              Cancel
+            </Button>
+          </div>
         </form>
       </AdminDrawer>
     </AdminPage>

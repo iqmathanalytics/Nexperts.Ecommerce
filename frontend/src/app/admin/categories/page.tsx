@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { AdminImageField } from "@/components/admin/AdminImageField";
+import { useToast } from "@/components/ui/toast";
 import { mediaUrl } from "@/lib/utils";
 
 type Category = {
@@ -36,6 +37,7 @@ const emptyForm = {
 
 export default function CategoriesPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("ACTIVE");
   const [editing, setEditing] = useState<Category | "new" | null>(null);
@@ -48,8 +50,9 @@ export default function CategoriesPage() {
 
   const save = useMutation({
     mutationFn: () => {
+      if (form.name.trim().length < 2) throw new Error("Name must be at least 2 characters");
       const body = {
-        name: form.name,
+        name: form.name.trim(),
         slug: form.slug || undefined,
         parentId: form.parentId || null,
         description: form.description || null,
@@ -65,16 +68,27 @@ export default function CategoriesPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-cats"] });
+      toast.push(editing === "new" ? "Category created" : "Category saved", "success");
       setEditing(null);
+      setForm(emptyForm);
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const archive = useMutation({
     mutationFn: (id: number) => api(`/admin/categories/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-cats"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-cats"] });
+      toast.push("Category archived", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const restore = useMutation({
     mutationFn: (id: number) => api(`/admin/categories/${id}/restore`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-cats"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-cats"] });
+      toast.push("Category restored", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const parentName = useMemo(() => new Map(all.map((c) => [c.id, c.name])), [all]);
@@ -220,9 +234,14 @@ export default function CategoriesPage() {
             </Select>
           </div>
           <FormError error={save.error} />
-          <Button type="submit" disabled={save.isPending}>
-            Save
-          </Button>
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" pending={save.isPending} disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={save.isPending}>
+              Cancel
+            </Button>
+          </div>
         </form>
       </AdminDrawer>
     </AdminPage>

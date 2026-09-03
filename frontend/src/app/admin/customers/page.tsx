@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/ui/input";
 import { formatINR } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
 
 type Customer = {
   id: number;
@@ -52,6 +53,7 @@ export default function CustomersPage() {
     enabled: Boolean(open),
   });
   const qc = useQueryClient();
+  const toast = useToast();
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["customers"] });
@@ -61,24 +63,31 @@ export default function CustomersPage() {
   const status = useMutation({
     mutationFn: ({ id, next }: { id: number; next: "ACTIVE" | "SUSPENDED" }) =>
       api(`/admin/customers/${id}/status`, { method: "POST", body: JSON.stringify({ status: next }) }),
-    onSuccess: () => {
+    onSuccess: (_d, v) => {
       setConfirmDelete(null);
       refresh();
+      toast.push(v.next === "ACTIVE" ? "Customer activated" : "Customer deactivated", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const restore = useMutation({
     mutationFn: (id: number) => api(`/admin/customers/${id}/restore`, { method: "POST" }),
     onSuccess: () => {
       setConfirmDelete(null);
       refresh();
+      toast.push("Customer restored", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const remove = useMutation({
     mutationFn: (id: number) => api(`/admin/customers/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       setConfirmDelete(null);
+      setOpen(null);
       refresh();
+      toast.push("Customer deleted", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const items = (data?.data as { items?: Customer[] })?.items ?? [];

@@ -18,6 +18,7 @@ import { setSessionGate } from "@/lib/sessionGate";
 import { paymentLabel } from "@/lib/orders";
 import { OrderPlacedCeremony } from "@/components/store/OrderPlacedCeremony";
 import { easeOut } from "@/lib/motion";
+import { markFirstOrderOfferDone } from "@/lib/offers";
 import { splashHoldMs } from "@/lib/splash";
 
 const addressSchema = z.object({
@@ -104,8 +105,10 @@ export default function CheckoutPage() {
     },
     onSuccess: (res) => {
       setSessionGate("customer");
+      markFirstOrderOfferDone();
       qc.invalidateQueries({ queryKey: ["cart"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["coupon-eligibility"] });
       setPlaced({ id: res.data.id, orderNumber: res.data.orderNumber });
     },
     onError: (e: Error) => setError(e.message),

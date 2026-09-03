@@ -10,16 +10,17 @@ function scrollWindowToTop() {
   document.body.scrollTop = 0;
 }
 
-/** Lightweight route fade without framer-motion on the critical path. */
+/** Soft route enter — CSS keeps the critical path light. */
 export function PageFade({ children }: { children: ReactNode }) {
   const path = usePathname();
 
   useEffect(() => {
     scrollWindowToTop();
+    document.documentElement.classList.remove("nx-route-pending");
   }, [path]);
 
   return (
-    <div key={path} className="animate-[rise-in_0.08s_ease-out]">
+    <div key={path} className="page-enter">
       {children}
     </div>
   );

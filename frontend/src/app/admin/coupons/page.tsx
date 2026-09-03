@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
 
 type Coupon = {
   id: number;
@@ -52,6 +53,7 @@ function toLocalInput(iso: string) {
 
 export default function CouponsPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -64,15 +66,20 @@ export default function CouponsPage() {
         method: "POST",
         body: JSON.stringify({
           ...v,
+          code: v.code.trim().toUpperCase(),
           value: Number(v.value),
           minOrderAmount: Number(v.minOrderAmount),
+          startsAt: new Date(v.startsAt).toISOString(),
+          endsAt: new Date(v.endsAt).toISOString(),
         }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["coupons"] });
       form.reset(emptyForm());
       setEditingId(null);
+      toast.push("Coupon created", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const update = useMutation({
@@ -81,15 +88,20 @@ export default function CouponsPage() {
         method: "PUT",
         body: JSON.stringify({
           ...v,
+          code: v.code.trim().toUpperCase(),
           value: Number(v.value),
           minOrderAmount: Number(v.minOrderAmount),
+          startsAt: new Date(v.startsAt).toISOString(),
+          endsAt: new Date(v.endsAt).toISOString(),
         }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["coupons"] });
       form.reset(emptyForm());
       setEditingId(null);
+      toast.push("Coupon saved", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const toggleStatus = useMutation({
@@ -106,7 +118,11 @@ export default function CouponsPage() {
           status: c.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
         }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["coupons"] });
+      toast.push("Coupon status updated", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const rows = useMemo(() => {

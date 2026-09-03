@@ -8,6 +8,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 import { AdminProductPicker } from "@/components/admin/AdminProductPicker";
+import { useToast } from "@/components/ui/toast";
 
 type Lookbook = {
   id: number;
@@ -36,6 +37,7 @@ const emptyForm = {
 
 export default function LookbooksPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Lookbook | "new" | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -50,10 +52,16 @@ export default function LookbooksPage() {
 
   const save = useMutation({
     mutationFn: () => {
+      if (form.title.trim().length < 2) throw new Error("Title must be at least 2 characters");
       const body = {
-        ...form,
+        title: form.title.trim(),
         slug: form.slug || undefined,
         brandId: form.brandId === "" ? null : Number(form.brandId),
+        description: form.description || null,
+        coverImageUrl: form.coverImageUrl || null,
+        videoUrl: form.videoUrl || null,
+        status: form.status,
+        productIds: form.productIds,
       };
       return editing === "new"
         ? api("/admin/lookbooks", { method: "POST", body: JSON.stringify(body) })
@@ -61,12 +69,19 @@ export default function LookbooksPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-lookbooks"] });
+      toast.push(editing === "new" ? "Lookbook created" : "Lookbook saved", "success");
       setEditing(null);
+      setForm(emptyForm);
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const archive = useMutation({
     mutationFn: (id: number) => api(`/admin/lookbooks/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-lookbooks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-lookbooks"] });
+      toast.push("Lookbook archived", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   const rows = useMemo(() => {
@@ -76,19 +91,23 @@ export default function LookbooksPage() {
   }, [data?.data, q]);
 
   async function openEdit(l: Lookbook) {
-    const detail = await api<Lookbook>(`/admin/lookbooks/${l.id}`);
-    const row = detail.data;
-    setForm({
-      title: row.title,
-      slug: row.slug,
-      brandId: row.brandId ?? "",
-      description: row.description ?? "",
-      coverImageUrl: row.coverImageUrl ?? "",
-      videoUrl: row.videoUrl ?? "",
-      status: row.status,
-      productIds: row.productIds ?? [],
-    });
-    setEditing(row);
+    try {
+      const detail = await api<Lookbook>(`/admin/lookbooks/${l.id}`);
+      const row = detail.data;
+      setForm({
+        title: row.title,
+        slug: row.slug,
+        brandId: row.brandId ?? "",
+        description: row.description ?? "",
+        coverImageUrl: row.coverImageUrl ?? "",
+        videoUrl: row.videoUrl ?? "",
+        status: row.status,
+        productIds: row.productIds ?? [],
+      });
+      setEditing(row);
+    } catch (e) {
+      toast.push(e instanceof Error ? e.message : "Could not open lookbook", "error");
+    }
   }
 
   return (
@@ -178,9 +197,14 @@ export default function LookbooksPage() {
             </Select>
           </div>
           <FormError error={save.error} />
-          <Button type="submit" disabled={save.isPending}>
-            Save
-          </Button>
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" pending={save.isPending} disabled={save.isPending}>
+              {save.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={save.isPending}>
+              Cancel
+            </Button>
+          </div>
         </form>
       </AdminDrawer>
     </AdminPage>
