@@ -212,7 +212,7 @@ export function CatalogInner({
             </button>
             {(menChips ?? visibleCats).map((c) => (
               <button
-                key={"slug" in c ? c.slug : c.id}
+                key={c.slug}
                 type="button"
                 onClick={() => setFilter("category", c.slug)}
                 className={`btn-chip inline-flex shrink-0 items-center justify-center px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
