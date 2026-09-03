@@ -1,5 +1,5 @@
 // <define:__IMAGES_DEVICE_SIZES__>
-var define_IMAGES_DEVICE_SIZES_default = [640, 750, 828, 1080, 1200, 1920];
+var define_IMAGES_DEVICE_SIZES_default = [640, 750, 828, 1080, 1400];
 
 // <define:__IMAGES_FORMATS__>
 var define_IMAGES_FORMATS_default = ["image/avif", "image/webp"];
@@ -11,10 +11,10 @@ var define_IMAGES_IMAGE_SIZES_default = [64, 96, 128, 256, 384];
 var define_IMAGES_LOCAL_PATTERNS_default = [{ pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$", search: "" }];
 
 // <define:__IMAGES_QUALITIES__>
-var define_IMAGES_QUALITIES_default = [75];
+var define_IMAGES_QUALITIES_default = [50, 55, 60, 65, 70, 72, 75];
 
 // <define:__IMAGES_REMOTE_PATTERNS__>
-var define_IMAGES_REMOTE_PATTERNS_default = [{ protocol: "https", hostname: "^(?:^(?:images\\.unsplash\\.com)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:^(?:picsum\\.photos)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:(?!\\.)(?=.)[^/]*?\\.r2\\.dev\\/?)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:(?!\\.)(?=.)[^/]*?\\.r2\\.cloudflarestorage\\.com\\/?)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }];
+var define_IMAGES_REMOTE_PATTERNS_default = [{ protocol: "https", hostname: "^(?:^(?:images\\.unsplash\\.com)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:^(?:images\\.pexels\\.com)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:^(?:picsum\\.photos)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:(?!\\.)(?=.)[^/]*?\\.r2\\.dev\\/?)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "https", hostname: "^(?:(?!\\.)(?=.)[^/]*?\\.r2\\.cloudflarestorage\\.com\\/?)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "http", hostname: "^(?:^(?:localhost)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }, { protocol: "http", hostname: "^(?:^(?:127\\.0\\.0\\.1)$)$", pathname: "^(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?)\\/?)$" }];
 
 // node_modules/@opennextjs/aws/dist/utils/error.js
 function isOpenNextError(e) {
