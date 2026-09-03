@@ -93,9 +93,12 @@ export async function dashboard(period = "30d") {
     pool.query(`SELECT COUNT(*) AS total FROM reviews WHERE status = 'PENDING'`),
     pool.query(`
       SELECT
-        SUM(CASE WHEN (stock - reserved_stock) > 0 AND (stock - reserved_stock) <= reorder_level THEN 1 ELSE 0 END) AS lowStock,
-        SUM(CASE WHEN (stock - reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock
-      FROM inventory
+        SUM(CASE WHEN (i.stock - i.reserved_stock) > 0 AND (i.stock - i.reserved_stock) <= i.reorder_level THEN 1 ELSE 0 END) AS lowStock,
+        SUM(CASE WHEN (i.stock - i.reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock
+      FROM inventory i
+      INNER JOIN product_variants v ON v.id = i.variant_id
+      INNER JOIN products p ON p.id = v.product_id
+      WHERE v.status = 'ACTIVE' AND p.status = 'PUBLISHED'
     `),
     pool.query(
       `SELECT DATE(created_at) AS day, COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END),0) AS revenue,

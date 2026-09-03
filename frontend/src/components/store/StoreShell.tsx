@@ -3,11 +3,9 @@
 import dynamic from "next/dynamic";
 import { PageFade } from "@/components/store/PageFade";
 import { Header, Footer } from "@/components/store/Header";
+import { OpeningScreen } from "@/components/store/OpeningScreen";
 import type { ReactNode } from "react";
 
-const OpeningScreen = dynamic(() => import("@/components/store/OpeningScreen").then((m) => m.OpeningScreen), {
-  ssr: false,
-});
 const OfferPopups = dynamic(() => import("@/components/store/OfferPopups").then((m) => m.OfferPopups), { ssr: false });
 
 export function StoreShell({ children }: { children: ReactNode }) {

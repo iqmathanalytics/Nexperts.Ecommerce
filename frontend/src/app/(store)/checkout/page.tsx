@@ -14,9 +14,11 @@ import { Input, Label } from "@/components/ui/input";
 import { PageState, Spinner, Toast } from "@/components/ui/state";
 import { cn, formatMoney } from "@/lib/utils";
 import { loginUrl } from "@/lib/auth";
+import { setSessionGate } from "@/lib/sessionGate";
 import { paymentLabel } from "@/lib/orders";
 import { OrderPlacedCeremony } from "@/components/store/OrderPlacedCeremony";
 import { easeOut } from "@/lib/motion";
+import { splashHoldMs } from "@/lib/splash";
 
 const addressSchema = z.object({
   fullName: z.string().min(2),
@@ -57,6 +59,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
   const [error, setError] = useState<string | null>(null);
   const [shippingEta, setShippingEta] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<{ id: number; orderNumber: string } | null>(null);
   const commerce = useQuery({
     queryKey: ["commerce"],
     queryFn: () =>
@@ -100,9 +103,10 @@ export default function CheckoutPage() {
       return res;
     },
     onSuccess: (res) => {
+      setSessionGate("customer");
       qc.invalidateQueries({ queryKey: ["cart"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
-      router.push(`/checkout/success?order=${res.data.orderNumber}&id=${res.data.id}`);
+      setPlaced({ id: res.data.id, orderNumber: res.data.orderNumber });
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -120,6 +124,14 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!onlineAvailable && paymentMethod === "ONLINE") setPaymentMethod("COD");
   }, [onlineAvailable, paymentMethod]);
+
+  useEffect(() => {
+    if (!placed) return;
+    const timer = window.setTimeout(() => {
+      router.push(`/checkout/success?order=${placed.orderNumber}&id=${placed.id}&placed=1`);
+    }, splashHoldMs() + 900);
+    return () => window.clearTimeout(timer);
+  }, [placed, router]);
 
   const list = addresses.data?.data ?? [];
 
@@ -169,17 +181,33 @@ export default function CheckoutPage() {
   return (
     <div className="bg-background text-ink">
       <AnimatePresence>
-        {place.isPending ? (
+        {place.isPending || placed ? (
           <motion.div
-            className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-[#1e3d32] text-white"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#1e3d32] px-6 text-center text-white"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <OrderPlacedCeremony compact />
-            <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.36em] text-[#c4a056]">The house</p>
-            <p className="mt-3 font-display text-4xl font-medium italic text-white">Sealing your order</p>
-            <p className="mt-3 text-sm text-white/75">This screen holds for a moment, then your confirmation opens.</p>
+            {placed ? (
+              <>
+                <OrderPlacedCeremony />
+                <p className="relative mt-8 text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]">
+                  House confirmation
+                </p>
+                <p className="relative mt-4 font-display text-5xl font-medium italic text-white md:text-7xl">Order placed</p>
+                <p className="relative mt-4 max-w-md text-sm text-white/85">It’s yours. The atelier is preparing your pieces.</p>
+                <p className="relative mt-6 border border-white/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
+                  {placed.orderNumber}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/25 border-t-white" aria-hidden />
+                <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.36em] text-[#c4a056]">The house</p>
+                <p className="mt-3 font-display text-4xl font-medium italic text-white">Placing your order</p>
+                <p className="mt-3 text-sm text-white/75">Please keep this screen open for a moment.</p>
+              </>
+            )}
           </motion.div>
         ) : null}
       </AnimatePresence>

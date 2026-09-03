@@ -19,27 +19,30 @@ function SuccessInner() {
   const params = useSearchParams();
   const orderNumber = params.get("order");
   const id = params.get("id");
+  const alreadyCelebrated = params.get("placed") === "1";
   const orderQuery = useQuery({
     queryKey: ["order", id],
     queryFn: () => api<CustomerOrder>(`/orders/${id}`),
     enabled: Boolean(id),
+    retry: false,
   });
   const order = orderQuery.data?.data;
   const pay = order?.payments?.[0];
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "60123456789";
-  const [ceremony, setCeremony] = useState(true);
+  const [ceremony, setCeremony] = useState(!alreadyCelebrated);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setCeremony(false), splashHoldMs());
+    if (alreadyCelebrated) return;
+    const timer = window.setTimeout(() => setCeremony(false), splashHoldMs() + 900);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [alreadyCelebrated]);
 
   return (
     <div className="bg-background text-ink">
       <AnimatePresence>
         {ceremony ? (
           <motion.div
-            className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-[#1e3d32] px-6 text-center text-white"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#1e3d32] px-6 text-center text-white"
             initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, y: "-6%" }}
@@ -47,8 +50,13 @@ function SuccessInner() {
           >
             <OrderPlacedCeremony />
             <p className="relative mt-8 text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]">House confirmation</p>
-            <h1 className="relative mt-4 font-display text-5xl font-medium italic text-white md:text-7xl">It’s yours.</h1>
-            <p className="relative mt-5 max-w-md text-sm text-white/85">The house has sealed your order. Confirmation opens next.</p>
+            <h1 className="relative mt-4 font-display text-5xl font-medium italic text-white md:text-7xl">Order placed</h1>
+            <p className="relative mt-5 max-w-md text-sm text-white/85">It’s yours. The house has sealed your order.</p>
+            {orderNumber ? (
+              <p className="relative mt-6 border border-white/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
+                {orderNumber}
+              </p>
+            ) : null}
           </motion.div>
         ) : null}
       </AnimatePresence>

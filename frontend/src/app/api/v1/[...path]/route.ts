@@ -31,12 +31,21 @@ function candidateBases() {
   };
   add(process.env.API_PROXY_TARGET);
   add(process.env.NEXT_PUBLIC_API_URL);
-  if (process.env.NODE_ENV !== "production") {
+  const hasRemote = bases.some((b) => !/localhost|127\.0\.0\.1/i.test(b));
+  // Local fallbacks are only for a fully local API. Mixing Render + localhost
+  // turns a slow checkout into a 401 from the other origin and looks like logout.
+  if (process.env.NODE_ENV !== "production" && !hasRemote) {
     add("http://127.0.0.1:4010");
     add("http://localhost:4010");
     add("http://127.0.0.1:4000");
   }
   return bases.length ? bases : ["http://127.0.0.1:4010"];
+}
+
+function timeoutMs(method: string, suffix: string) {
+  if (method !== "GET" && method !== "HEAD" && /\/checkout(?:\?|$)/.test(suffix)) return 45_000;
+  if (method !== "GET" && method !== "HEAD" && /\/(?:media|images|logo|hero)(?:\/|\?|$)/.test(suffix)) return 30_000;
+  return 15_000;
 }
 
 /** Bind auth cookies to the storefront host (first-party) instead of Render. */
@@ -75,13 +84,17 @@ async function proxy(req: NextRequest, pathSegments: string[]) {
     init.body = await req.arrayBuffer();
   }
 
+  const mutating = req.method !== "GET" && req.method !== "HEAD";
+  const bases = mutating ? candidateBases().slice(0, 1) : candidateBases();
+  const waitFor = timeoutMs(req.method, suffix);
+
   let upstream: Response | undefined;
-  for (const base of candidateBases()) {
+  for (const base of bases) {
     try {
-      upstream = await fetch(`${base}${suffix}`, { ...init, signal: AbortSignal.timeout(6_000) });
+      upstream = await fetch(`${base}${suffix}`, { ...init, signal: AbortSignal.timeout(waitFor) });
       break;
     } catch {
-      /* try the next local/prod API origin */
+      /* try the next origin only for idempotent reads */
     }
   }
 

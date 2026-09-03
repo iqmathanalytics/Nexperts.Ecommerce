@@ -1,10 +1,28 @@
 import { z } from "zod";
-import { desc, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, pool } from "../../db";
 import { addresses, reviews, roles, userRoles, users, wishlistItems, wishlists } from "../../db/schema";
 import { AppError } from "../../utils/http";
 import { audit } from "../../utils/audit";
 import bcrypt from "bcryptjs";
+
+async function requireCustomerAccount(id: number) {
+  const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  if (!user) throw new AppError("NOT_FOUND", "Customer not found", 404);
+  const assigned = await db
+    .select({ name: roles.name })
+    .from(userRoles)
+    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(eq(userRoles.userId, id));
+  const names = assigned.map((r) => r.name);
+  if (!names.includes("CUSTOMER")) {
+    throw new AppError("FORBIDDEN", "This account is not a store customer", 403);
+  }
+  if (names.some((name) => name !== "CUSTOMER")) {
+    throw new AppError("FORBIDDEN", "Staff accounts must be managed in Users", 403);
+  }
+  return user;
+}
 
 export async function listCustomers(q?: string, page = 1, limit = 20, status?: string) {
   const like = q ? `%${q}%` : null;
@@ -12,7 +30,7 @@ export async function listCustomers(q?: string, page = 1, limit = 20, status?: s
     ? "AND (u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ? OR u.phone LIKE ?)"
     : "";
   const params: unknown[] = like ? [like, like, like, like] : [];
-  if (status === "ACTIVE" || status === "SUSPENDED") {
+  if (status === "ACTIVE" || status === "SUSPENDED" || status === "DELETED") {
     where += " AND u.status = ?";
     params.push(status);
   }
@@ -52,9 +70,32 @@ export async function getCustomer(id: number) {
   return { ...safe, addresses: addr, reviews: revs, wishlist: wish, orders: orderRows };
 }
 
+export const customerStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "SUSPENDED"]),
+});
+
 export async function updateCustomerStatus(adminId: number, id: number, status: "ACTIVE" | "SUSPENDED") {
+  const user = await requireCustomerAccount(id);
+  if (user.status === "DELETED") {
+    throw new AppError("INVALID_STATUS", "Restore this deleted account before changing status", 400);
+  }
   await db.update(users).set({ status }).where(eq(users.id, id));
   await audit({ adminUserId: adminId, action: "CUSTOMER_UPDATED", resource: "customer", resourceId: id, metadata: { status } });
+}
+
+export async function deleteCustomer(adminId: number, id: number) {
+  const user = await requireCustomerAccount(id);
+  if (user.status === "DELETED") {
+    throw new AppError("INVALID_STATUS", "This account is already deleted", 400);
+  }
+  await db.update(users).set({ status: "DELETED" }).where(eq(users.id, id));
+  await audit({ adminUserId: adminId, action: "CUSTOMER_DELETED", resource: "customer", resourceId: id, metadata: { email: user.email } });
+}
+
+export async function restoreCustomer(adminId: number, id: number) {
+  await requireCustomerAccount(id);
+  await db.update(users).set({ status: "ACTIVE" }).where(eq(users.id, id));
+  await audit({ adminUserId: adminId, action: "CUSTOMER_UPDATED", resource: "customer", resourceId: id, metadata: { status: "ACTIVE" } });
 }
 
 export const adminUserSchema = z.object({

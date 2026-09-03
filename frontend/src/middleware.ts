@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   const needsCustomer =
     pathname.startsWith("/account") ||
     pathname === "/cart" ||
-    pathname.startsWith("/checkout");
+    (pathname.startsWith("/checkout") && pathname !== "/checkout/success");
 
   if (needsCustomer && !request.cookies.get(SESSION_GATES.customer)?.value) {
     const login = new URL("/login", request.url);

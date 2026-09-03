@@ -27,7 +27,7 @@ export default function OrderDetailPage() {
   const eligible = useQuery({
     queryKey: ["review-eligible"],
     queryFn: () => api<ReviewEligible[]>("/reviews/eligible"),
-    enabled: data?.data?.status === "DELIVERED",
+    enabled: Boolean(data?.data) && data?.data?.status !== "CANCELLED",
   });
   const orderEligible = (eligible.data?.data ?? []).filter((e) => e.orderId === Number(id));
   const cancel = useMutation({
@@ -164,7 +164,7 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {o.status === "DELIVERED" && orderEligible.length > 0 ? (
+      {orderEligible.length > 0 ? (
         <div className="mt-8 rounded-[1.8rem] border border-line bg-surface p-6">
           <h2 className="font-display text-2xl font-medium italic">How did it wear?</h2>
           <p className="mt-1 text-sm text-muted">A short note helps the next client choose well.</p>

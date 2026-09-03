@@ -16,7 +16,7 @@ import {
 import { api } from "@/lib/api";
 import type { User } from "@/lib/types";
 import { PageState, Spinner } from "@/components/ui/state";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { loginUrl } from "@/lib/auth";
 import { clearSessionGate } from "@/lib/sessionGate";
 import { cn } from "@/lib/utils";
@@ -53,10 +53,6 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
 
   const user = me.data?.data.user ?? null;
   const signedOut = me.isError || (me.isSuccess && !user);
-
-  useEffect(() => {
-    if (signedOut) clearSessionGate("customer");
-  }, [signedOut]);
 
   if (me.isLoading)
     return (

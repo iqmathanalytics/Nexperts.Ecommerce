@@ -70,7 +70,9 @@ export async function setStockWithAudit(
 export async function listInventory(filter?: "low" | "out" | "all", q?: string) {
   let extra = "";
   const params: unknown[] = [];
-  if (filter === "low") extra += " AND i.stock > 0 AND (i.stock - i.reserved_stock) <= i.reorder_level";
+  if (filter === "low") {
+    extra += " AND (i.stock - i.reserved_stock) > 0 AND (i.stock - i.reserved_stock) <= i.reorder_level";
+  }
   if (filter === "out") extra += " AND (i.stock - i.reserved_stock) <= 0";
   if (q) {
     extra += " AND (p.name LIKE ? OR v.sku LIKE ?)";
@@ -209,12 +211,16 @@ export async function inventoryAnalytics() {
       LIMIT 8
     `),
     pool.query(`
-      SELECT p.name, p.id, i.stock
+      SELECT p.name, p.id, GREATEST(i.stock - i.reserved_stock, 0) AS stock
       FROM inventory i
       INNER JOIN product_variants v ON v.id = i.variant_id
       INNER JOIN products p ON p.id = v.product_id
       LEFT JOIN order_items oi ON oi.variant_id = v.id
-      WHERE oi.id IS NULL AND i.stock > 0
+      WHERE oi.id IS NULL
+        AND (i.stock - i.reserved_stock) > 0
+        AND v.status = 'ACTIVE'
+        AND p.status = 'PUBLISHED'
+      ORDER BY stock DESC
       LIMIT 8
     `),
   ]);

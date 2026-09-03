@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import { env } from "../config/env";
 import { AppError } from "../utils/http";
 
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]);
 const MAX_BYTES = 5 * 1024 * 1024;
 
 function r2Enabled() {

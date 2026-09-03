@@ -1,9 +1,12 @@
 import { z } from "zod";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { orderItems, orders, products, reviews, users } from "../../db/schema";
 import { AppError } from "../../utils/http";
 import { audit } from "../../utils/audit";
+import { invalidateStorefrontCache } from "../../utils/ttlCache";
+
+const REVIEWABLE_STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED"] as const;
 
 export const reviewSchema = z.object({
   productId: z.number().int().positive(),
@@ -14,14 +17,21 @@ export const reviewSchema = z.object({
   fitFeedback: z.enum(["SMALL", "TRUE", "LARGE"]).optional(),
 });
 
-export async function listEligibleReviews(userId: number, productId?: number) {
-  const deliveredOrders = await db
-    .select({ id: orders.id, orderNumber: orders.orderNumber })
-    .from(orders)
-    .where(and(eq(orders.userId, userId), eq(orders.status, "DELIVERED")));
-  if (!deliveredOrders.length) return [];
+export const moderateSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED", "HIDDEN"]),
+});
 
-  const orderIds = deliveredOrders.map((o) => o.id);
+export async function listEligibleReviews(userId: number, productId?: number) {
+  const purchasedOrders = await db
+    .select({ id: orders.id, orderNumber: orders.orderNumber, status: orders.status })
+    .from(orders)
+    .where(and(eq(orders.userId, userId), ne(orders.status, "CANCELLED")));
+  const reviewable = purchasedOrders.filter((o) =>
+    REVIEWABLE_STATUSES.includes(o.status as (typeof REVIEWABLE_STATUSES)[number]),
+  );
+  if (!reviewable.length) return [];
+
+  const orderIds = reviewable.map((o) => o.id);
   const itemFilters = [inArray(orderItems.orderId, orderIds)];
   if (productId) itemFilters.push(eq(orderItems.productId, productId));
 
@@ -45,7 +55,7 @@ export async function listEligibleReviews(userId: number, productId?: number) {
     ? await db.select({ id: products.id, slug: products.slug }).from(products).where(inArray(products.id, productIds))
     : [];
   const slugById = new Map(productRows.map((p) => [p.id, p.slug]));
-  const orderNumberById = new Map(deliveredOrders.map((o) => [o.id, o.orderNumber]));
+  const orderNumberById = new Map(reviewable.map((o) => [o.id, o.orderNumber]));
 
   return items
     .filter((i) => !reviewed.has(`${i.orderId}-${i.productId}`))
@@ -61,8 +71,8 @@ export async function listEligibleReviews(userId: number, productId?: number) {
 export async function createReview(userId: number, input: z.infer<typeof reviewSchema>) {
   const [order] = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, userId))).limit(1);
   if (!order) throw new AppError("FORBIDDEN", "You can only review products you purchased", 403);
-  if (order.status !== "DELIVERED") {
-    throw new AppError("NOT_ELIGIBLE", "You can review after the order is delivered", 400);
+  if (order.status === "CANCELLED" || !REVIEWABLE_STATUSES.includes(order.status as (typeof REVIEWABLE_STATUSES)[number])) {
+    throw new AppError("NOT_ELIGIBLE", "This order cannot be reviewed", 400);
   }
   const [item] = await db
     .select()
@@ -84,14 +94,15 @@ export async function createReview(userId: number, input: z.infer<typeof reviewS
     comment: input.comment,
     fitFeedback: input.fitFeedback,
     userId,
-    status: "PENDING",
+    status: "APPROVED",
     isVerified: true,
   });
   if (input.fitFeedback) {
     const { updateFitStats } = await import("../premium/premium.service.js");
     await updateFitStats(input.productId, input.fitFeedback);
   }
-  return { id: Number(result[0].insertId), ...input, status: "PENDING" };
+  invalidateStorefrontCache();
+  return { id: Number(result[0].insertId), ...input, status: "APPROVED" as const };
 }
 
 export async function listMyReviews(userId: number) {
@@ -113,7 +124,11 @@ export async function listMyReviews(userId: number) {
 }
 
 export async function adminListReviews(status?: string) {
-  const q = db
+  const allowed = ["PENDING", "APPROVED", "REJECTED", "HIDDEN"] as const;
+  const filter = allowed.includes(status as (typeof allowed)[number])
+    ? eq(reviews.status, status as (typeof allowed)[number])
+    : undefined;
+  return db
     .select({
       id: reviews.id,
       rating: reviews.rating,
@@ -131,17 +146,23 @@ export async function adminListReviews(status?: string) {
     .from(reviews)
     .innerJoin(products, eq(reviews.productId, products.id))
     .innerJoin(users, eq(reviews.userId, users.id))
+    .where(filter ?? sql`1=1`)
     .orderBy(desc(reviews.createdAt));
-  if (status) return q.where(eq(reviews.status, status as "PENDING" | "APPROVED" | "REJECTED" | "HIDDEN"));
-  return q;
 }
 
 export async function moderateReview(adminId: number, id: number, status: "APPROVED" | "REJECTED" | "HIDDEN") {
+  const [row] = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
+  if (!row) throw new AppError("NOT_FOUND", "Review not found", 404);
   await db.update(reviews).set({ status }).where(eq(reviews.id, id));
+  invalidateStorefrontCache();
   await audit({ adminUserId: adminId, action: "REVIEW_MODERATED", resource: "review", resourceId: id, metadata: { status } });
+  return { ...row, status };
 }
 
 export async function deleteReview(adminId: number, id: number) {
+  const [row] = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
+  if (!row) throw new AppError("NOT_FOUND", "Review not found", 404);
   await db.delete(reviews).where(eq(reviews.id, id));
+  invalidateStorefrontCache();
   await audit({ adminUserId: adminId, action: "REVIEW_DELETED", resource: "review", resourceId: id });
 }

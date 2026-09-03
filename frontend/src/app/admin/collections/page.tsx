@@ -148,7 +148,13 @@ export default function CollectionsPage() {
             <Label>Description</Label>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-          <AdminImageField label="Cover image" value={form.imageUrl} onChange={(imageUrl) => setForm({ ...form, imageUrl })} folder="collections" />
+          <AdminImageField
+            label="Cover image"
+            value={form.imageUrl}
+            onChange={(imageUrl) => setForm({ ...form, imageUrl })}
+            folder="collections"
+            hint="Seasonal collection banner."
+          />
           <AdminProductPicker selectedIds={form.productIds} onChange={(productIds) => setForm({ ...form, productIds })} />
           <div>
             <Label>Status</Label>

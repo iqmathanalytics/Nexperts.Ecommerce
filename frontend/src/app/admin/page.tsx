@@ -89,7 +89,7 @@ function DashboardBody({ data, periodLabel }: { data: Dash; periodLabel: string 
         <KpiCard icon={Banknote} label="Revenue" value={formatINR(k.revenue)} hint={periodLabel} href="/admin/analytics" />
         <KpiCard icon={ShoppingBag} label="Orders" value={k.orders.toLocaleString("en-MY")} hint={periodLabel} href="/admin/orders" />
         <KpiCard icon={TrendingUp} label="Average order" value={formatINR(k.aov)} hint={`${k.productsSold.toLocaleString("en-MY")} units sold`} />
-        <KpiCard icon={Users} label="Customers" value={k.customers.toLocaleString("en-MY")} hint="Active accounts" href="/admin/customers" />
+        <KpiCard icon={Users} label="Customers" value={k.customers.toLocaleString("en-MY")} hint="Active customer accounts" href="/admin/customers" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

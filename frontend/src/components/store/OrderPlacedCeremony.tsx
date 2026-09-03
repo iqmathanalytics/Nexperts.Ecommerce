@@ -40,7 +40,7 @@ export function OrderPlacedCeremony({ compact = false }: { compact?: boolean }) 
           style={{ width: s.size, height: s.size }}
           initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
           animate={{ x: s.x, y: s.y, opacity: [0, 1, 0], scale: [0.4, 1, 0.6] }}
-          transition={{ duration: 1.1, delay: s.delay, ease: easeOut }}
+          transition={{ duration: 1.15, delay: s.delay, ease: easeOut, repeat: 2, repeatDelay: 0.2 }}
         />
       ))}
 

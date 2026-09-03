@@ -193,7 +193,13 @@ export default function CategoriesPage() {
             <Label>Description (category page)</Label>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-          <AdminImageField label="Image" value={form.imageUrl} onChange={(imageUrl) => setForm({ ...form, imageUrl })} folder="categories" />
+          <AdminImageField
+            label="Image"
+            value={form.imageUrl}
+            onChange={(imageUrl) => setForm({ ...form, imageUrl })}
+            folder="categories"
+            hint="Shown on the category page and navigation tiles."
+          />
           <div>
             <Label>SEO title</Label>
             <Input value={form.seoTitle} onChange={(e) => setForm({ ...form, seoTitle: e.target.value })} />

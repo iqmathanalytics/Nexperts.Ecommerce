@@ -90,6 +90,8 @@ export async function placeOrder(userId: number, input: z.infer<typeof checkoutS
 
   const conn = await pool.getConnection();
   const orderNumber = await nextOrderNumber();
+  let orderId = 0;
+  let committed = false;
   try {
     await conn.beginTransaction();
     for (const item of quote.cart.items) {
@@ -142,7 +144,7 @@ export async function placeOrder(userId: number, input: z.infer<typeof checkoutS
         input.notes ?? null,
       ],
     );
-    const orderId = Number((orderRes as { insertId: number }).insertId);
+    orderId = Number((orderRes as { insertId: number }).insertId);
 
     for (const item of quote.cart.items) {
       const line = toMoney(item.price * item.quantity);
@@ -174,24 +176,32 @@ export async function placeOrder(userId: number, input: z.infer<typeof checkoutS
     );
     await conn.query("DELETE FROM cart_items WHERE cart_id = ?", [quote.cart.id]);
     await conn.commit();
-    const order = await getOrderById(orderId, userId);
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (user) {
-      void sendOrderConfirmationEmail({
-        email: user.email,
-        firstName: user.firstName,
-        orderNumber: order.orderNumber,
-        total: Number(order.total),
-        orderId: order.id,
-      }).catch((err) => console.error("Failed to send order confirmation email", err));
-    }
-    return order;
+    committed = true;
   } catch (err) {
-    await conn.rollback();
+    if (!committed) {
+      try {
+        await conn.rollback();
+      } catch {
+        /* transaction may already be closed */
+      }
+    }
     throw err;
   } finally {
     conn.release();
   }
+
+  const order = await getOrderById(orderId, userId);
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (user) {
+    void sendOrderConfirmationEmail({
+      email: user.email,
+      firstName: user.firstName,
+      orderNumber: order.orderNumber,
+      total: Number(order.total),
+      orderId: order.id,
+    }).catch((err) => console.error("Failed to send order confirmation email", err));
+  }
+  return order;
 }
 
 export async function getOrderById(orderId: number, userId?: number, isAdmin = false) {

@@ -90,7 +90,7 @@ export function AdminSidebar({
   user: User;
   overlay?: boolean;
 }) {
-  const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+  const name = [user.firstName, user.lastName].map((part) => part?.trim()).filter(Boolean).join(" ") || user.email;
 
   return (
     <aside

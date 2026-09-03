@@ -157,7 +157,13 @@ export default function LookbooksPage() {
             <Label>Description</Label>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-          <AdminImageField label="Cover image" value={form.coverImageUrl} onChange={(coverImageUrl) => setForm({ ...form, coverImageUrl })} folder="lookbooks" />
+          <AdminImageField
+            label="Cover image"
+            value={form.coverImageUrl}
+            onChange={(coverImageUrl) => setForm({ ...form, coverImageUrl })}
+            folder="lookbooks"
+            hint="Lookbook cover for the homepage carousel."
+          />
           <div>
             <Label>Video URL (optional)</Label>
             <Input value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />

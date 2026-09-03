@@ -178,8 +178,20 @@ export default function BrandsPage() {
             <Label>Lookbook bio (designer page)</Label>
             <Textarea value={form.lookbookBio} onChange={(e) => setForm({ ...form, lookbookBio: e.target.value })} />
           </div>
-          <AdminImageField label="Logo" value={form.logoUrl} onChange={(logoUrl) => setForm({ ...form, logoUrl })} folder="brands" />
-          <AdminImageField label="Hero image" value={form.heroImageUrl} onChange={(heroImageUrl) => setForm({ ...form, heroImageUrl })} folder="brands" />
+          <AdminImageField
+            label="Logo"
+            value={form.logoUrl}
+            onChange={(logoUrl) => setForm({ ...form, logoUrl })}
+            folder="brands"
+            hint="Square mark used in filters and designer lists."
+          />
+          <AdminImageField
+            label="Hero image"
+            value={form.heroImageUrl}
+            onChange={(heroImageUrl) => setForm({ ...form, heroImageUrl })}
+            folder="brands"
+            hint="Wide photo for the designer page."
+          />
           <div>
             <Label>SEO title</Label>
             <Input value={form.seoTitle} onChange={(e) => setForm({ ...form, seoTitle: e.target.value })} />

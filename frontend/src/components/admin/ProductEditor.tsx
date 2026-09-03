@@ -5,10 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { mediaUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Toast } from "@/components/ui/state";
+import { AdminProductImageGrid } from "@/components/admin/AdminImageField";
 
 type Variant = {
   id?: number;
@@ -76,6 +76,7 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
   const [returnInfo, setReturnInfo] = useState("7-day returns");
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNew, setIsNew] = useState(true);
+  const [pendingImages, setPendingImages] = useState<Array<{ file: File; preview: string }>>([]);
   const [variants, setVariants] = useState<Variant[]>(
     mode === "create"
       ? ["S", "M", "L", "XL"].map((size, i) => ({
@@ -163,17 +164,26 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
   }
 
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const body = payload();
       if (!body.name.trim()) throw new Error("Name is required");
       if (body.variants.some((v) => !v.price || !v.mrp)) throw new Error("Each size needs a price and MRP");
-      return mode === "create"
-        ? api("/admin/products", { method: "POST", body: JSON.stringify(body) })
-        : api(`/admin/products/${params.id}`, { method: "PUT", body: JSON.stringify(body) });
+      const res =
+        mode === "create"
+          ? await api<{ id: number }>("/admin/products", { method: "POST", body: JSON.stringify(body) })
+          : await api(`/admin/products/${params.id}`, { method: "PUT", body: JSON.stringify(body) });
+      if (mode === "create" && pendingImages.length && res.data?.id) {
+        const fd = new FormData();
+        pendingImages.forEach((item) => fd.append("images", item.file));
+        await api(`/admin/products/${res.data.id}/images`, { method: "POST", body: fd });
+      }
+      return res;
     },
     onSuccess: (res: any) => {
       setErr(null);
       setMsg("Saved — published products appear on the storefront immediately.");
+      pendingImages.forEach((item) => URL.revokeObjectURL(item.preview));
+      setPendingImages([]);
       qc.invalidateQueries({ queryKey: ["admin-products"] });
       qc.invalidateQueries({ queryKey: ["admin-product", params.id] });
       if (mode === "create") router.push(`/admin/products/${res.data.id}`);
@@ -454,55 +464,58 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
           Add size
         </Button>
       </div>
-      {mode === "edit" && (
-        <div className="rounded-2xl border border-line bg-surface-raised p-5">
-          <p className="mb-2 font-medium">Images</p>
-          <p className="mb-3 text-xs text-muted">
-            First image is the product card. Second image is the hover swap on the shop. Drag order with the arrows.
-          </p>
-          <input type="file" multiple accept="image/*" onChange={(e) => e.target.files && upload.mutate(e.target.files)} />
-          <div className="mt-3 flex flex-wrap gap-3">
-            {images.map((img, i) => (
-              <div key={img.id} className="relative w-24">
-                <img src={mediaUrl(img.url)} alt={img.alt ?? ""} className="h-24 w-24 rounded object-cover" />
-                {i === 0 ? <span className="absolute left-1 top-1 rounded bg-white/90 px-1 text-[10px]">Card</span> : null}
-                {i === 1 ? <span className="absolute left-1 top-1 rounded bg-white/90 px-1 text-[10px]">Hover</span> : null}
-                <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
-                  <button type="button" onClick={() => reorder(i, i - 1)}>
-                    ↑
-                  </button>
-                  <button type="button" onClick={() => reorder(i, i + 1)}>
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => api(`/admin/images/${img.id}/primary`, { method: "POST" }).then(() => existing.refetch())}
-                  >
-                    Primary
-                  </button>
-                  <button
-                    type="button"
-                    className="text-danger"
-                    onClick={() => api(`/admin/images/${img.id}`, { method: "DELETE" }).then(() => existing.refetch())}
-                  >
-                    Delete
-                  </button>
-                </div>
-                <input
-                  className="mt-1 w-full rounded border border-line bg-surface px-1 py-0.5 text-[10px]"
-                  placeholder="Alt text"
-                  defaultValue={img.alt ?? ""}
-                  onBlur={(e) => {
-                    const alt = e.target.value;
-                    if (alt === (img.alt ?? "")) return;
-                    api(`/admin/images/${img.id}`, { method: "PATCH", body: JSON.stringify({ alt }) }).then(() => existing.refetch());
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <AdminProductImageGrid
+        images={images}
+        pending={mode === "create" ? pendingImages.map((item) => ({ preview: item.preview, name: item.file.name })) : undefined}
+        uploading={upload.isPending}
+        onUpload={(files) => {
+          if (mode === "create") {
+            setPendingImages((current) => [
+              ...current,
+              ...files.map((file) => ({ file, preview: URL.createObjectURL(file) })),
+            ]);
+            return;
+          }
+          const list = new DataTransfer();
+          files.forEach((file) => list.items.add(file));
+          upload.mutate(list.files);
+        }}
+        onRemovePending={
+          mode === "create"
+            ? (index) =>
+                setPendingImages((current) => {
+                  const next = [...current];
+                  const [removed] = next.splice(index, 1);
+                  if (removed) URL.revokeObjectURL(removed.preview);
+                  return next;
+                })
+            : undefined
+        }
+        onDelete={
+          mode === "edit"
+            ? (id) => {
+                void api(`/admin/images/${id}`, { method: "DELETE" }).then(() => existing.refetch());
+              }
+            : undefined
+        }
+        onPrimary={
+          mode === "edit"
+            ? (id) => {
+                void api(`/admin/images/${id}/primary`, { method: "POST" }).then(() => existing.refetch());
+              }
+            : undefined
+        }
+        onReorder={mode === "edit" ? reorder : undefined}
+        onAlt={
+          mode === "edit"
+            ? (id, alt) => {
+                void api(`/admin/images/${id}`, { method: "PATCH", body: JSON.stringify({ alt }) }).then(() => existing.refetch());
+              }
+            : undefined
+        }
+      >
+        {mode === "create" ? <p className="mt-2 text-xs text-muted">These photos upload when you save the product.</p> : null}
+      </AdminProductImageGrid>
       <Button onClick={() => save.mutate()} disabled={save.isPending}>
         Save product
       </Button>

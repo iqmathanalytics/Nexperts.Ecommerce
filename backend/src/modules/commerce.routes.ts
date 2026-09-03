@@ -113,9 +113,8 @@ adminOpsRouter.post("/coupons", requirePermission("coupon.manage"), validate(cou
 adminOpsRouter.put("/coupons/:id", requirePermission("coupon.manage"), validate(coupon.couponSchema), asyncHandler(async (req, res) => { await coupon.updateCoupon(req.user!.id, Number(req.params.id), req.body); res.json(success({ ok: true })); }));
 
 adminOpsRouter.get("/reviews", requirePermission("review.manage"), asyncHandler(async (req, res) => res.json(success(await review.adminListReviews(String(req.query.status ?? ""))))));
-adminOpsRouter.post("/reviews/:id/moderate", requirePermission("review.manage"), asyncHandler(async (req, res) => {
-  await review.moderateReview(req.user!.id, Number(req.params.id), req.body.status);
-  res.json(success({ ok: true }));
+adminOpsRouter.post("/reviews/:id/moderate", requirePermission("review.manage"), validate(review.moderateSchema), asyncHandler(async (req, res) => {
+  res.json(success(await review.moderateReview(req.user!.id, Number(req.params.id), req.body.status)));
 }));
 adminOpsRouter.delete("/reviews/:id", requirePermission("review.manage"), asyncHandler(async (req, res) => {
   await review.deleteReview(req.user!.id, Number(req.params.id));
@@ -144,8 +143,16 @@ adminOpsRouter.get("/customers", requirePermission("customer.read"), asyncHandle
 adminOpsRouter.get("/customers/:id", requirePermission("customer.read"), asyncHandler(async (req, res) => {
   res.json(success(await adminUsers.getCustomer(Number(req.params.id))));
 }));
-adminOpsRouter.post("/customers/:id/status", requirePermission("customer.update"), asyncHandler(async (req, res) => {
+adminOpsRouter.post("/customers/:id/status", requirePermission("customer.update"), validate(adminUsers.customerStatusSchema), asyncHandler(async (req, res) => {
   await adminUsers.updateCustomerStatus(req.user!.id, Number(req.params.id), req.body.status);
+  res.json(success({ ok: true }));
+}));
+adminOpsRouter.delete("/customers/:id", requirePermission("customer.update"), asyncHandler(async (req, res) => {
+  await adminUsers.deleteCustomer(req.user!.id, Number(req.params.id));
+  res.json(success({ ok: true }));
+}));
+adminOpsRouter.post("/customers/:id/restore", requirePermission("customer.update"), asyncHandler(async (req, res) => {
+  await adminUsers.restoreCustomer(req.user!.id, Number(req.params.id));
   res.json(success({ ok: true }));
 }));
 

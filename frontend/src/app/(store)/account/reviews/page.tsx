@@ -17,7 +17,7 @@ export default function ReviewsPage() {
   return (
     <div className="text-ink">
       <h1 className="text-3xl font-semibold text-ink">Reviews</h1>
-      <p className="mt-2 text-sm text-muted">Review products from your delivered orders.</p>
+      <p className="mt-2 text-sm text-muted">Review products from your orders. Verified reviews are accepted and published straight away.</p>
       {msg && (
         <div className="mt-3">
           <Toast message={msg} />
@@ -61,7 +61,7 @@ export default function ReviewsPage() {
             reviews.data!.data.map((r) => (
               <div key={r.id} className="rounded-xl border border-line bg-white p-4">
                 <p className="font-medium text-ink">
-                  {r.productName} · {r.rating}/5 · {r.status}
+                  {r.productName} · {r.rating}/5 · {r.status === "APPROVED" ? "Accepted" : r.status === "PENDING" ? "Pending" : r.status === "REJECTED" ? "Rejected" : r.status}
                 </p>
                 <p className="text-sm text-ink">{r.title}</p>
                 <p className="text-sm text-muted">{r.comment}</p>

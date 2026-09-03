@@ -1,9 +1,16 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import multer from "multer";
 import { AppError, fail } from "../utils/http";
 import { isProd } from "../config/env";
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json(fail("FILE_TOO_LARGE", "Image must be 5MB or smaller"));
+    }
+    return res.status(400).json(fail("UPLOAD_FAILED", err.message));
+  }
   if (err instanceof AppError) {
     return res.status(err.status).json(fail(err.code, err.message));
   }

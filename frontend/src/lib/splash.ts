@@ -1,13 +1,26 @@
-/** First-visit home intro only. Product pages paint immediately. */
+/** First-visit home intro: brand plays, holds 2s, then the store reveals. */
+export const SPLASH_LETTER_IN_MS = 1100;
 export const SPLASH_HOLD_MS = 2000;
-export const SPLASH_EXIT_MS = 0.4;
-export const SPLASH_REDUCED_MS = 600;
+export const SPLASH_EXIT_MS = 0.45;
+export const SPLASH_REDUCED_MS = 800;
 export const INTRO_PENDING_CLASS = "nx-intro-pending";
 export const INTRO_SEEN_KEY = "nx-intro-seen";
 
+export function prefersReducedMotion() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Full time the opening cover stays up before fade-out begins. */
+export function splashTotalMs() {
+  if (prefersReducedMotion()) return SPLASH_REDUCED_MS;
+  return SPLASH_LETTER_IN_MS + SPLASH_HOLD_MS;
+}
+
+/** Hold after the brand mark has finished animating in. */
 export function splashHoldMs() {
-  if (typeof window === "undefined") return SPLASH_HOLD_MS;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? SPLASH_REDUCED_MS : SPLASH_HOLD_MS;
+  if (prefersReducedMotion()) return SPLASH_REDUCED_MS;
+  return SPLASH_HOLD_MS;
 }
 
 export function introAlreadySeen() {

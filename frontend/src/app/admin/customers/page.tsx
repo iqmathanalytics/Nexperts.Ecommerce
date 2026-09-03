@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { formatINR } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { AdminDrawer, AdminPage, DataTable, FilterBar } from "@/components/admin/AdminTable";
+import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 
 type Customer = {
   id: number;
@@ -27,11 +27,18 @@ type CustomerDetail = Customer & {
   addresses?: unknown[];
 };
 
+function statusLabel(status: string) {
+  if (status === "SUSPENDED") return "Deactivated";
+  if (status === "DELETED") return "Deleted";
+  return "Active";
+}
+
 export default function CustomersPage() {
   const [q, setQ] = useState("");
   const dq = useDebouncedValue(q, 300);
   const [statusFilter, setStatusFilter] = useState("");
   const [open, setOpen] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["customers", dq, statusFilter],
     queryFn: () =>
@@ -45,27 +52,96 @@ export default function CustomersPage() {
     enabled: Boolean(open),
   });
   const qc = useQueryClient();
+
+  function refresh() {
+    qc.invalidateQueries({ queryKey: ["customers"] });
+    qc.invalidateQueries({ queryKey: ["customer", open] });
+  }
+
   const status = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      api(`/admin/customers/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+    mutationFn: ({ id, next }: { id: number; next: "ACTIVE" | "SUSPENDED" }) =>
+      api(`/admin/customers/${id}/status`, { method: "POST", body: JSON.stringify({ status: next }) }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["customers"] });
-      qc.invalidateQueries({ queryKey: ["customer", open] });
+      setConfirmDelete(null);
+      refresh();
     },
   });
+  const restore = useMutation({
+    mutationFn: (id: number) => api(`/admin/customers/${id}/restore`, { method: "POST" }),
+    onSuccess: () => {
+      setConfirmDelete(null);
+      refresh();
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (id: number) => api(`/admin/customers/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      setConfirmDelete(null);
+      refresh();
+    },
+  });
+
   const items = (data?.data as { items?: Customer[] })?.items ?? [];
   const customer = detail.data?.data;
+  const busy = status.isPending || restore.isPending || remove.isPending;
+
+  function accountActions(c: Customer, fromRow = false) {
+    return (
+      <div
+        className="flex flex-wrap gap-2"
+        onClick={fromRow ? (e) => e.stopPropagation() : undefined}
+      >
+        {c.status === "ACTIVE" ? (
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => status.mutate({ id: c.id, next: "SUSPENDED" })}>
+            Deactivate
+          </Button>
+        ) : null}
+        {c.status === "SUSPENDED" ? (
+          <Button size="sm" disabled={busy} onClick={() => status.mutate({ id: c.id, next: "ACTIVE" })}>
+            Activate
+          </Button>
+        ) : null}
+        {c.status === "DELETED" ? (
+          <Button size="sm" disabled={busy} onClick={() => restore.mutate(c.id)}>
+            Restore
+          </Button>
+        ) : (
+          <Button size="sm" variant="danger" disabled={busy} onClick={() => setConfirmDelete(c)}>
+            Delete
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <AdminPage title="Customers" description="Member accounts, order totals, and account status.">
+    <AdminPage title="Customers" description="Deactivate a member so they cannot sign in, or delete the account. Order history is kept.">
       <FilterBar>
         <Input className="max-w-sm" placeholder="Search name, email or phone" value={q} onChange={(e) => setQ(e.target.value)} />
         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-44">
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
-          <option value="SUSPENDED">Suspended</option>
+          <option value="SUSPENDED">Deactivated</option>
+          <option value="DELETED">Deleted</option>
         </Select>
       </FilterBar>
+      <FormError error={status.error ?? restore.error ?? remove.error} />
+      {confirmDelete ? (
+        <div className="rounded-2xl border border-danger/30 bg-[#f8e8e9] p-4 text-sm">
+          <p className="font-semibold text-[#8a1c24]">Delete {confirmDelete.firstName} {confirmDelete.lastName}?</p>
+          <p className="mt-1 text-[#8a1c24]/80">
+            {confirmDelete.email} will not be able to sign in. Orders stay in reports. You can restore the account later.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="danger" pending={remove.isPending} onClick={() => remove.mutate(confirmDelete.id)}>
+              {remove.isPending ? "Deleting…" : "Delete account"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <DataTable
         columns={[
           { id: "name", header: "Name", cell: (c) => `${c.firstName} ${c.lastName}` },
@@ -74,7 +150,8 @@ export default function CustomersPage() {
           { id: "orders", header: "Orders", cell: (c) => c.totalOrders },
           { id: "spend", header: "Spend", cell: (c) => formatINR(Number(c.totalSpending)) },
           { id: "last", header: "Last order", cell: (c) => (c.lastOrder ? new Date(c.lastOrder).toLocaleDateString() : "—") },
-          { id: "status", header: "Status", cell: (c) => c.status },
+          { id: "status", header: "Status", cell: (c) => statusLabel(c.status) },
+          { id: "actions", header: "Account", cell: (c) => accountActions(c, true) },
         ]}
         rows={items}
         rowKey={(c) => c.id}
@@ -94,18 +171,12 @@ export default function CustomersPage() {
               Orders: {customer.orders?.length ?? 0} · Reviews: {customer.reviews?.length ?? 0} · Addresses:{" "}
               {customer.addresses?.length ?? 0}
             </p>
-            <p>Account status: {customer.status}</p>
-            <div className="flex gap-2">
-              {customer.status === "ACTIVE" ? (
-                <Button size="sm" variant="danger" onClick={() => status.mutate({ id: customer.id, status: "SUSPENDED" })}>
-                  Deactivate
-                </Button>
-              ) : (
-                <Button size="sm" onClick={() => status.mutate({ id: customer.id, status: "ACTIVE" })}>
-                  Activate
-                </Button>
-              )}
-            </div>
+            <p>Account status: {statusLabel(customer.status)}</p>
+            <p className="text-xs text-muted">
+              Deactivate blocks sign-in. Delete marks the account removed; orders are not erased.
+            </p>
+            {accountActions(customer)}
+            <FormError error={status.error ?? restore.error ?? remove.error} />
           </div>
         )}
       </AdminDrawer>

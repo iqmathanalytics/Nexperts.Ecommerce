@@ -70,9 +70,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ data: 
       !path.startsWith("/admin/auth/")
     ) {
       const current = window.location.pathname;
+      // Stay on checkout/success so a blip after placing an order cannot dump the
+      // customer on the login page (the order may already exist).
       if (current.startsWith("/admin")) {
         window.location.assign("/admin/login");
-      } else if (current.startsWith("/account") || current.startsWith("/cart") || current.startsWith("/checkout")) {
+      } else if (current.startsWith("/account") || current === "/cart") {
         window.location.assign(loginUrl(current));
       }
     }

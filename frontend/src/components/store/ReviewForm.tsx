@@ -59,7 +59,7 @@ export function ReviewForm({ eligible, productId, onSuccess, onError }: ReviewFo
       qc.invalidateQueries({ queryKey: ["review-eligible"] });
       qc.invalidateQueries({ queryKey: ["product"] });
       form.reset({ orderId: 0, productId: productId ?? 0, rating: 5, title: "", comment: "", fitFeedback: "TRUE" });
-      onSuccess?.("Review submitted. It will appear after approval.");
+      onSuccess?.("Review accepted. Thank you — it is live on the product page.");
     },
     onError: (e: Error) => onError?.(e.message),
   });
@@ -67,7 +67,7 @@ export function ReviewForm({ eligible, productId, onSuccess, onError }: ReviewFo
   if (!eligible.length) {
     return (
       <p className="text-sm text-muted">
-        You can review products after your order is delivered. Only purchased items can be reviewed.
+        You can review products from your orders. Only purchased items can be reviewed.
       </p>
     );
   }

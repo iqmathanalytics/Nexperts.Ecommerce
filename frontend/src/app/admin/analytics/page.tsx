@@ -90,7 +90,12 @@ export default function AnalyticsPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard icon={Banknote} label="Gross revenue" value={formatINR(s?.grossRevenue ?? 0)} hint={periodLabel} />
             <KpiCard icon={Banknote} label="Net revenue" value={formatINR(s?.netRevenue ?? 0)} hint="After SST" />
-            <KpiCard icon={ShoppingBag} label="Units sold" value={(s?.unitsSold ?? 0).toLocaleString("en-MY")} />
+            <KpiCard
+              icon={ShoppingBag}
+              label="Orders"
+              value={(s?.orders ?? 0).toLocaleString("en-MY")}
+              hint={`${(s?.unitsSold ?? 0).toLocaleString("en-MY")} units · AOV ${formatINR(s?.aov ?? 0)}`}
+            />
             <KpiCard icon={TrendingDown} label="Discounts" value={formatINR(s?.discounts ?? 0)} hint={`Refunds ${formatINR(s?.refunds ?? 0)}`} />
           </div>
 

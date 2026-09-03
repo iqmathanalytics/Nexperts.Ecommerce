@@ -42,6 +42,20 @@ export async function ensureSchema() {
   } catch (err) {
     console.warn("ensureMenDepartments skipped:", (err as Error).message);
   }
+  try {
+    await ensureAdminDisplayName();
+  } catch (err) {
+    console.warn("ensureAdminDisplayName skipped:", (err as Error).message);
+  }
+}
+
+async function ensureAdminDisplayName() {
+  await pool.query(
+    `UPDATE users
+     SET first_name = 'Nexperts', last_name = ''
+     WHERE email IN ('admin@nexpertsacademy.com', 'admin@nexperts.com')
+        OR (first_name = 'Asha' AND last_name = 'Mehta')`,
+  );
 }
 
 type CatRow = RowDataPacket & { id: number; slug: string };

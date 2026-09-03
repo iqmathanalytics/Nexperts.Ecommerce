@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { ApiRequestError, api } from "@/lib/api";
 import type { User } from "@/lib/types";
-import { SESSION_GATES, SESSION_GATE_EVENT, clearSessionGate } from "@/lib/sessionGate";
+import { SESSION_GATES, SESSION_GATE_EVENT } from "@/lib/sessionGate";
 
 function subscribe(onStoreChange: () => void) {
   window.addEventListener(SESSION_GATE_EVENT, onStoreChange);
@@ -30,10 +30,6 @@ export function useSession() {
     enabled: gated,
   });
   const user = me.data?.data.user ?? undefined;
-
-  useEffect(() => {
-    if (gated && me.isSuccess && !user) clearSessionGate("customer");
-  }, [gated, me.isSuccess, user]);
 
   return {
     user,
