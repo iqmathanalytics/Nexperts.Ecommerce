@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductGrid } from "@/components/store/ProductCard";
@@ -15,35 +15,51 @@ function pad(n: number) {
 }
 
 function SaleClock({ endsAt }: { endsAt?: string | null }) {
-  const end = useMemo(() => {
-    if (endsAt) {
-      const parsed = new Date(endsAt).getTime();
-      if (!Number.isNaN(parsed) && parsed > Date.now()) return parsed;
-    }
-    const d = new Date();
-    d.setDate(d.getDate() + 3);
-    d.setHours(23, 59, 59, 0);
-    return d.getTime();
-  }, [endsAt]);
-  const [left, setLeft] = useState(() => Math.max(0, end - Date.now()));
+  // null until mount — avoids SSR/client Date.now() mismatch on the timer digits
+  const [left, setLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    setLeft(Math.max(0, end - Date.now()));
-    const id = window.setInterval(() => setLeft(Math.max(0, end - Date.now())), 1000);
-    return () => window.clearInterval(id);
-  }, [end]);
+    let end: number;
+    if (endsAt) {
+      const parsed = new Date(endsAt).getTime();
+      if (!Number.isNaN(parsed) && parsed > Date.now()) {
+        end = parsed;
+      } else {
+        const d = new Date();
+        d.setDate(d.getDate() + 3);
+        d.setHours(23, 59, 59, 0);
+        end = d.getTime();
+      }
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + 3);
+      d.setHours(23, 59, 59, 0);
+      end = d.getTime();
+    }
 
-  const s = Math.floor(left / 1000);
-  const days = Math.floor(s / 86400);
-  const hours = Math.floor((s % 86400) / 3600);
-  const mins = Math.floor((s % 3600) / 60);
-  const secs = s % 60;
-  const parts = [
-    { l: "Days", v: pad(days) },
-    { l: "Hrs", v: pad(hours) },
-    { l: "Mins", v: pad(mins) },
-    { l: "Secs", v: pad(secs) },
-  ];
+    const tick = () => setLeft(Math.max(0, end - Date.now()));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [endsAt]);
+
+  const parts =
+    left == null
+      ? [
+          { l: "Days", v: "--" },
+          { l: "Hrs", v: "--" },
+          { l: "Mins", v: "--" },
+          { l: "Secs", v: "--" },
+        ]
+      : (() => {
+          const s = Math.floor(left / 1000);
+          return [
+            { l: "Days", v: pad(Math.floor(s / 86400)) },
+            { l: "Hrs", v: pad(Math.floor((s % 86400) / 3600)) },
+            { l: "Mins", v: pad(Math.floor((s % 3600) / 60)) },
+            { l: "Secs", v: pad(s % 60) },
+          ];
+        })();
 
   return (
     <div className="mx-auto grid w-full max-w-[24.75rem] grid-cols-4 gap-2 sm:gap-2.5" role="timer" aria-label="Sale ends in">
