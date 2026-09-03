@@ -1,3 +1,4 @@
+import type { RowDataPacket } from "mysql2/promise";
 import { pool } from "./index";
 import { CATEGORY_IMAGES } from "./catalogData";
 import { invalidateStorefrontCache } from "../utils/ttlCache";
@@ -43,7 +44,7 @@ export async function ensureSchema() {
   }
 }
 
-type CatRow = { id: number; slug: string };
+type CatRow = RowDataPacket & { id: number; slug: string };
 
 async function ensureMenDepartments() {
   const kids: Array<{ parent: string; name: string; slug: string; imageKey: string }> = [
