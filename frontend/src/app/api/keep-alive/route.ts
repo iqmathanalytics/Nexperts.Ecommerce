@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
-
 function upstreamBase() {
   const explicit = process.env.API_PROXY_TARGET?.trim();
   if (explicit) return explicit.replace(/\/$/, "");

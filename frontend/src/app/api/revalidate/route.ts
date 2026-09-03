@@ -1,8 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-export const runtime = "edge";
-
 const DEFAULT_PATHS = ["/", "/women", "/men", "/sale", "/lookbooks", "/designers", "/products"];
 
 export async function POST(req: Request) {
