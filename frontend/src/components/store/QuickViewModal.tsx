@@ -17,6 +17,7 @@ import { loginUrl } from "@/lib/auth";
 import { ScarcityBanner } from "@/components/store/ScarcityBanner";
 import { isModifiedClick } from "@/lib/motion";
 import { ProductCommerceDetails } from "@/components/store/ProductCommerceDetails";
+import { addGuestCartItem } from "@/lib/guestCart";
 
 type Variant = {
   id: number;
@@ -130,7 +131,7 @@ export function QuickViewModal({
                 alt=""
                 fill
                 priority
-                quality={65}
+                quality={60}
                 sizes="(max-width:768px) 90vw, 420px"
                 className="object-cover object-top"
               />
@@ -188,7 +189,7 @@ export function QuickViewModal({
                     disabled={!s.inStock}
                     onClick={() => setVariantId(s.id)}
                     className={`min-w-12 border px-3 py-2 text-sm transition ${
-                      variant?.id === s.id ? "border-ink bg-ink text-white" : "border-line hover:border-ink disabled:opacity-40"
+                      variant?.id === s.id ? "btn-chip-active" : "border-line hover:border-ink disabled:opacity-40"
                     }`}
                   >
                     {s.label}
@@ -203,10 +204,25 @@ export function QuickViewModal({
             <QuantitySpinner value={qty} onChange={setQty} max={variant?.available ?? 10} />
             <Button
               className="flex-1"
-              disabled={!variant?.inStock || add.isPending}
+              disabled={!variant?.inStock}
+              pending={add.isPending}
               onClick={() => {
+                if (!product || !variant || add.isPending) return;
                 if (!isAuthenticated) {
-                  router.push(loginUrl(`/products/${productSlug}`));
+                  const sizeLabel = variant.attributes?.size ?? variant.attributes?.Size;
+                  addGuestCartItem({
+                    variantId: variant.id,
+                    quantity: qty,
+                    productName: product.name,
+                    price: variant.price,
+                    imageUrl: product.images.find((i) => i.isPrimary)?.url ?? product.images[0]?.url ?? null,
+                    slug: product.slug,
+                    size: typeof sizeLabel === "string" ? sizeLabel : undefined,
+                  });
+                  push("Added to bag");
+                  pulseCart();
+                  openMiniCart();
+                  onClose();
                   return;
                 }
                 add.mutate();
@@ -233,11 +249,13 @@ export function QuickViewModal({
               onClose();
               if (isModifiedClick(e)) return;
               e.preventDefault();
+              const href = `/products/${productSlug}`;
               goToProduct({
-                href: `/products/${productSlug}`,
+                href,
                 name,
                 imageUrl: images[0]?.url ?? preview?.imageUrl ?? null,
               });
+              router.push(href);
             }}
             className="mt-6 inline-block text-xs font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline"
           >

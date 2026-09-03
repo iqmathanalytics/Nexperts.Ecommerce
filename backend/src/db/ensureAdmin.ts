@@ -12,19 +12,20 @@ const ADMIN_PASSWORD = "admin@123";
 
 async function main() {
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const profile = { passwordHash, status: "ACTIVE" as const, firstName: "Nexperts", lastName: "" };
 
   const [byNew] = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
   const [byLegacy] = await db.select().from(users).where(eq(users.email, "admin@nexperts.com")).limit(1);
 
   let userId: number;
   if (byNew) {
-    await db.update(users).set({ passwordHash, status: "ACTIVE" }).where(eq(users.id, byNew.id));
+    await db.update(users).set(profile).where(eq(users.id, byNew.id));
     userId = byNew.id;
-    console.log(`Updated password for ${ADMIN_EMAIL}`);
+    console.log(`Updated password + name for ${ADMIN_EMAIL}`);
   } else if (byLegacy) {
     await db
       .update(users)
-      .set({ email: ADMIN_EMAIL, passwordHash, status: "ACTIVE" })
+      .set({ email: ADMIN_EMAIL, ...profile })
       .where(eq(users.id, byLegacy.id));
     userId = byLegacy.id;
     console.log(`Migrated admin@nexperts.com → ${ADMIN_EMAIL}`);
@@ -32,8 +33,8 @@ async function main() {
     const result = await db.insert(users).values({
       email: ADMIN_EMAIL,
       passwordHash,
-      firstName: "Admin",
-      lastName: "Nexperts",
+      firstName: "Nexperts",
+      lastName: "",
       phone: "9876500001",
       status: "ACTIVE",
     });
@@ -56,7 +57,7 @@ async function main() {
     console.warn("SUPER_ADMIN role missing — run full db:seed after migrate");
   }
 
-  console.log(`\nAdmin login:\n  Email:    ${ADMIN_EMAIL}\n  Password: ${ADMIN_PASSWORD}\n`);
+  console.log(`\nAdmin login:\n  Email:    ${ADMIN_EMAIL}\n  Password: ${ADMIN_PASSWORD}\n  Name:     Nexperts\n`);
   await pool.end();
 }
 

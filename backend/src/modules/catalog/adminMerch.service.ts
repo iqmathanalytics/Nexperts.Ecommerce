@@ -167,6 +167,7 @@ export async function createCollection(adminId: number, input: z.infer<typeof co
     await db.insert(collectionProducts).values(ids.map((productId, i) => ({ collectionId: id, productId, sortOrder: i })));
   }
   await audit({ adminUserId: adminId, action: "COLLECTION_CREATED", resource: "collection", resourceId: id });
+  invalidateStorefrontCache();
   return getCollectionAdmin(id);
 }
 
@@ -194,6 +195,7 @@ export async function updateCollection(adminId: number, id: number, input: z.inf
     }
   }
   await audit({ adminUserId: adminId, action: "COLLECTION_UPDATED", resource: "collection", resourceId: id });
+  invalidateStorefrontCache();
   return getCollectionAdmin(id);
 }
 
@@ -201,6 +203,7 @@ export async function archiveCollection(adminId: number, id: number) {
   await getCollectionAdmin(id);
   await db.update(collections).set({ status: "ARCHIVED" }).where(eq(collections.id, id));
   await audit({ adminUserId: adminId, action: "COLLECTION_DELETED", resource: "collection", resourceId: id });
+  invalidateStorefrontCache();
 }
 
 export async function listLookbooksAdmin() {
@@ -252,6 +255,7 @@ export async function createLookbook(adminId: number, input: z.infer<typeof look
     await db.insert(lookbookItems).values(ids.map((productId, i) => ({ lookbookId: id, productId, sortOrder: i })));
   }
   await audit({ adminUserId: adminId, action: "LOOKBOOK_CREATED", resource: "lookbook", resourceId: id });
+  invalidateStorefrontCache();
   return getLookbookAdmin(id);
 }
 
@@ -278,6 +282,7 @@ export async function updateLookbook(adminId: number, id: number, input: z.infer
     }
   }
   await audit({ adminUserId: adminId, action: "LOOKBOOK_UPDATED", resource: "lookbook", resourceId: id });
+  invalidateStorefrontCache();
   return getLookbookAdmin(id);
 }
 
@@ -285,4 +290,5 @@ export async function archiveLookbook(adminId: number, id: number) {
   await getLookbookAdmin(id);
   await db.update(lookbooks).set({ status: "ARCHIVED" }).where(eq(lookbooks.id, id));
   await audit({ adminUserId: adminId, action: "LOOKBOOK_DELETED", resource: "lookbook", resourceId: id });
+  invalidateStorefrontCache();
 }

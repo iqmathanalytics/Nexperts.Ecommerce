@@ -14,40 +14,109 @@ export type CampaignHeroLink = { href: string; label: string };
 
 export type CampaignHeroVideo = {
   src: string;
+  /** Optional lighter source for phones / save-data. */
+  srcMobile?: string;
+  /** Optional Full HD for large desktop when a single film is on screen. */
+  srcHd?: string;
   poster: string;
   alt: string;
 };
+
+function pickVideoSrc(video: CampaignHeroVideo, opts?: { allowFullHd?: boolean }) {
+  if (typeof window === "undefined") return video.src;
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  const saveData = Boolean(connection?.saveData);
+  const slow =
+    connection?.effectiveType === "2g" ||
+    connection?.effectiveType === "slow-2g" ||
+    connection?.effectiveType === "3g";
+  const phone = window.matchMedia("(max-width: 767px)").matches;
+  const largeDesktop = window.matchMedia("(min-width: 1280px)").matches;
+
+  if ((phone || saveData || slow) && video.srcMobile) return video.srcMobile;
+  if (opts?.allowFullHd && largeDesktop && video.srcHd && !saveData && !slow) return video.srcHd;
+  return video.src;
+}
 
 function FilmPane({
   video,
   reduceMotion,
   fallbackImage,
   eager,
+  allowFullHd = false,
 }: {
   video: CampaignHeroVideo;
   reduceMotion: boolean;
   fallbackImage?: string;
   eager?: boolean;
+  allowFullHd?: boolean;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLVideoElement>(null);
   const still = fallbackImage || video.poster;
+  const [src, setSrc] = useState(() => pickVideoSrc(video, { allowFullHd }));
+  const [inView, setInView] = useState(eager ?? false);
+  // Poster paints first for LCP; video arms after a short idle delay even when eager.
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setSrc(pickVideoSrc(video, { allowFullHd }));
+  }, [video, allowFullHd]);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    if (!eager) return;
+    const ric = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+    if (ric) {
+      const id = ric(() => setReady(true), { timeout: 900 });
+      return () => {
+        (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+      };
+    }
+    const t = window.setTimeout(() => setReady(true), 450);
+    return () => window.clearTimeout(t);
+  }, [eager, reduceMotion]);
+
+  useEffect(() => {
+    const root = wrapRef.current;
+    if (!root || reduceMotion) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const visible = Boolean(entry?.isIntersecting);
+        setInView(visible);
+        if (visible && !eager) setReady(true);
+      },
+      { root: null, threshold: 0.2, rootMargin: "80px 0px" },
+    );
+    io.observe(root);
+    return () => io.disconnect();
+  }, [reduceMotion, eager]);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || reduceMotion) return;
+    if (!el || reduceMotion || !ready) return;
     el.muted = true;
-    const play = () => el.play().catch(() => undefined);
-    play();
+    if (inView) {
+      el.play().catch(() => undefined);
+    } else {
+      el.pause();
+    }
+  }, [reduceMotion, ready, inView, src]);
+
+  useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === "visible") play();
+      const el = ref.current;
+      if (!el || reduceMotion || !inView) return;
+      if (document.visibilityState === "visible") el.play().catch(() => undefined);
+      else el.pause();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [reduceMotion, video.src]);
+  }, [reduceMotion, inView]);
 
   return (
-    <div className="hero-film">
-      {reduceMotion ? (
+    <div ref={wrapRef} className="hero-film">
+      {reduceMotion || !ready ? (
         <div
           className="absolute inset-0 bg-cover bg-[center_22%] md:bg-center"
           style={{ backgroundImage: `url(${still})` }}
@@ -58,15 +127,15 @@ function FilmPane({
         <video
           ref={ref}
           className="hero-film-media"
-          autoPlay
+          autoPlay={inView}
           muted
           loop
           playsInline
-          preload={eager ? "metadata" : "none"}
+          preload={eager ? "auto" : "metadata"}
           poster={video.poster}
           aria-label={video.alt}
         >
-          <source src={video.src} type="video/mp4" />
+          <source src={src} type="video/mp4" />
         </video>
       )}
     </div>
@@ -87,7 +156,7 @@ export function CampaignHero({
   video?: CampaignHeroVideo;
   videos?: CampaignHeroVideo[];
   image?: string;
-  kicker: string;
+  kicker?: string;
   title: string;
   subtitle?: string;
   actions: CampaignHeroAction[];
@@ -95,15 +164,25 @@ export function CampaignHero({
   children?: ReactNode;
 }) {
   const [reduceMotion, setReduceMotion] = useState(false);
-  const films = videos?.length ? videos : video ? [video] : [];
+  const [narrow, setNarrow] = useState(false);
+  const allFilms = videos?.length ? videos : video ? [video] : [];
+  // Mobile: one film only — dual autoplay was ~10MB and stalled the main thread.
+  const films = narrow && allFilms.length > 1 ? [allFilms[0]!] : allFilms;
   const split = films.length > 1;
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduceMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const width = window.matchMedia("(max-width: 767px)");
+    const syncMotion = () => setReduceMotion(motion.matches);
+    const syncWidth = () => setNarrow(width.matches);
+    syncMotion();
+    syncWidth();
+    motion.addEventListener("change", syncMotion);
+    width.addEventListener("change", syncWidth);
+    return () => {
+      motion.removeEventListener("change", syncMotion);
+      width.removeEventListener("change", syncWidth);
+    };
   }, []);
 
   const lines = title.split("\n");
@@ -115,11 +194,12 @@ export function CampaignHero({
         <div className={`absolute inset-0 ${split ? "grid grid-rows-2 md:grid-cols-2 md:grid-rows-1 md:divide-x md:divide-white/20" : ""}`}>
           {films.map((film, i) => (
             <FilmPane
-              key={film.src}
+              key={`${film.src}-${film.alt}`}
               video={film}
               reduceMotion={reduceMotion}
               fallbackImage={i === 0 ? image : film.poster}
               eager={i === 0}
+              allowFullHd={!split}
             />
           ))}
         </div>
@@ -128,7 +208,7 @@ export function CampaignHero({
           className="absolute inset-0 bg-cover bg-[center_22%] md:bg-center"
           style={{ backgroundImage: `url(${still})` }}
           role="img"
-          aria-label={kicker}
+          aria-label={kicker || title}
         />
       ) : null}
 
@@ -136,7 +216,9 @@ export function CampaignHero({
 
       <div className="pointer-events-none relative z-10 mx-auto flex h-full w-full max-w-3xl flex-col items-center justify-end px-6 pb-16 pt-[calc(var(--store-chrome)+1rem)] text-center md:pb-20">
         <div className="flex w-full flex-col items-center gap-4 md:gap-5">
-          <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.2em] text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">{kicker}</p>
+          {kicker ? (
+            <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.2em] text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">{kicker}</p>
+          ) : null}
           <h1 className="max-w-[16ch] text-balance font-display text-4xl font-medium italic leading-[0.95] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.45)] md:text-6xl lg:text-[4.75rem]">
             {lines.map((line, i) => (
               <span key={i}>

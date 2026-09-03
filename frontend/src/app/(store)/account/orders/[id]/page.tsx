@@ -13,6 +13,7 @@ import { OrderTracking } from "@/components/store/OrderTracking";
 import { canCancelOrder, expectedDeliveryWindow, friendlyOrderStatus, paymentLabel } from "@/lib/orders";
 import { asAmount, formatAddress, type CustomerOrder } from "@/lib/orderTypes";
 import { useState } from "react";
+import { BackButton } from "@/components/store/BackButton";
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +48,9 @@ export default function OrderDetailPage() {
 
   return (
     <div className="text-ink">
+      <div className="mb-4">
+        <BackButton fallback="/account/orders" tone="dark" />
+      </div>
       <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">Order {o.orderNumber}</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -145,11 +149,11 @@ export default function OrderDetailPage() {
             href={`https://wa.me/${whatsapp}`}
             target="_blank"
             rel="noreferrer"
-            className="block rounded-[1.8rem] border border-line bg-brand px-6 py-5 text-white transition hover:bg-brand-deep"
+            className="btn-store btn-fill block rounded-[1.8rem] px-6 py-5 transition"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent">Concierge</p>
-            <p className="mt-2 font-display text-2xl font-medium italic">Need a hand?</p>
-            <p className="mt-1 text-sm text-white/75">WhatsApp the house about this order.</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Concierge</p>
+            <p className="mt-2 font-display text-2xl font-medium italic text-[var(--btn-fill-text)]">Need a hand?</p>
+            <p className="mt-1 text-sm text-muted">WhatsApp the house about this order.</p>
           </a>
           <Link
             href="/products"

@@ -39,7 +39,7 @@ export function SearchOverlay() {
   const { searchOpen, closeSearch, goToProduct } = useStoreUi();
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
-  const debouncedQ = useDebouncedValue(q, 220);
+  const debouncedQ = useDebouncedValue(q, 150);
 
   const suggest = useQuery({
     queryKey: ["suggest", debouncedQ],
@@ -107,7 +107,9 @@ export function SearchOverlay() {
                       closeSearch();
                       if (isModifiedClick(e)) return;
                       e.preventDefault();
-                      goToProduct({ href: `/products/${p.slug}`, name: p.name });
+                      const href = `/products/${p.slug}`;
+                      goToProduct({ href, name: p.name });
+                      router.push(href);
                     }}
                     className="block border-b border-line py-3 transition hover:pl-1"
                   >

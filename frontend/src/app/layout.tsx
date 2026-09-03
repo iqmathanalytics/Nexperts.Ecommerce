@@ -10,7 +10,10 @@ const body = Figtree({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   display: "swap",
-  preload: true,
+  // Intro cover delays first paint of body UI; preloading here triggers Chrome's
+  // "preloaded but not used" warning on home and subsequent navigations.
+  preload: false,
+  adjustFontFallback: true,
 });
 
 const display = Bodoni_Moda({
@@ -20,6 +23,7 @@ const display = Bodoni_Moda({
   style: ["normal", "italic"],
   display: "swap",
   preload: false,
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
@@ -36,13 +40,24 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     apiOrigin = "";
   }
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${body.variable} ${display.variable} h-full scroll-smooth antialiased`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${body.variable} ${display.variable} h-full scroll-smooth antialiased`}
+      // Inline intro script may add `nx-intro-pending` before hydrate — expected mismatch.
+      suppressHydrationWarning
+    >
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.pexels.com" />
         <link rel="dns-prefetch" href="https://images.pexels.com" />
         {apiOrigin ? <link rel="preconnect" href={apiOrigin} /> : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(location.pathname.indexOf("/admin")===0)return;if(sessionStorage.getItem("nx-intro-v4")==="1")return;document.documentElement.classList.add("nx-intro-pending");}catch(e){try{if(location.pathname.indexOf("/admin")!==0)document.documentElement.classList.add("nx-intro-pending");}catch(_){}}})();`,
+          }}
+        />
       </head>
       <body className="min-h-full bg-background font-sans text-ink antialiased [color:var(--ink)]">
         <Providers>{children}</Providers>

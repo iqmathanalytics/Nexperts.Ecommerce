@@ -79,7 +79,7 @@ export function toFullFigure(src: string) {
   return src;
 }
 
-/** Wide cinematic crop for category / lookbook / designer heroes (16:9). */
+/** Wide cinematic crop for category / lookbook / designer heroes (16:9), subject-centered. */
 export function toHeroBanner(src: string, width = 1800) {
   if (src.startsWith("https://images.unsplash.com/") || src.startsWith("https://images.pexels.com/")) {
     try {
@@ -89,17 +89,17 @@ export function toHeroBanner(src: string, width = 1800) {
       if (src.startsWith("https://images.unsplash.com/")) {
         url.searchParams.set("auto", "format");
         url.searchParams.set("fit", "crop");
-        url.searchParams.set("crop", "entropy");
+        url.searchParams.set("crop", "faces");
         url.searchParams.set("w", String(w));
         url.searchParams.set("h", String(h));
-        url.searchParams.set("q", "85");
+        url.searchParams.set("q", "62");
       } else {
         url.searchParams.set("auto", "compress");
         url.searchParams.set("cs", "tinysrgb");
         url.searchParams.set("fit", "crop");
         url.searchParams.set("w", String(w));
         url.searchParams.set("h", String(h));
-        url.searchParams.set("q", "85");
+        url.searchParams.set("q", "62");
       }
       return url.toString();
     } catch {

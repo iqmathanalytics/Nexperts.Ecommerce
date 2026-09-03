@@ -68,7 +68,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   if (signedOut || !user) {
     return (
       <PageState title="Please sign in">
-        <Link href={loginUrl(path)} className="btn-store rounded-full bg-[#1c1915] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white hover:bg-[#2a2620]">
+        <Link href={loginUrl(path)} className="btn-store btn-fill rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em]">
           Sign in
         </Link>
       </PageState>
@@ -112,7 +112,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
                   href={l.href}
                   className={cn(
                     "flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2.5 text-sm transition md:w-full",
-                    active ? "bg-brand text-white" : "text-muted hover:bg-brand-soft hover:text-ink",
+                    active ? "btn-chip-active" : "text-muted hover:bg-brand-soft hover:text-ink",
                   )}
                 >
                   <Icon className="h-4 w-4" />

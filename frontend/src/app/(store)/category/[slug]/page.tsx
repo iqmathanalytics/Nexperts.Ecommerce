@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { CatalogInner } from "@/components/store/Catalog";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { PageHero } from "@/components/store/PageHero";
-import { PageState, Spinner } from "@/components/ui/state";
+import { PageState, PageLoader } from "@/components/ui/state";
 import { categoryHref, inferCategoryGender, shopGenderLabel } from "@/lib/shop";
 import type { ProductCard } from "@/lib/types";
 
@@ -32,11 +32,7 @@ function CategoryInner() {
   });
 
   if (cat.isLoading) {
-    return (
-      <div className="flex justify-center py-24">
-        <Spinner />
-      </div>
-    );
+    return <PageLoader label="Loading category" />;
   }
   if (cat.isError || !cat.data) return <PageState title="Category not found" />;
 
@@ -51,7 +47,8 @@ function CategoryInner() {
         kicker={kicker}
         title={category.name}
         subtitle={category.description}
-        focal={slug.includes("ethnic") || slug.includes("dress") ? "upper" : "center"}
+        focal="center"
+        backHref={gender === "MEN" ? "/men" : gender === "WOMEN" ? "/women" : "/products"}
       >
         {category.children.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -59,7 +56,7 @@ function CategoryInner() {
               <Link
                 key={child.id}
                 href={childHref(child.slug)}
-                className="btn-store border border-white/70 bg-black/45 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white hover:bg-white hover:text-[#1c1915]"
+                className="btn-store btn-hero-outline rounded-sm border border-white/80 bg-[rgba(244,239,230,0.9)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#123028] hover:bg-white"
               >
                 {child.name}
               </Link>
@@ -92,9 +89,7 @@ function CategoryGenderSplit({ slug, name }: { slug: string; name: string }) {
     <div className="mx-auto max-w-7xl space-y-16 px-4 py-12 md:px-6">
       <p className="text-sm text-muted">Shop {name.toLowerCase()} by collection — woman and man are listed separately.</p>
       {women.isLoading || men.isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
+        <PageLoader label="Loading pieces" compact />
       ) : (
         <>
           {womenItems.length ? (
@@ -128,13 +123,7 @@ function CategoryGenderSplit({ slug, name }: { slug: string; name: string }) {
 
 export default function CategoryPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center py-24">
-          <Spinner />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageLoader label="Loading category" />}>
       <CategoryInner />
     </Suspense>
   );

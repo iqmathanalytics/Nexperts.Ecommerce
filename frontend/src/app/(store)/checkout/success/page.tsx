@@ -161,7 +161,7 @@ function SuccessInner() {
               <div className="flex flex-col gap-3">
                 <Link
                   href={`/account/orders/${order.id}`}
-                  className="btn-store inline-flex h-12 items-center justify-center gap-2 bg-[#1c1915] px-6 text-[11px] font-semibold uppercase tracking-[0.2em] text-white hover:bg-[#2a2620]"
+                  className="btn-store btn-fill inline-flex h-12 items-center justify-center gap-2 px-6 text-[11px] font-semibold uppercase tracking-[0.2em]"
                 >
                   Track this order <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
@@ -186,7 +186,7 @@ function SuccessInner() {
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Link
               href={id ? `/account/orders/${id}` : "/account/orders"}
-              className="btn-store inline-flex h-12 items-center justify-center gap-2 bg-[#1c1915] px-7 text-[11px] font-semibold uppercase tracking-[0.2em] text-white hover:bg-[#2a2620]"
+              className="btn-store btn-fill inline-flex h-12 items-center justify-center gap-2 px-7 text-[11px] font-semibold uppercase tracking-[0.2em]"
             >
               View order <ArrowRight className="h-3.5 w-3.5" />
             </Link>

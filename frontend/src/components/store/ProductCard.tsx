@@ -53,7 +53,9 @@ export function ProductCard({
   function openProduct(e: MouseEvent<HTMLAnchorElement>) {
     if (isModifiedClick(e)) return;
     e.preventDefault();
+    // Push on the click tick so Next starts the route immediately (curtain is decorative).
     goToProduct({ href, name: product.name, imageUrl: product.imageUrl });
+    router.push(href);
   }
 
   return (
@@ -64,12 +66,12 @@ export function ProductCard({
           if (canHoverSwap) setHoverReady(true);
           prefetchQuickView();
         }}
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 8 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-60px" }}
-        transition={{ duration: 0.25, delay: Math.min(index, 6) * 0.02, ease: easeOut }}
-        whileHover={{ y: -4 }}
-        whileTap={{ scale: 0.99 }}
+        viewport={{ once: true, margin: "-40px" }}
+        transition={{ duration: 0.18, delay: Math.min(index, 4) * 0.015, ease: easeOut }}
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.985 }}
       >
         <TiltStage className="relative">
           <div className="relative isolate px-2 pt-2">
@@ -83,7 +85,7 @@ export function ProductCard({
                       src={product.imageUrl}
                       alt={product.name}
                       fill
-                      quality={70}
+                      quality={65}
                       priority={index < 4}
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
                       className={`object-cover object-top transition duration-500 ease-out ${

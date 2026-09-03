@@ -29,6 +29,8 @@ import { useSession } from "@/hooks/useSession";
 import { loginUrl } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 import { useStoreUi } from "@/components/store/StoreUiContext";
+import { BackButton } from "@/components/store/BackButton";
+import { addGuestCartItem } from "@/lib/guestCart";
 
 type Variant = {
   id: number;
@@ -209,6 +211,23 @@ export default function ProductPage() {
     return false;
   }
 
+  function addToBagAsGuest() {
+    if (!product || !variant) return;
+    const sizeLabel = variant.attributes?.size ?? variant.attributes?.Size ?? variant.name;
+    addGuestCartItem({
+      variantId: variant.id,
+      quantity: qty,
+      productName: product.name,
+      price: variant.price,
+      imageUrl: product.images.find((i) => i.isPrimary)?.url ?? product.images[0]?.url ?? null,
+      slug: product.slug,
+      size: typeof sizeLabel === "string" ? sizeLabel : undefined,
+    });
+    push("Added to bag");
+    pulseCart();
+    openMiniCart();
+  }
+
   if (isLoading) {
     return (
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 md:grid-cols-2 md:px-6">
@@ -228,6 +247,9 @@ export default function ProductPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 text-ink md:px-6">
+      <div className="mb-4">
+        <BackButton fallback="/products" tone="dark" />
+      </div>
       <Breadcrumbs
         items={[
           { label: "Shop", href: "/products" },
@@ -295,7 +317,7 @@ export default function ProductPage() {
                     disabled={!v.inStock}
                     onClick={() => setVariantId(v.id)}
                     className={`min-w-14 border px-3 py-2 text-sm transition ${
-                      v.id === variant.id ? "border-ink bg-ink text-white" : "border-line hover:border-ink disabled:opacity-40"
+                      v.id === variant.id ? "btn-chip-active" : "border-line hover:border-ink disabled:opacity-40"
                     }`}
                   >
                     {sizeLabel}
@@ -325,25 +347,47 @@ export default function ProductPage() {
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <QuantitySpinner value={qty} max={Math.max(1, variant.available)} onChange={setQty} />
-            <Button className="min-w-40" disabled={!variant.inStock || addCart.isPending} onClick={() => requireSignIn() && addCart.mutate()}>
+            <Button
+              className="min-w-40"
+              disabled={!variant.inStock}
+              pending={addCart.isPending}
+              onClick={() => {
+                if (addCart.isPending) return;
+                if (!isAuthenticated) {
+                  addToBagAsGuest();
+                  return;
+                }
+                addCart.mutate();
+              }}
+            >
               {addCart.isPending ? "Adding…" : "Add to bag"}
             </Button>
             <Button
               variant="brand"
-              disabled={!variant.inStock || addCart.isPending}
+              disabled={!variant.inStock}
+              pending={addCart.isPending}
               onClick={() => {
-                if (!requireSignIn()) return;
-                addCart.mutateAsync().then(() => router.push("/checkout")).catch(() => undefined);
+                if (addCart.isPending) return;
+                if (!isAuthenticated) {
+                  addToBagAsGuest();
+                  router.push(loginUrl("/checkout"));
+                  return;
+                }
+                void addCart.mutateAsync();
+                router.push("/checkout");
               }}
             >
               Buy now
             </Button>
-            <motion.div whileTap={{ scale: 0.9 }}>
+            <motion.div whileTap={{ scale: 0.92 }}>
               <Button
                 variant="outline"
                 size="icon"
-                disabled={wish.isPending}
-                onClick={() => requireSignIn() && wish.mutate()}
+                pending={wish.isPending}
+                onClick={() => {
+                  if (wish.isPending) return;
+                  requireSignIn() && wish.mutate();
+                }}
                 aria-label={wishItem ? "Remove from wishlist" : "Add to wishlist"}
               >
                 <Heart className={`h-5 w-5 ${wishItem ? "fill-ink text-ink" : ""}`} />

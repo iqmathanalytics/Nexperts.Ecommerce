@@ -53,7 +53,7 @@ export function MobileTabBar() {
           <ShoppingBag className="h-5 w-5" />
           Bag
           {count > 0 ? (
-            <span className="absolute right-[18%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 text-[9px] text-white">
+            <span className="absolute right-[18%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--btn-fill)] px-1 text-[9px] font-semibold text-[var(--btn-fill-text)]">
               {count}
             </span>
           ) : null}

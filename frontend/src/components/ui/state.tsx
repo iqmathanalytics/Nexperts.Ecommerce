@@ -3,6 +3,7 @@ import { Spinner, PageState, FieldError } from "@/components/ui/primitives";
 import { Toast } from "@/components/ui/toast";
 
 export { Spinner, PageState, FieldError, Toast };
+export { PageLoader, GlobalLoading } from "@/components/ui/GlobalLoading";
 export {
   Skeleton,
   ProductCardSkeleton,

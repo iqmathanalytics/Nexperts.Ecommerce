@@ -3,15 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatINR } from "@/lib/utils";
 import { PageState, Skeleton } from "@/components/ui/state";
 import { useStoreUi } from "@/components/store/StoreUiContext";
+import { PageBackCorner } from "@/components/store/BackButton";
 import { isModifiedClick } from "@/lib/motion";
 
 export default function LookbookPage() {
   const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
   const { goToProduct } = useStoreUi();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["lookbook", slug],
@@ -50,6 +52,7 @@ export default function LookbookPage() {
           <Image src={lb.coverImageUrl} alt="" fill priority className="object-cover object-center opacity-90" sizes="100vw" />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+        <PageBackCorner fallback="/products" tone="light" />
         <div className="relative z-10 mx-auto flex min-h-[70vh] max-w-7xl flex-col justify-end px-4 py-16 md:px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">Lookbook</p>
           <h1 className="mt-3 font-display text-5xl font-semibold md:text-6xl">{lb.title}</h1>
@@ -67,7 +70,9 @@ export default function LookbookPage() {
               onClick={(e) => {
                 if (isModifiedClick(e)) return;
                 e.preventDefault();
-                goToProduct({ href: `/products/${item.slug}`, name: item.name, imageUrl: item.imageUrl });
+                const href = `/products/${item.slug}`;
+                goToProduct({ href, name: item.name, imageUrl: item.imageUrl });
+                router.push(href);
               }}
               className="group border border-line bg-surface"
             >

@@ -16,6 +16,7 @@ import { SearchOverlay } from "@/components/store/SearchOverlay";
 import { MobileTabBar } from "@/components/store/MobileTabBar";
 import { MEGA_MEN, MEGA_WOMEN, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
 import { categoryHref, withShopGender } from "@/lib/shop";
+import { GUEST_CART_EVENT, guestCartCount } from "@/lib/guestCart";
 import Image from "next/image";
 import { OfferTheatre } from "@/components/store/OfferTheatre";
 
@@ -81,6 +82,17 @@ export function Header() {
     retry: false,
     staleTime: 15_000,
   });
+  const [guestCount, setGuestCount] = useState(0);
+  useEffect(() => {
+    const sync = () => setGuestCount(guestCartCount());
+    sync();
+    window.addEventListener(GUEST_CART_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(GUEST_CART_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
   const wishlist = useQuery({
     queryKey: ["wishlist"],
     queryFn: () => api<{ items: unknown[] }>("/wishlist"),
@@ -98,7 +110,7 @@ export function Header() {
   const megaWomen = editorial.megaWomen.length ? editorial.megaWomen : MEGA_WOMEN;
   const megaMen = editorial.megaMen.length ? editorial.megaMen : MEGA_MEN;
 
-  const cartCount = cart.data?.data.items.length ?? 0;
+  const cartCount = isAuthenticated ? (cart.data?.data.items.length ?? 0) : guestCount;
   const wishCount = wishlist.data?.data.items.length ?? 0;
 
   useEffect(() => {
@@ -117,7 +129,7 @@ export function Header() {
   const iconBtn = solid
     ? "rounded-sm p-2 text-ink transition hover:bg-black/5"
     : "rounded-sm p-2 text-white transition hover:bg-white/15";
-  const countBadge = solid ? "bg-ink text-white" : "bg-white text-ink";
+  const countBadge = solid ? "btn-chip-active" : "bg-white text-ink";
 
   return (
     <>
@@ -342,6 +354,25 @@ export function Header() {
 
 export function Footer() {
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "60123456789";
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  async function onSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setMessage("");
+    try {
+      await api("/newsletter/subscribe", { method: "POST", body: JSON.stringify({ email }) });
+      setStatus("ok");
+      setMessage("You're on the list.");
+      setEmail("");
+    } catch (err) {
+      setStatus("error");
+      setMessage(err instanceof Error ? err.message : "Could not subscribe");
+    }
+  }
+
   return (
     <footer className="mt-auto border-t border-line bg-surface pb-20 text-ink md:pb-0">
       <div className="border-b border-line bg-surface-muted">
@@ -350,21 +381,25 @@ export function Footer() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">Newsletter</p>
             <p className="mt-1 text-sm text-muted">New drops, member offers, and styling notes.</p>
           </div>
-          <form
-            className="flex w-full max-w-md gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-            }}
-          >
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              className="h-11 flex-1 border border-line bg-white px-3 text-sm outline-none focus:border-ink"
-            />
-            <button type="submit" className="btn-store inline-flex h-11 items-center justify-center bg-[#1c1915] px-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white hover:bg-[#2a2620]">
-              Join
-            </button>
+          <form className="flex w-full max-w-md flex-col gap-2" onSubmit={onSubscribe}>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                className="h-11 flex-1 border border-line bg-white px-3 text-sm outline-none focus:border-ink"
+              />
+              <button
+                type="submit"
+                disabled={status === "loading"}
+                className="btn-store btn-fill inline-flex h-11 items-center justify-center px-5 text-[11px] font-semibold uppercase tracking-[0.2em] disabled:opacity-60"
+              >
+                {status === "loading" ? "…" : "Join"}
+              </button>
+            </div>
+            {message ? <p className={`text-xs ${status === "error" ? "text-red-700" : "text-muted"}`}>{message}</p> : null}
           </form>
         </div>
       </div>
@@ -394,6 +429,12 @@ export function Footer() {
           </Link>
           <Link href="/products?sort=newest" className="mt-2.5 block text-sm hover:underline">
             New in
+          </Link>
+          <Link href="/lookbooks" className="mt-2.5 block text-sm hover:underline">
+            Lookbooks
+          </Link>
+          <Link href="/designers" className="mt-2.5 block text-sm hover:underline">
+            Designers
           </Link>
           <Link href="/sale" className="mt-2.5 block text-sm hover:underline">
             Sale

@@ -18,8 +18,13 @@ export function ProductCardSkeleton() {
   );
 }
 
-export function Spinner() {
-  return <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-ink" />;
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <div className={cn("relative h-6 w-6", className)} role="status" aria-label="Loading">
+      <span className="absolute inset-0 rounded-full border-2 border-line opacity-50" />
+      <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-ink" />
+    </div>
+  );
 }
 
 export function PageState({ title, children }: { title: string; children?: React.ReactNode }) {

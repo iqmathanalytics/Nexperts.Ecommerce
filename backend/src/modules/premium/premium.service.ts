@@ -27,6 +27,7 @@ import {
   ugcPhotos,
   users,
   waitlistEntries,
+  newsletterSubscribers,
 } from "../../db/schema";
 import { AppError } from "../../utils/http";
 import { listProducts } from "../catalog/catalog.service";
@@ -633,4 +634,36 @@ export async function updateFitStats(productId: number, fit: "SMALL" | "TRUE" | 
       largeCount: stats.largeCount + (fit === "LARGE" ? 1 : 0),
     })
     .where(eq(productFitStats.productId, productId));
+}
+
+let newsletterTableReady = false;
+
+async function ensureNewsletterTable() {
+  if (newsletterTableReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL,
+      status ENUM('ACTIVE','UNSUBSCRIBED') NOT NULL DEFAULT 'ACTIVE',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY newsletter_email_unique (email)
+    )
+  `);
+  newsletterTableReady = true;
+}
+
+export async function subscribeNewsletter(email: string) {
+  await ensureNewsletterTable();
+  const normalized = email.trim().toLowerCase();
+  if (!normalized.includes("@")) throw new AppError("VALIDATION", "Enter a valid email", 400);
+  const [existing] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.email, normalized)).limit(1);
+  if (existing) {
+    if (existing.status !== "ACTIVE") {
+      await db.update(newsletterSubscribers).set({ status: "ACTIVE" }).where(eq(newsletterSubscribers.id, existing.id));
+    }
+    return { email: normalized, alreadySubscribed: true };
+  }
+  await db.insert(newsletterSubscribers).values({ email: normalized, status: "ACTIVE" });
+  return { email: normalized, alreadySubscribed: false };
 }

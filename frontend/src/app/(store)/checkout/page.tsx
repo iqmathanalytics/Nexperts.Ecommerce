@@ -57,6 +57,15 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
   const [error, setError] = useState<string | null>(null);
   const [shippingEta, setShippingEta] = useState<string | null>(null);
+  const commerce = useQuery({
+    queryKey: ["commerce"],
+    queryFn: () =>
+      api<{
+        payments: Array<{ id: "COD" | "ONLINE"; available: boolean; label: string; note: string }>;
+      }>("/commerce"),
+    staleTime: 60_000,
+  });
+  const onlineAvailable = commerce.data?.data.payments.find((p) => p.id === "ONLINE")?.available ?? false;
   const addresses = useQuery({ queryKey: ["addresses"], queryFn: () => api<Address[]>("/addresses") });
   const quote = useQuery({
     queryKey: ["quote", appliedCoupon],
@@ -96,6 +105,10 @@ export default function CheckoutPage() {
     onError: (e: Error) => setError(e.message),
   });
   const form = useForm({ resolver: zodResolver(addressSchema), defaultValues: { country: "Malaysia", isDefault: true } });
+  useEffect(() => {
+    if (!onlineAvailable && paymentMethod === "ONLINE") setPaymentMethod("COD");
+  }, [onlineAvailable, paymentMethod]);
+
   const list = addresses.data?.data ?? [];
 
   useEffect(() => {
@@ -179,8 +192,8 @@ export default function CheckoutPage() {
                 <span
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold",
-                    i < step && "bg-[#1c1915] text-white",
-                    i === step && "bg-[#1e3d32] text-white",
+                    i < step && "btn-chip-active",
+                    i === step && "btn-chip-active",
                     i > step && "border border-line bg-surface-raised text-muted",
                   )}
                 >
@@ -291,7 +304,7 @@ export default function CheckoutPage() {
                       <Input {...form.register("postalCode")} />
                     </div>
                     <div className="md:col-span-2 flex flex-wrap gap-2">
-                      <Button type="submit" disabled={addAddress.isPending}>
+                      <Button type="submit" pending={addAddress.isPending}>
                         {addAddress.isPending ? "Saving…" : "Save and use address"}
                       </Button>
                       {list.length > 0 ? (
@@ -405,18 +418,20 @@ export default function CheckoutPage() {
                     <span className="mt-1 block text-sm text-[#4f4a42]">Pay when your order arrives. Always available.</span>
                   </span>
                 </label>
-                <label
-                  className={cn(
-                    "flex cursor-pointer items-start gap-4 border p-5 transition",
-                    paymentMethod === "ONLINE" ? "border-[#1c1915] bg-[#f3eee6]" : "border-line hover:border-[#1c1915]",
-                  )}
-                >
-                  <input type="radio" checked={paymentMethod === "ONLINE"} onChange={() => setPaymentMethod("ONLINE")} />
-                  <span>
-                    <span className="font-display text-xl italic text-[#1c1915]">Pay online</span>
-                    <span className="mt-1 block text-sm text-[#4f4a42]">Cards and wallets when configured on the server.</span>
-                  </span>
-                </label>
+                {onlineAvailable ? (
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-4 border p-5 transition",
+                      paymentMethod === "ONLINE" ? "border-[#1c1915] bg-[#f3eee6]" : "border-line hover:border-[#1c1915]",
+                    )}
+                  >
+                    <input type="radio" checked={paymentMethod === "ONLINE"} onChange={() => setPaymentMethod("ONLINE")} />
+                    <span>
+                      <span className="font-display text-xl italic text-[#1c1915]">Pay online</span>
+                      <span className="mt-1 block text-sm text-[#4f4a42]">Cards and wallets via the configured payment gateway.</span>
+                    </span>
+                  </label>
+                ) : null}
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={() => setStep(2)}>
                     Back
@@ -456,8 +471,8 @@ export default function CheckoutPage() {
                   <Button variant="outline" onClick={() => setStep(3)}>
                     Back
                   </Button>
-                  <Button disabled={place.isPending || !addressId} onClick={() => place.mutate()} className="h-12 min-w-[14rem] uppercase tracking-[0.2em]">
-                    <Lock className="h-3.5 w-3.5" /> Place order · {formatMoney(q?.total ?? 0)}
+                  <Button pending={place.isPending} disabled={!addressId} onClick={() => place.mutate()} className="h-12 min-w-[14rem] uppercase tracking-[0.2em]">
+                    <Lock className="h-3.5 w-3.5" /> {place.isPending ? "Placing…" : `Place order · ${formatMoney(q?.total ?? 0)}`}
                   </Button>
                 </div>
               </div>

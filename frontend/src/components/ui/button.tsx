@@ -7,13 +7,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /** Fixed near-black / white — stays readable even if theme tokens flip. */
-        default: "bg-[#1c1915] text-white hover:bg-[#2a2620]",
-        brand: "bg-[#1e3d32] text-white hover:bg-[#142820]",
-        outline: "border border-line bg-transparent text-[#1c1915] hover:border-[#1c1915] hover:bg-surface-muted",
-        ghost: "bg-transparent text-[#1c1915] hover:bg-surface-muted",
-        danger: "bg-danger text-white hover:opacity-90",
-        secondary: "bg-surface-muted text-[#1c1915] hover:bg-line",
+        /** Soft sage fill + dark label — lighter and easier to read than black pills. */
+        default: "btn-fill",
+        brand: "btn-fill",
+        outline: "border border-line bg-transparent text-[var(--btn-fill-text)] hover:border-[var(--btn-fill-border)] hover:bg-[var(--btn-fill)]",
+        ghost: "bg-transparent text-[var(--btn-fill-text)] hover:bg-[var(--btn-fill)]",
+        danger: "border border-danger/30 bg-[#f8e8e9] text-[#8a1c24] hover:bg-[#f3d6d8]",
+        secondary: "border border-line bg-surface-muted text-[var(--btn-fill-text)] hover:bg-[var(--btn-fill)]",
       },
       size: {
         default: "h-11 px-5 py-2",
@@ -31,9 +31,37 @@ export function Button({
   variant,
   size,
   type = "button",
+  pending = false,
+  disabled,
+  children,
+  onClick,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>) {
-  return <button type={type} className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+}: ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    /** Instant busy look without waiting on the network — prefer this over only `disabled`. */
+    pending?: boolean;
+  }) {
+  const isBusy = Boolean(pending);
+  return (
+    <button
+      type={type}
+      aria-busy={isBusy || undefined}
+      data-pending={isBusy ? "true" : undefined}
+      disabled={disabled}
+      className={cn(buttonVariants({ variant, size }), isBusy && "btn-pending", className)}
+      {...props}
+      onClick={(e) => {
+        if (isBusy || disabled) {
+          e.preventDefault();
+          return;
+        }
+        onClick?.(e);
+      }}
+    >
+      {isBusy ? <span className="btn-spinner" aria-hidden /> : null}
+      {children}
+    </button>
+  );
 }
 
 export { buttonVariants };

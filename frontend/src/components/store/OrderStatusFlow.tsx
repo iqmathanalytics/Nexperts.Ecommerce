@@ -17,7 +17,7 @@ export function OrderStatusFlow({ status }: { status: string }) {
           className={cn(
             "rounded-full px-3 py-1 text-xs font-medium",
             i < current && "bg-brand-soft text-ink font-semibold",
-            i === current && "bg-ink text-white",
+            i === current && "btn-chip-active",
             i > current && "bg-background text-muted",
           )}
         >

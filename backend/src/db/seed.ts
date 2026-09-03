@@ -78,7 +78,10 @@ async function seed() {
   // Always ensure the primary admin login works (fresh seed or existing DB)
   const [academyAdmin] = await db.select().from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
   if (academyAdmin) {
-    await db.update(users).set({ passwordHash: adminHash, status: "ACTIVE" }).where(eq(users.id, academyAdmin.id));
+    await db
+      .update(users)
+      .set({ passwordHash: adminHash, status: "ACTIVE", firstName: "Nexperts", lastName: "" })
+      .where(eq(users.id, academyAdmin.id));
     console.log(`Updated admin password for ${ADMIN_EMAIL}`);
   }
 
@@ -87,7 +90,7 @@ async function seed() {
     // Migrate legacy seed admin email → academy login
     await db
       .update(users)
-      .set({ email: ADMIN_EMAIL, passwordHash: adminHash, status: "ACTIVE" })
+      .set({ email: ADMIN_EMAIL, passwordHash: adminHash, status: "ACTIVE", firstName: "Nexperts", lastName: "" })
       .where(eq(users.id, legacyAdmin.id));
     console.log(`Migrated admin@nexperts.com → ${ADMIN_EMAIL}`);
   }
@@ -127,8 +130,8 @@ async function seed() {
       await db.insert(users).values({
         email: ADMIN_EMAIL,
         passwordHash: adminHash,
-        firstName: "Asha",
-        lastName: "Mehta",
+        firstName: "Nexperts",
+        lastName: "",
         phone: "9876500001",
       }),
     );

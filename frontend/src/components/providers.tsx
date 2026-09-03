@@ -1,10 +1,11 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/toast";
 import { StoreUiProvider } from "@/components/store/StoreUiContext";
+import { GlobalLoading } from "@/components/ui/GlobalLoading";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -28,7 +29,12 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <ErrorBoundary>
         <ToastProvider>
-          <StoreUiProvider>{children}</StoreUiProvider>
+          <StoreUiProvider>
+            <Suspense fallback={null}>
+              <GlobalLoading />
+            </Suspense>
+            {children}
+          </StoreUiProvider>
         </ToastProvider>
       </ErrorBoundary>
     </QueryClientProvider>

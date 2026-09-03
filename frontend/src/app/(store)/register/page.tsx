@@ -80,7 +80,7 @@ function RegisterForm() {
           <PasswordField registration={form.register("password")} autoComplete="new-password" placeholder="At least 8 characters" />
           <FieldError message={form.formState.errors.password?.message} />
         </div>
-        <Button type="submit" className="mt-2 h-12 w-full rounded-full" disabled={mutate.isPending}>
+        <Button type="submit" className="mt-2 h-12 w-full rounded-full" pending={mutate.isPending}>
           {mutate.isPending ? "Creating…" : "Create account"}
         </Button>
       </form>

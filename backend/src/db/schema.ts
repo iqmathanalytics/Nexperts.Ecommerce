@@ -762,6 +762,18 @@ export const waitlistEntries = mysqlTable(
   ],
 );
 
+export const newsletterSubscribers = mysqlTable(
+  "newsletter_subscribers",
+  {
+    id: id(),
+    email: varchar("email", { length: 255 }).notNull(),
+    status: mysqlEnum("status", ["ACTIVE", "UNSUBSCRIBED"]).notNull().default("ACTIVE"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [uniqueIndex("newsletter_email_unique").on(t.email)],
+);
+
 export const productPresence = mysqlTable(
   "product_presence",
   {

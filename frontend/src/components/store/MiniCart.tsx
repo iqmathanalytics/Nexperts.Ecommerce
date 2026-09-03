@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatINR } from "@/lib/utils";
 import { useSession } from "@/hooks/useSession";
 import { loginUrl } from "@/lib/auth";
+import { GUEST_CART_EVENT, readGuestCart, type GuestCartItem } from "@/lib/guestCart";
 import { useStoreUi } from "@/components/store/StoreUiContext";
 import { Drawer } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/state";
@@ -24,9 +26,44 @@ type CartPayload = {
   subtotal?: number;
 };
 
+type DisplayItem = {
+  key: string | number;
+  quantity: number;
+  productName: string;
+  slug: string;
+  imageUrl: string | null;
+  price: number;
+  size?: string;
+};
+
+function guestToDisplay(items: GuestCartItem[]): DisplayItem[] {
+  return items.map((i) => ({
+    key: i.variantId,
+    quantity: i.quantity,
+    productName: i.productName ?? "Item",
+    slug: i.slug ?? "products",
+    imageUrl: i.imageUrl ?? null,
+    price: i.price ?? 0,
+    size: i.size,
+  }));
+}
+
 export function MiniCart() {
   const { miniCartOpen, closeMiniCart } = useStoreUi();
   const { isAuthenticated } = useSession();
+  const [guestItems, setGuestItems] = useState<GuestCartItem[]>([]);
+
+  useEffect(() => {
+    const sync = () => setGuestItems(readGuestCart());
+    sync();
+    window.addEventListener(GUEST_CART_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(GUEST_CART_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
   const cart = useQuery({
     queryKey: ["cart"],
     queryFn: () => api<CartPayload>("/cart"),
@@ -34,24 +71,28 @@ export function MiniCart() {
     retry: false,
   });
 
-  const items = cart.data?.data.items ?? [];
-  const subtotal = cart.data?.data.subtotal ?? items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const items: DisplayItem[] = isAuthenticated
+    ? (cart.data?.data.items ?? []).map((item) => ({
+        key: item.id,
+        quantity: item.quantity,
+        productName: item.productName,
+        slug: item.slug,
+        imageUrl: item.imageUrl,
+        price: item.price,
+        size: item.size,
+      }))
+    : guestToDisplay(guestItems);
+
+  const subtotal = isAuthenticated
+    ? (cart.data?.data.subtotal ?? items.reduce((s, i) => s + i.price * i.quantity, 0))
+    : items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  const loading = isAuthenticated && cart.isLoading;
 
   return (
     <Drawer open={miniCartOpen} onClose={closeMiniCart} title="Your bag">
       <div className="flex h-full flex-col">
-        {!isAuthenticated ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-            <p className="text-sm text-muted">Sign in to view your bag and checkout.</p>
-            <Link
-              href={loginUrl("/cart")}
-              onClick={closeMiniCart}
-              className="btn-store inline-flex h-11 items-center bg-[#1c1915] px-5 text-sm font-semibold text-white hover:bg-[#2a2620]"
-            >
-              Sign in
-            </Link>
-          </div>
-        ) : cart.isLoading ? (
+        {loading ? (
           <div className="space-y-4 p-5">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
@@ -67,7 +108,7 @@ export function MiniCart() {
           <>
             <ul className="flex-1 space-y-4 overflow-y-auto p-5">
               {items.map((item) => (
-                <li key={item.id} className="flex gap-3">
+                <li key={item.key} className="flex gap-3">
                   <Link href={`/products/${item.slug}`} onClick={closeMiniCart} className="relative h-24 w-16 shrink-0 overflow-hidden bg-surface-muted">
                     {item.imageUrl ? (
                       <Image src={item.imageUrl} alt="" fill className="object-cover object-center" sizes="72px" />
@@ -93,22 +134,42 @@ export function MiniCart() {
                 <span className="text-muted">Subtotal</span>
                 <span className="font-semibold">{formatINR(subtotal)}</span>
               </div>
-              <div className="grid gap-2">
-                <Link
-                  href="/checkout"
-                  onClick={closeMiniCart}
-                  className="btn-store inline-flex h-11 items-center justify-center bg-[#1c1915] text-sm font-semibold text-white hover:bg-[#2a2620]"
-                >
-                  Checkout
-                </Link>
-                <Link
-                  href="/cart"
-                  onClick={closeMiniCart}
-                  className="btn-store inline-flex h-11 items-center justify-center border border-line bg-white text-sm font-semibold text-[#1c1915] hover:border-[#1c1915]"
-                >
-                  View bag
-                </Link>
-              </div>
+              {!isAuthenticated ? (
+                <div className="grid gap-2">
+                  <p className="text-xs text-muted">Sign in to checkout — your bag will merge automatically.</p>
+                  <Link
+                    href={loginUrl("/checkout")}
+                    onClick={closeMiniCart}
+                    className="btn-store btn-fill inline-flex h-11 items-center justify-center text-sm font-semibold"
+                  >
+                    Sign in to checkout
+                  </Link>
+                  <Link
+                    href="/cart"
+                    onClick={closeMiniCart}
+                    className="btn-store inline-flex h-11 items-center justify-center border border-line bg-white text-sm font-semibold text-[#1c1915] hover:border-[#1c1915]"
+                  >
+                    View bag
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <Link
+                    href="/checkout"
+                    onClick={closeMiniCart}
+                    className="btn-store btn-fill inline-flex h-11 items-center justify-center text-sm font-semibold"
+                  >
+                    Checkout
+                  </Link>
+                  <Link
+                    href="/cart"
+                    onClick={closeMiniCart}
+                    className="btn-store inline-flex h-11 items-center justify-center border border-line bg-white text-sm font-semibold text-[#1c1915] hover:border-[#1c1915]"
+                  >
+                    View bag
+                  </Link>
+                </div>
+              )}
             </div>
           </>
         )}

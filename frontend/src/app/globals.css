@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Paint intro cover before React so the store never flashes first. */
+html.nx-intro-pending {
+  overflow: hidden;
+}
+html.nx-intro-pending::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 119;
+  background: #1e3d32;
+  pointer-events: auto;
+}
+
 /* Tropical modern luxury — global stage */
 :root {
   --background: #f3eee6;
@@ -19,6 +32,12 @@
   --success: #1f6b45;
   --danger: #b4232c;
   --focus: rgba(30, 61, 50, 0.22);
+  /* Light filled CTAs — soft sage fill + dark ink label for clear contrast */
+  --btn-fill: #e4efe9;
+  --btn-fill-hover: #d2e4da;
+  --btn-fill-active: #c3d9cc;
+  --btn-fill-text: #123028;
+  --btn-fill-border: #9bb8a8;
   --hero-veil: linear-gradient(
     180deg,
     rgba(8, 10, 9, 0.62) 0%,
@@ -50,6 +69,11 @@
   --link: #f4efe6;
   --accent: #d4b56a;
   --focus: rgba(212, 181, 106, 0.22);
+  --btn-fill: #2a342f;
+  --btn-fill-hover: #36443d;
+  --btn-fill-active: #405048;
+  --btn-fill-text: #f4efe6;
+  --btn-fill-border: #5a6b62;
   --hero-veil: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.15) 0%,
@@ -260,6 +284,10 @@ select {
   transform: translate(-50%, -50%);
   object-fit: cover;
   object-position: center 22%;
+  /* Keep full-bleed cover sharp — avoid browser soft upscaling artifacts. */
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 @media (min-width: 768px) {
   .hero-film-media {
@@ -275,7 +303,7 @@ select {
 }
 .category-hero-media {
   object-fit: cover;
-  object-position: center 36%;
+  object-position: center center;
 }
 @media (max-width: 767px) {
   .category-hero {
@@ -283,7 +311,7 @@ select {
     height: clamp(24rem, 58svh, 34rem);
   }
   .category-hero-media {
-    object-position: center 26%;
+    object-position: center center;
   }
 }
 
@@ -300,7 +328,7 @@ select {
   text-transform: uppercase;
 }
 
-/* High-contrast store CTAs — fixed ink/white so labels stay readable on film. */
+/* High-contrast store CTAs — light fills with dark labels for readable type. */
 .btn-hero {
   display: inline-flex;
   height: 2.75rem;
@@ -315,7 +343,7 @@ select {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease, transform 80ms ease;
+  transition: background-color 50ms ease, color 50ms ease, border-color 50ms ease, transform 0ms linear;
 }
 @media (min-width: 640px) {
   .btn-hero {
@@ -327,33 +355,84 @@ select {
   will-change: transform;
 }
 .btn-hero:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .btn-hero-solid {
   border-color: #ffffff;
-  background-color: #ffffff;
-  color: #1c1915;
+  background-color: #f4efe6;
+  color: #123028;
 }
 .btn-hero-solid:hover {
-  background-color: #f3eee6;
-  color: #1c1915;
+  background-color: #ffffff;
+  color: #123028;
 }
 .btn-hero-outline {
   border-color: rgba(255, 255, 255, 0.95);
-  background-color: rgba(12, 12, 12, 0.58);
-  color: #ffffff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+  background-color: rgba(244, 239, 230, 0.88);
+  color: #123028;
+  text-shadow: none;
 }
 .btn-hero-outline:hover {
   background-color: #ffffff;
-  color: #1c1915;
-  text-shadow: none;
+  color: #123028;
 }
 .btn-store {
-  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease, opacity 100ms ease, transform 80ms ease;
+  transition: background-color 50ms ease, color 50ms ease, border-color 50ms ease, opacity 50ms ease, transform 0ms linear, box-shadow 50ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
-.btn-store:active {
-  transform: scale(0.985);
+.btn-store:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn-store[data-pending="true"],
+.btn-pending {
+  opacity: 0.92;
+  background-color: var(--btn-fill-active) !important;
+  border-color: var(--btn-fill-border) !important;
+  color: var(--btn-fill-text) !important;
+  cursor: wait;
+}
+.btn-spinner {
+  display: inline-block;
+  height: 0.85rem;
+  width: 0.85rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 2px solid color-mix(in srgb, var(--btn-fill-text) 25%, transparent);
+  border-top-color: var(--btn-fill-text);
+  animation: btn-spin 0.55s linear infinite;
+}
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Shared light filled CTA — use across store + admin */
+.btn-fill {
+  background-color: var(--btn-fill);
+  color: var(--btn-fill-text);
+  border: 1px solid var(--btn-fill-border);
+}
+.btn-fill:hover {
+  background-color: var(--btn-fill-hover);
+  color: var(--btn-fill-text);
+}
+.btn-fill:active:not(:disabled) {
+  background-color: var(--btn-fill-active);
+}
+.btn-chip {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+.btn-chip:hover {
+  border-color: var(--btn-fill-border);
+}
+.btn-chip-active {
+  border-color: var(--btn-fill-border);
+  background-color: var(--btn-fill);
+  color: var(--btn-fill-text);
 }
 
 /* Page scrollbar — cream track, forest thumb, gold hover */
@@ -416,6 +495,15 @@ select {
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes loading-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
 }
 
 @keyframes marquee {
@@ -507,7 +595,8 @@ select {
   top: -8%;
   left: -8%;
   background: radial-gradient(circle, rgba(196, 160, 86, 0.55), transparent 68%);
-  animation: orb-drift-a 16s ease-in-out infinite;
+  animation: orb-drift-a 22s ease-in-out infinite;
+  will-change: transform;
 }
 
 .orb-b {
@@ -518,7 +607,8 @@ select {
   top: 18%;
   right: -6%;
   background: radial-gradient(circle, rgba(30, 61, 50, 0.35), transparent 70%);
-  animation: orb-drift-b 18s ease-in-out infinite;
+  animation: orb-drift-b 26s ease-in-out infinite;
+  will-change: transform;
 }
 
 .orb-c {
@@ -529,7 +619,15 @@ select {
   bottom: 8%;
   left: 32%;
   background: radial-gradient(circle, rgba(196, 160, 86, 0.28), transparent 70%);
-  animation: orb-drift-c 14s ease-in-out infinite;
+  animation: orb-drift-c 20s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (max-width: 767px) {
+  .orb-b,
+  .orb-c {
+    display: none;
+  }
 }
 
 .float-slow {

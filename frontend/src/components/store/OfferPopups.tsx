@@ -52,7 +52,7 @@ export function OfferPopups() {
     if (quiet || !welcome) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (dismissed(WELCOME_KEY)) return;
-    const show = window.setTimeout(() => setWelcomeOpen(true), reduce ? 900 : 2800);
+    const show = window.setTimeout(() => setWelcomeOpen(true), reduce ? 600 : 1600);
     return () => window.clearTimeout(show);
   }, [quiet, welcome]);
 
@@ -175,7 +175,7 @@ function WelcomeOffer({
           <Link
             href={offer.href}
             onClick={onClose}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-brand py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white"
+            className="btn-store btn-fill mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em]"
           >
             <Sparkles className="h-3.5 w-3.5 text-accent" />
             Claim offer

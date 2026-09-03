@@ -242,6 +242,14 @@ premiumRouter.post(
 );
 
 premiumRouter.post(
+  "/newsletter/subscribe",
+  validate(z.object({ email: z.string().email() })),
+  asyncHandler(async (req, res) => {
+    res.json(success(await premium.subscribeNewsletter(req.body.email)));
+  }),
+);
+
+premiumRouter.post(
   "/cart/merge",
   requireCustomer,
   validate(

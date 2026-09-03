@@ -193,8 +193,8 @@ export function CatalogInner({
             <button
               type="button"
               onClick={() => setFilter("category", "")}
-              className={`inline-flex shrink-0 items-center justify-center border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-                !categoryValue ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"
+              className={`btn-chip inline-flex shrink-0 items-center justify-center px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                !categoryValue ? "btn-chip-active" : ""
               }`}
             >
               All
@@ -204,8 +204,8 @@ export function CatalogInner({
                 key={c.id}
                 type="button"
                 onClick={() => setFilter("category", c.slug)}
-                className={`inline-flex shrink-0 items-center justify-center border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
-                  categoryValue === c.slug ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"
+                className={`btn-chip inline-flex shrink-0 items-center justify-center px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                  categoryValue === c.slug ? "btn-chip-active" : ""
                 }`}
               >
                 {c.name}
@@ -260,8 +260,8 @@ export function CatalogInner({
                     key={b.slug}
                     type="button"
                     onClick={() => setFilter("brand", active ? "" : b.slug)}
-                    className={`inline-flex items-center gap-2 border px-2.5 py-1.5 text-xs transition ${
-                      active ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
+                    className={`btn-chip inline-flex items-center gap-2 px-2.5 py-1.5 text-xs transition ${
+                      active ? "btn-chip-active" : ""
                     }`}
                   >
                     <span className="h-3 w-3 rounded-full" style={{ backgroundColor: brandColors[i % brandColors.length] }} />
@@ -291,8 +291,8 @@ export function CatalogInner({
                   key={label}
                   type="button"
                   onClick={() => setFilter("gender", v)}
-                  className={`inline-flex items-center justify-center border px-3 py-1.5 text-xs transition ${
-                    (activeGender ?? "") === v ? "border-ink bg-ink text-white" : "border-line hover:border-ink"
+                  className={`btn-chip inline-flex items-center justify-center px-3 py-1.5 text-xs transition ${
+                    (activeGender ?? "") === v ? "btn-chip-active" : ""
                   }`}
                 >
                   {label}

@@ -72,7 +72,7 @@ function LoginForm() {
           <Label>Password</Label>
           <PasswordField registration={form.register("password")} />
         </div>
-        <Button type="submit" className="mt-2 h-12 w-full rounded-full" disabled={login.isPending}>
+        <Button type="submit" className="mt-2 h-12 w-full rounded-full" pending={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}
         </Button>
       </form>

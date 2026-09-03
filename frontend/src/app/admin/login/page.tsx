@@ -164,7 +164,7 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            <Button type="submit" className="mt-6 h-12 w-full rounded-full" disabled={login.isPending}>
+            <Button type="submit" className="mt-6 h-12 w-full rounded-full" pending={login.isPending}>
               <Lock className="h-4 w-4" />
               {login.isPending ? "Signing in…" : "Sign in"}
             </Button>

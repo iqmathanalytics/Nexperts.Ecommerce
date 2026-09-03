@@ -1,26 +1,25 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useStoreUi } from "@/components/store/StoreUiContext";
 import { easeOut } from "@/lib/motion";
 
-const REVEAL_MS = 180;
+/** Short curtain after sync router.push from the click handler. */
+const REVEAL_MS = 70;
 
 export function ProductTransit() {
   const { productTransit, clearProductTransit } = useStoreUi();
-  const router = useRouter();
   const path = usePathname();
   const [phase, setPhase] = useState<"cover" | "reveal">("cover");
 
   useEffect(() => {
     if (!productTransit) return;
     setPhase("cover");
-    router.push(productTransit.href);
-    const failsafe = window.setTimeout(() => clearProductTransit(), 900);
+    const failsafe = window.setTimeout(() => clearProductTransit(), 500);
     return () => window.clearTimeout(failsafe);
-  }, [productTransit, router, clearProductTransit]);
+  }, [productTransit, clearProductTransit]);
 
   useEffect(() => {
     if (!productTransit) return;
@@ -38,24 +37,24 @@ export function ProductTransit() {
           className="pointer-events-none fixed inset-0 z-[140] overflow-hidden"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.08 }}
           aria-hidden
         >
           <motion.div
             className="absolute inset-y-0 left-0 w-1/2 bg-brand"
             initial={{ x: "-100%" }}
             animate={{ x: phase === "reveal" ? "-100%" : "0%" }}
-            transition={{ duration: 0.22, ease: easeOut }}
+            transition={{ duration: 0.1, ease: easeOut }}
           />
           <motion.div
             className="absolute inset-y-0 right-0 w-1/2 bg-brand-deep"
             initial={{ x: "100%" }}
             animate={{ x: phase === "reveal" ? "100%" : "0%" }}
-            transition={{ duration: 0.22, ease: easeOut }}
+            transition={{ duration: 0.1, ease: easeOut }}
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-white">
             <p className="nexperts-mark text-[10px] text-white/60">Nexperts</p>
-            <p className="mt-2 max-w-sm text-center font-display text-3xl font-semibold leading-tight">
+            <p className="mt-2 max-w-sm text-center font-display text-2xl font-semibold leading-tight md:text-3xl">
               {productTransit.name}
             </p>
           </div>

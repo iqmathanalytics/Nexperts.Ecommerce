@@ -87,7 +87,7 @@ export function OrderTracking({
               <span
                 className={cn(
                   "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition",
-                  done && "border-ink bg-ink text-white",
+                  done && "btn-chip-active",
                   active && "border-ink bg-brand text-ink shadow-sm",
                   upcoming && "border-line bg-background text-muted",
                 )}
@@ -135,7 +135,7 @@ export function OrderTracking({
               <span
                 className={cn(
                   "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2",
-                  done && "border-ink bg-ink text-white",
+                  done && "btn-chip-active",
                   active && "border-ink bg-brand text-ink",
                   upcoming && "border-line bg-background text-muted",
                 )}

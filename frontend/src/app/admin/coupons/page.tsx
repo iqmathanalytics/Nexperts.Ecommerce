@@ -22,32 +22,93 @@ type Coupon = {
   endsAt: string;
 };
 
+type CouponForm = {
+  code: string;
+  type: string;
+  value: number;
+  minOrderAmount: number;
+  startsAt: string;
+  endsAt: string;
+  status: "ACTIVE" | "INACTIVE";
+};
+
+const emptyForm = (): CouponForm => ({
+  code: "",
+  type: "PERCENTAGE",
+  value: 10,
+  minOrderAmount: 999,
+  startsAt: new Date().toISOString().slice(0, 16),
+  endsAt: new Date(Date.now() + 86400000 * 60).toISOString().slice(0, 16),
+  status: "ACTIVE",
+});
+
+function toLocalInput(iso: string) {
+  try {
+    return new Date(iso).toISOString().slice(0, 16);
+  } catch {
+    return iso.slice(0, 16);
+  }
+}
+
 export default function CouponsPage() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
   const { data, isLoading } = useQuery({ queryKey: ["coupons"], queryFn: () => api<Coupon[]>("/admin/coupons") });
-  const form = useForm({
-    defaultValues: {
-      code: "",
-      type: "PERCENTAGE",
-      value: 10,
-      minOrderAmount: 999,
-      startsAt: new Date().toISOString().slice(0, 16),
-      endsAt: new Date(Date.now() + 86400000 * 60).toISOString().slice(0, 16),
-    },
-  });
+  const form = useForm<CouponForm>({ defaultValues: emptyForm() });
+
   const create = useMutation({
-    mutationFn: (v: Record<string, unknown>) =>
+    mutationFn: (v: CouponForm) =>
       api("/admin/coupons", {
         method: "POST",
-        body: JSON.stringify({ ...v, value: Number(v.value), minOrderAmount: Number(v.minOrderAmount) }),
+        body: JSON.stringify({
+          ...v,
+          value: Number(v.value),
+          minOrderAmount: Number(v.minOrderAmount),
+        }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["coupons"] });
-      form.reset();
+      form.reset(emptyForm());
+      setEditingId(null);
     },
   });
+
+  const update = useMutation({
+    mutationFn: (v: CouponForm) =>
+      api(`/admin/coupons/${editingId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ...v,
+          value: Number(v.value),
+          minOrderAmount: Number(v.minOrderAmount),
+        }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["coupons"] });
+      form.reset(emptyForm());
+      setEditingId(null);
+    },
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: (c: Coupon) =>
+      api(`/admin/coupons/${c.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          code: c.code,
+          type: c.type,
+          value: Number(c.value),
+          minOrderAmount: Number(c.minOrderAmount),
+          startsAt: c.startsAt,
+          endsAt: c.endsAt,
+          status: c.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+        }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["coupons"] }),
+  });
+
   const rows = useMemo(() => {
     const all = data?.data ?? [];
     const query = q.trim().toLowerCase();
@@ -58,11 +119,27 @@ export default function CouponsPage() {
     });
   }, [data?.data, q, status]);
 
+  function startEdit(c: Coupon) {
+    setEditingId(c.id);
+    form.reset({
+      code: c.code,
+      type: c.type,
+      value: Number(c.value),
+      minOrderAmount: Number(c.minOrderAmount),
+      startsAt: toLocalInput(c.startsAt),
+      endsAt: toLocalInput(c.endsAt),
+      status: (c.status as "ACTIVE" | "INACTIVE") || "ACTIVE",
+    });
+  }
+
+  const saving = create.isPending || update.isPending;
+  const formError = create.error || update.error || toggleStatus.error;
+
   return (
     <AdminPage title="Coupons" description="Discount codes for checkout — percentage, fixed, and free shipping.">
       <form
         className="grid shrink-0 gap-2 rounded-2xl border border-line bg-surface-raised p-4 md:grid-cols-3"
-        onSubmit={form.handleSubmit((v) => create.mutate(v))}
+        onSubmit={form.handleSubmit((v) => (editingId ? update.mutate(v) : create.mutate(v)))}
       >
         <Input placeholder="CODE" {...form.register("code", { required: true })} />
         <Select {...form.register("type")}>
@@ -73,11 +150,29 @@ export default function CouponsPage() {
         <Input type="number" placeholder="Min order" {...form.register("minOrderAmount")} />
         <Input type="datetime-local" {...form.register("startsAt")} />
         <Input type="datetime-local" {...form.register("endsAt")} />
-        <Button type="submit" disabled={create.isPending}>
-          Create
-        </Button>
+        <Select {...form.register("status")}>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </Select>
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving}>
+            {editingId ? (update.isPending ? "Saving…" : "Save") : create.isPending ? "Creating…" : "Create"}
+          </Button>
+          {editingId ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditingId(null);
+                form.reset(emptyForm());
+              }}
+            >
+              Cancel
+            </Button>
+          ) : null}
+        </div>
         <div className="md:col-span-3">
-          <FormError error={create.error} />
+          <FormError error={formError} />
         </div>
       </form>
       <FilterBar>
@@ -97,6 +192,20 @@ export default function CouponsPage() {
           { id: "usage", header: "Usage", cell: (c) => `${c.usageCount}/${c.usageLimit ?? "∞"}` },
           { id: "status", header: "Status", cell: (c) => c.status },
           { id: "dates", header: "Valid", cell: (c) => `${formatDate(c.startsAt)} – ${formatDate(c.endsAt)}` },
+          {
+            id: "actions",
+            header: "Actions",
+            cell: (c) => (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => startEdit(c)}>
+                  Edit
+                </Button>
+                <Button size="sm" variant="ghost" disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate(c)}>
+                  {c.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                </Button>
+              </div>
+            ),
+          },
         ]}
         rows={rows}
         rowKey={(c) => c.id}

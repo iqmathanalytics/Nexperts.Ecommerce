@@ -426,6 +426,7 @@ async function loadBrands() {
       slug: brands.slug,
       description: brands.description,
       logoUrl: brands.logoUrl,
+      heroImageUrl: brands.heroImageUrl,
       status: brands.status,
     })
     .from(brands)

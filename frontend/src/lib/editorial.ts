@@ -96,7 +96,12 @@ export const NEW_HERO = px(1926769, 1400);
 export const SALE_HERO = u("photo-1595777457583-95e059d581b8", 1400);
 
 const mixkit = (id: number, alt: string) => ({
+  /** Mobile / save-data fallback — small file. */
+  srcMobile: `https://assets.mixkit.co/videos/${id}/${id}-360.mp4`,
+  /** Default playback — sharp enough for store heroes (~3–6MB). */
   src: `https://assets.mixkit.co/videos/${id}/${id}-720.mp4`,
+  /** Large desktop on a fast link — Full HD when a single film is showing. */
+  srcHd: `https://assets.mixkit.co/videos/${id}/${id}-1080.mp4`,
   poster: `https://assets.mixkit.co/videos/${id}/${id}-thumb-720-0.jpg`,
   alt,
 });

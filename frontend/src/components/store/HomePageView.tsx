@@ -52,7 +52,6 @@ export function HomePageView({ data }: { data: HomeData }) {
     <div className="bg-background text-ink">
       <CampaignHero
         videos={[HERO_VIDEO, MEN_HERO_VIDEO]}
-        kicker="Nexperts"
         title={editorial.homeHeadline}
         subtitle={editorial.homeSubhead}
         actions={[
@@ -181,7 +180,7 @@ export function HomePageView({ data }: { data: HomeData }) {
                       <Link
                         key={`w-${c.id}`}
                         href={categoryHref(c.slug, "WOMEN")}
-                        className="btn-store rounded-full border border-line bg-white px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1c1915] hover:border-[#1e3d32] hover:bg-[#1e3d32] hover:text-white"
+                        className="btn-store btn-chip rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] hover:bg-[var(--btn-fill)] hover:border-[var(--btn-fill-border)] hover:text-[var(--btn-fill-text)]"
                       >
                         {c.name}
                       </Link>
@@ -197,7 +196,7 @@ export function HomePageView({ data }: { data: HomeData }) {
                       <Link
                         key={`m-${c.id}`}
                         href={categoryHref(c.slug, "MEN")}
-                        className="btn-store rounded-full border border-line bg-white px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1c1915] hover:border-[#1e3d32] hover:bg-[#1e3d32] hover:text-white"
+                        className="btn-store btn-chip rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] hover:bg-[var(--btn-fill)] hover:border-[var(--btn-fill-border)] hover:text-[var(--btn-fill-text)]"
                       >
                         {c.slug === "tops" ? "Shirts" : c.slug === "outerwear" ? "Jackets" : c.name}
                       </Link>

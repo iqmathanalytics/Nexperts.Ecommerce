@@ -41,6 +41,7 @@ export default function DesignerPage() {
         title={brand.name}
         subtitle={brand.lookbookBio || brand.description}
         focal="center"
+        backHref="/products"
       />
       <div className="mx-auto max-w-7xl px-4 py-14 md:px-6">
         <h2 className="font-display text-3xl font-semibold">Collection</h2>

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 export function PageFade({ children }: { children: ReactNode }) {
   const path = usePathname();
   return (
-    <div key={path} className="animate-[rise-in_0.12s_ease-out]">
+    <div key={path} className="animate-[rise-in_0.08s_ease-out]">
       {children}
     </div>
   );

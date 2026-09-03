@@ -41,7 +41,8 @@ export default function SeasonalCollectionPage() {
         kicker="Seasonal"
         title={collection.name || String(season)}
         subtitle={collection.description}
-        focal="upper"
+        focal="center"
+        backHref="/"
       />
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
         <ProductGrid products={collection.products ?? []} />
