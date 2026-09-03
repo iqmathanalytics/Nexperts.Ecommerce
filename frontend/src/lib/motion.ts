@@ -34,10 +34,10 @@ export const heartPop = {
 export const easeOut = [0.22, 1, 0.36, 1] as const;
 
 export const offerModal = {
-  initial: { opacity: 0, scale: 0.84, y: 56, rotateX: 14 },
-  animate: { opacity: 1, scale: 1, y: 0, rotateX: 0 },
-  exit: { opacity: 0, scale: 0.92, y: 40, rotateX: -6, filter: "blur(10px)" },
-  transition: { duration: 0.62, ease: easeOut },
+  initial: { opacity: 0, x: 72, scale: 0.96 },
+  animate: { opacity: 1, x: 0, scale: 1 },
+  exit: { opacity: 0, x: 56, scale: 0.97, filter: "blur(6px)" },
+  transition: { type: "spring" as const, stiffness: 280, damping: 28 },
 };
 
 export const offerDock = {

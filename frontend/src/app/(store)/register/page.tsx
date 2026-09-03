@@ -12,17 +12,20 @@ import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { Suspense, useState } from "react";
 import { DEFAULT_AFTER_LOGIN, safeNextPath } from "@/lib/auth";
-import { setSessionGate } from "@/lib/sessionGate";
+import { establishCustomerSession } from "@/lib/authSession";
 import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
 import { MEN_HERO } from "@/lib/editorial";
 import type { User } from "@/lib/types";
 
 const schema = z.object({
-  firstName: z.string().min(2),
-  lastName: z.string().min(1),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  password: z.string().min(8),
+  firstName: z.string().trim().min(2, "Enter your first name"),
+  lastName: z.string().trim().min(1, "Enter your last name"),
+  email: z.string().email("Enter a valid email"),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => !v || v.length >= 8, { message: "Phone must be at least 8 characters" }),
+  password: z.string().min(8, "Use at least 8 characters"),
 });
 
 function RegisterForm() {
@@ -31,7 +34,9 @@ function RegisterForm() {
   const next = safeNextPath(params.get("next"));
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const form = useForm({ resolver: zodResolver(schema) });
+  const [redirecting, setRedirecting] = useState(false);
+  const form = useForm({ resolver: zodResolver(schema), defaultValues: { firstName: "", lastName: "", email: "", phone: "", password: "" } });
+
   const mutate = useMutation({
     mutationFn: (body: z.infer<typeof schema>) => {
       const phone = body.phone?.trim();
@@ -46,14 +51,32 @@ function RegisterForm() {
         }),
       });
     },
-    onSuccess: (res) => {
-      setSessionGate("customer");
-      qc.setQueryData(["me"], { data: { user: res.data.user } });
-      qc.invalidateQueries({ queryKey: ["cart"] });
-      router.replace(next || DEFAULT_AFTER_LOGIN);
+    onSuccess: async (res) => {
+      setError(null);
+      setRedirecting(true);
+      try {
+        const user = await establishCustomerSession(res.data.user);
+        qc.setQueryData(["me"], { data: { user } });
+        await qc.invalidateQueries({ queryKey: ["cart"] });
+        router.replace(next || DEFAULT_AFTER_LOGIN);
+      } catch (e) {
+        setRedirecting(false);
+        setError(e instanceof Error ? e.message : "Account created, but sign-in failed. Try logging in.");
+      }
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      setRedirecting(false);
+      setError(e.message);
+    },
   });
+
+  if (redirecting) {
+    return (
+      <div className="flex min-h-[50svh] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
+      </div>
+    );
+  }
 
   return (
     <AuthStage
@@ -68,7 +91,14 @@ function RegisterForm() {
         </div>
       ) : null}
 
-      <form className="space-y-4" onSubmit={form.handleSubmit((v) => mutate.mutate(v))}>
+      <form
+        className="space-y-4"
+        onSubmit={form.handleSubmit((v) => {
+          setError(null);
+          mutate.mutate(v);
+        })}
+        noValidate
+      >
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>First name</Label>
@@ -78,6 +108,7 @@ function RegisterForm() {
           <div>
             <Label>Last name</Label>
             <AuthInput placeholder="Rahman" {...form.register("lastName")} />
+            <FieldError message={form.formState.errors.lastName?.message} />
           </div>
         </div>
         <div>
@@ -86,8 +117,9 @@ function RegisterForm() {
           <FieldError message={form.formState.errors.email?.message} />
         </div>
         <div>
-          <Label>Phone</Label>
+          <Label>Phone <span className="font-normal text-muted">(optional)</span></Label>
           <AuthInput type="tel" placeholder="01x-xxx xxxx" {...form.register("phone")} />
+          <FieldError message={form.formState.errors.phone?.message} />
         </div>
         <div>
           <Label>Password</Label>
@@ -111,7 +143,13 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50svh] items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
+        </div>
+      }
+    >
       <RegisterForm />
     </Suspense>
   );

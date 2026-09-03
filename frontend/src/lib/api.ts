@@ -1,5 +1,6 @@
 import { API_URL } from "./utils";
 import { loginUrl } from "./auth";
+import { clearSessionGate } from "./sessionGate";
 
 export type ApiSuccess<T> = { success: true; data: T; meta?: Record<string, number> };
 export type ApiError = { success: false; error: { code: string; message: string } };
@@ -73,8 +74,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ data: 
       // Stay on checkout/success so a blip after placing an order cannot dump the
       // customer on the login page (the order may already exist).
       if (current.startsWith("/admin")) {
+        clearSessionGate("admin");
         window.location.assign("/admin/login");
-      } else if (current.startsWith("/account") || current === "/cart") {
+      } else if (current.startsWith("/account")) {
+        clearSessionGate("customer");
         window.location.assign(loginUrl(current));
       }
     }

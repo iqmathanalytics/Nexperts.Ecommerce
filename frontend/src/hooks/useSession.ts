@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { ApiRequestError, api } from "@/lib/api";
 import type { User } from "@/lib/types";
-import { SESSION_GATES, SESSION_GATE_EVENT } from "@/lib/sessionGate";
+import { SESSION_GATE_EVENT, hasSessionGate } from "@/lib/sessionGate";
 
 function subscribe(onStoreChange: () => void) {
   window.addEventListener(SESSION_GATE_EVENT, onStoreChange);
@@ -12,8 +12,7 @@ function subscribe(onStoreChange: () => void) {
 }
 
 function readCustomerGate() {
-  if (typeof document === "undefined") return false;
-  return document.cookie.includes(`${SESSION_GATES.customer}=`);
+  return hasSessionGate("customer");
 }
 
 function isUnreachable(error: unknown) {

@@ -8,6 +8,8 @@ import { Badge, Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 import { formatMoney, mediaUrl } from "@/lib/utils";
 
 type Product = {
@@ -24,8 +26,9 @@ type Product = {
 
 export default function AdminProducts() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState("");
-  const dq = useDebouncedValue(q, 300);
+  const dq = useDebouncedValue(q, 150);
   const [status, setStatus] = useState("PUBLISHED");
   const { data, isLoading } = useQuery({
     queryKey: ["admin-products", dq, status],
@@ -34,15 +37,27 @@ export default function AdminProducts() {
   const rows = data?.data ?? [];
   const archive = useMutation({
     mutationFn: (id: number) => api(`/admin/products/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      toast.push("Product archived", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const restore = useMutation({
     mutationFn: (id: number) => api(`/admin/products/${id}/status`, { method: "POST", body: JSON.stringify({ status: "PUBLISHED" }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      toast.push("Product restored", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const duplicate = useMutation({
     mutationFn: (id: number) => api<{ id: number }>(`/admin/products/${id}/duplicate`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      toast.push("Product duplicated", "success");
+    },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
 
   return (
@@ -96,19 +111,36 @@ export default function AdminProducts() {
                 <Link href={`/admin/products/${p.id}`} className="font-semibold text-brand hover:underline">
                   Edit
                 </Link>
-                <button type="button" className="text-sm text-muted hover:underline" onClick={() => duplicate.mutate(p.id)}>
+                <button
+                  type="button"
+                  className="text-sm text-muted hover:underline disabled:opacity-50"
+                  disabled={duplicate.isPending}
+                  onClick={() => {
+                    if (confirmAction(`Duplicate “${p.name}”?`)) duplicate.mutate(p.id);
+                  }}
+                >
                   Duplicate
                 </button>
                 {p.status === "ARCHIVED" ? (
-                  <button type="button" className="text-sm font-semibold text-brand hover:underline" onClick={() => restore.mutate(p.id)}>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-brand hover:underline disabled:opacity-50"
+                    disabled={restore.isPending}
+                    onClick={() => {
+                      if (confirmAction(`Restore “${p.name}” to the shop?`)) restore.mutate(p.id);
+                    }}
+                  >
                     Restore
                   </button>
                 ) : (
                   <button
                     type="button"
-                    className="text-sm text-danger hover:underline"
+                    className="text-sm text-danger hover:underline disabled:opacity-50"
+                    disabled={archive.isPending}
                     onClick={() => {
-                      if (confirm(`Remove “${p.name}” from the shop?`)) archive.mutate(p.id);
+                      if (confirmAction(`Remove “${p.name}” from the shop? You can restore it later from Archived.`)) {
+                        archive.mutate(p.id);
+                      }
                     }}
                   >
                     Delete

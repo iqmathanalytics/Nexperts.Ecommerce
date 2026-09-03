@@ -9,6 +9,7 @@ import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/compo
 import { AdminImageField } from "@/components/admin/AdminImageField";
 import { AdminProductPicker } from "@/components/admin/AdminProductPicker";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 type Lookbook = {
   id: number;
@@ -131,7 +132,14 @@ export default function LookbooksPage() {
                 <Button size="sm" variant="ghost" onClick={() => openEdit(l)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => archive.mutate(l.id)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  pending={archive.isPending}
+                  onClick={() => {
+                    if (confirmAction(`Archive “${l.title}”? It will hide from the storefront.`)) archive.mutate(l.id);
+                  }}
+                >
                   Archive
                 </Button>
               </div>

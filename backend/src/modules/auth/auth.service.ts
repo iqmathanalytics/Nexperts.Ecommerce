@@ -124,6 +124,11 @@ export async function registerCustomer(input: z.infer<typeof registerSchema>) {
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1);
   if (existing) throw new AppError("EMAIL_TAKEN", "An account with this email already exists", 409);
 
+  const [customerRole] = await db.select().from(roles).where(eq(roles.name, "CUSTOMER")).limit(1);
+  if (!customerRole) {
+    throw new AppError("SETUP_INCOMPLETE", "Customer role is missing. Run database seed before registering users.", 500);
+  }
+
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
   const result = await db.insert(users).values({
     email: input.email,
@@ -133,10 +138,7 @@ export async function registerCustomer(input: z.infer<typeof registerSchema>) {
     phone: input.phone ?? null,
   });
   const userId = Number(result[0].insertId);
-  const [customerRole] = await db.select().from(roles).where(eq(roles.name, "CUSTOMER")).limit(1);
-  if (customerRole) {
-    await db.insert(userRoles).values({ userId, roleId: customerRole.id });
-  }
+  await db.insert(userRoles).values({ userId, roleId: customerRole.id });
   return issueSession(userId, "customer");
 }
 

@@ -9,6 +9,7 @@ import { Input, Select } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 type Coupon = {
   id: number;
@@ -216,7 +217,17 @@ export default function CouponsPage() {
                 <Button size="sm" variant="outline" onClick={() => startEdit(c)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate(c)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  pending={toggleStatus.isPending}
+                  onClick={() => {
+                    const next = c.status === "ACTIVE" ? "deactivate" : "activate";
+                    if (confirmAction(`${next === "deactivate" ? "Deactivate" : "Activate"} coupon “${c.code}”?`)) {
+                      toggleStatus.mutate(c);
+                    }
+                  }}
+                >
                   {c.status === "ACTIVE" ? "Deactivate" : "Activate"}
                 </Button>
               </div>

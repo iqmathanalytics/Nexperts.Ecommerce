@@ -5,6 +5,7 @@ import { ImagePlus, LoaderCircle, Upload, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn, mediaUrl } from "@/lib/utils";
 import { Input, Label } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 const ACCEPT_HINT = "JPEG, PNG, WEBP or GIF · up to 5MB";
@@ -110,6 +111,7 @@ export function AdminImageField({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUrl, setShowUrl] = useState(false);
+  const toast = useToast();
 
   async function upload(files: File[]) {
     const file = files[0];
@@ -118,8 +120,11 @@ export function AdminImageField({
     setError(null);
     try {
       onChange(await uploadAdminImage(file, folder));
+      toast.push(`${label} updated`, "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setError(message);
+      toast.push(message, "error");
     } finally {
       setBusy(false);
     }

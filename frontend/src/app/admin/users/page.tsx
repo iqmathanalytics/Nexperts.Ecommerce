@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 type AdminUser = {
   id: number;
@@ -211,7 +212,23 @@ export default function UsersPage() {
                 <Button size="sm" variant="outline" onClick={() => startEdit(u)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" pending={toggleStatus.isPending} onClick={() => toggleStatus.mutate(u)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  pending={toggleStatus.isPending}
+                  onClick={() => {
+                    const next = u.status === "ACTIVE" ? "suspend" : "activate";
+                    if (
+                      confirmAction(
+                        next === "suspend"
+                          ? `Suspend “${u.firstName} ${u.lastName}”? They will lose admin access.`
+                          : `Activate “${u.firstName} ${u.lastName}”?`,
+                      )
+                    ) {
+                      toggleStatus.mutate(u);
+                    }
+                  }}
+                >
                   {u.status === "ACTIVE" ? "Suspend" : "Activate"}
                 </Button>
               </div>

@@ -10,6 +10,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Toast } from "@/components/ui/state";
 import { useToast } from "@/components/ui/toast";
 import { AdminProductImageGrid } from "@/components/admin/AdminImageField";
+import { confirmAction } from "@/lib/confirm";
 
 type Variant = {
   id?: number;
@@ -175,7 +176,7 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
       const res =
         mode === "create"
           ? await api<{ id: number }>("/admin/products", { method: "POST", body: JSON.stringify(body) })
-          : await api(`/admin/products/${params.id}`, { method: "PUT", body: JSON.stringify(body) });
+          : await api<{ id: number }>(`/admin/products/${params.id}`, { method: "PUT", body: JSON.stringify(body) });
       if (mode === "create" && pendingImages.length && res.data?.id) {
         const fd = new FormData();
         pendingImages.forEach((item) => fd.append("images", item.file));
@@ -183,15 +184,19 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
       }
       return res;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       setErr(null);
       setMsg(null);
       pendingImages.forEach((item) => URL.revokeObjectURL(item.preview));
       setPendingImages([]);
       qc.invalidateQueries({ queryKey: ["admin-products"] });
       qc.invalidateQueries({ queryKey: ["admin-product"] });
-      toast.push(mode === "create" ? "Product created" : "Product saved", "success");
-      router.push("/admin/products");
+      toast.push(mode === "create" ? "Product created" : "Product updated", "success");
+      if (mode === "create" && res.data?.id) {
+        router.replace(`/admin/products/${res.data.id}`);
+      } else {
+        existing.refetch();
+      }
     },
     onError: (e: Error) => {
       setMsg(null);
@@ -208,18 +213,26 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
     },
     onSuccess: () => {
       setMsg("Images uploaded. The first is the card image; the second is the hover image.");
+      toast.push("Images uploaded", "success");
       existing.refetch();
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => {
+      setErr(e.message);
+      toast.push(e.message, "error");
+    },
   });
 
   const archive = useMutation({
     mutationFn: () => api(`/admin/products/${params.id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-products"] });
+      toast.push("Product archived", "success");
       router.push("/admin/products");
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => {
+      setErr(e.message);
+      toast.push(e.message, "error");
+    },
   });
 
   const restore = useMutation({
@@ -227,16 +240,26 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
     onSuccess: () => {
       setStatus("PUBLISHED");
       setMsg("Restored to the storefront");
+      toast.push("Product restored", "success");
       existing.refetch();
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => {
+      setErr(e.message);
+      toast.push(e.message, "error");
+    },
   });
 
   const duplicate = useMutation({
-    mutationFn: () => api<any>(`/admin/products/${params.id}/duplicate`, { method: "POST" }),
-    onSuccess: (res) => router.push(`/admin/products/${res.data.id}`),
-    onError: (e: Error) => setErr(e.message),
+    mutationFn: () => api<{ id: number }>(`/admin/products/${params.id}/duplicate`, { method: "POST" }),
+    onSuccess: (res) => {
+      toast.push("Product duplicated", "success");
+      router.push(`/admin/products/${res.data.id}`);
+    },
+    onError: (e: Error) => {
+      setErr(e.message);
+      toast.push(e.message, "error");
+    },
   });
 
   const images: Array<{ id: number; url: string; isPrimary: boolean; alt?: string }> = existing.data?.data.images ?? [];
@@ -265,21 +288,36 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
                 View on store
               </Link>
             ) : null}
-            <Button variant="outline" size="sm" onClick={() => duplicate.mutate()} disabled={duplicate.isPending}>
+            <Button
+              variant="outline"
+              size="sm"
+              pending={duplicate.isPending}
+              onClick={() => {
+                if (confirmAction("Duplicate this product?")) duplicate.mutate();
+              }}
+            >
               Duplicate
             </Button>
             {status === "ARCHIVED" ? (
-              <Button size="sm" onClick={() => restore.mutate()} disabled={restore.isPending}>
+              <Button
+                size="sm"
+                pending={restore.isPending}
+                onClick={() => {
+                  if (confirmAction("Restore this product to the storefront?")) restore.mutate();
+                }}
+              >
                 Restore to store
               </Button>
             ) : (
               <Button
                 variant="danger"
                 size="sm"
+                pending={archive.isPending}
                 onClick={() => {
-                  if (confirm("Remove this product from the shop? You can restore it later from Archived.")) archive.mutate();
+                  if (confirmAction("Remove this product from the shop? You can restore it later from Archived.")) {
+                    archive.mutate();
+                  }
                 }}
-                disabled={archive.isPending}
               >
                 Delete
               </Button>
@@ -337,7 +375,7 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
           <Select value={String(brandId)} onChange={(e) => setBrandId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">None</option>
             {(brands.data?.data ?? [])
-              .filter((b) => (b.status ?? "ACTIVE") === "ACTIVE")
+              .filter((b) => (b.status ?? "ACTIVE") === "ACTIVE" || b.id === brandId)
               .map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -395,7 +433,7 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
           <Label>Categories</Label>
           <div className="flex flex-wrap gap-2">
             {(cats.data?.data ?? [])
-              .filter((c) => (c.status ?? "ACTIVE") === "ACTIVE")
+              .filter((c) => (c.status ?? "ACTIVE") === "ACTIVE" || categoryIds.includes(c.id))
               .map((c) => (
                 <label key={c.id} className="text-sm">
                   <input

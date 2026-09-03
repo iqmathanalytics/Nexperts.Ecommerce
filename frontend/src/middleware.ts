@@ -13,9 +13,9 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // /cart stays public so guest bags work; checkout/account still require a session.
   const needsCustomer =
     pathname.startsWith("/account") ||
-    pathname === "/cart" ||
     (pathname.startsWith("/checkout") && pathname !== "/checkout/success");
 
   if (needsCustomer && !request.cookies.get(SESSION_GATES.customer)?.value) {

@@ -10,7 +10,9 @@ const body = Figtree({
   subsets: ["latin"],
   weight: ["400", "600"],
   display: "swap",
-  preload: true,
+  // Don't preload: the home intro covers the page for a few seconds, so a
+  // preloaded body font triggers Chrome's "preloaded but not used" warning.
+  preload: false,
   adjustFontFallback: true,
 });
 
@@ -52,7 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className={`${body.variable} ${display.variable} min-h-full bg-background font-sans text-ink antialiased [color:var(--ink)]`}>
+      <body className={`${body.variable} ${display.variable} ${body.className} min-h-full bg-background text-ink antialiased [color:var(--ink)]`}>
         <Providers>{children}</Providers>
       </body>
     </html>

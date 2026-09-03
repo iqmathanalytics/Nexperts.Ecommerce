@@ -11,6 +11,8 @@ import { OrderStatusFlow } from "@/components/store/OrderStatusFlow";
 import { canCancelOrder, ORDER_TRANSITIONS } from "@/lib/orders";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
+import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 const STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"] as const;
 const PAYMENTS = ["PENDING", "SUCCESS", "FAILED", "REFUNDED"] as const;
@@ -277,6 +279,7 @@ function OrderDrawer({
   onInvalidate: () => void;
 }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const { data } = useQuery({
     queryKey: ["admin-order", viewId],
     queryFn: () => api<OrderDetail>(`/admin/orders/${viewId}`),
@@ -285,17 +288,21 @@ function OrderDrawer({
   const update = useMutation({
     mutationFn: ({ status, note }: { status: string; note: string }) =>
       api(`/admin/orders/${viewId}/status`, { method: "POST", body: JSON.stringify({ status, note }) }),
-    onSuccess: () => {
+    onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["admin-order", viewId] });
       onInvalidate();
+      toast.push(`Order marked ${v.status.toLowerCase()}`, "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const cancel = useMutation({
     mutationFn: () => api(`/admin/orders/${viewId}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled by admin" }) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-order", viewId] });
       onInvalidate();
+      toast.push("Order cancelled", "success");
     },
+    onError: (e: Error) => toast.push(e.message, "error"),
   });
   const o = data?.data;
   const next = o ? ORDER_TRANSITIONS[o.status] ?? [] : [];
@@ -346,14 +353,25 @@ function OrderDrawer({
                   key={s}
                   size="sm"
                   variant="outline"
-                  disabled={update.isPending}
-                  onClick={() => update.mutate({ status: s, note: statusNote[s] ?? `Marked ${s.toLowerCase()}` })}
+                  pending={update.isPending}
+                  onClick={() => {
+                    if (confirmAction(`Mark order as ${labelStatus(s)}?`)) {
+                      update.mutate({ status: s, note: statusNote[s] ?? `Marked ${s.toLowerCase()}` });
+                    }
+                  }}
                 >
                   Mark {labelStatus(s)}
                 </Button>
               ))}
             {canCancelOrder(o.status) ? (
-              <Button size="sm" variant="danger" onClick={() => cancel.mutate()}>
+              <Button
+                size="sm"
+                variant="danger"
+                pending={cancel.isPending}
+                onClick={() => {
+                  if (confirmAction("Cancel this order? This cannot be undone from here.")) cancel.mutate();
+                }}
+              >
                 Cancel order
               </Button>
             ) : null}

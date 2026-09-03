@@ -105,7 +105,7 @@ html.nx-intro-pending::before {
   --color-danger: var(--danger);
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .hero-wordmark {
@@ -419,18 +419,18 @@ select {
 }
 .btn-store {
   transition:
-    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    background-color 90ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 90ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 90ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 90ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 80ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 90ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 90ms cubic-bezier(0.22, 1, 0.36, 1);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 .btn-store:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 a[data-nav-pending="true"],
 button[data-nav-pending="true"],
@@ -446,11 +446,11 @@ html.nx-route-pending button {
   cursor: progress;
 }
 html.nx-route-pending main {
-  opacity: 0.78;
-  transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0.92;
+  transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1);
 }
 main {
-  transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .btn-store[data-pending="true"],
 .btn-pending {

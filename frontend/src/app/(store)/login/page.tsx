@@ -12,13 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/input";
 import { FieldError, Toast } from "@/components/ui/state";
 import { DEFAULT_AFTER_LOGIN, safeNextPath } from "@/lib/auth";
-import { setSessionGate } from "@/lib/sessionGate";
+import { establishCustomerSession } from "@/lib/authSession";
+import { clearSessionGate } from "@/lib/sessionGate";
 import { AuthInput, AuthStage, PasswordField } from "@/components/store/AuthStage";
 import { WOMEN_HERO } from "@/lib/editorial";
 import type { User } from "@/lib/types";
 import { useSession } from "@/hooks/useSession";
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
+const schema = z.object({
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(1, "Password is required"),
+});
 
 function LoginForm() {
   const router = useRouter();
@@ -27,7 +31,8 @@ function LoginForm() {
   const qc = useQueryClient();
   const { isAuthenticated, isLoading: sessionLoading } = useSession();
   const [error, setError] = useState<string | null>(null);
-  const form = useForm({ resolver: zodResolver(schema) });
+  const [redirecting, setRedirecting] = useState(false);
+  const form = useForm({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } });
 
   // Soft gate may be set from a prior visit — confirm JWT before skipping the form.
   const me = useQuery({
@@ -38,7 +43,15 @@ function LoginForm() {
   });
 
   useEffect(() => {
+    if (me.isSuccess && !me.data?.data.user && sessionLoading === false && isAuthenticated === false) {
+      // Stale soft gate with no JWT — drop it so the form is usable.
+      clearSessionGate("customer");
+    }
+  }, [me.isSuccess, me.data?.data.user, sessionLoading, isAuthenticated]);
+
+  useEffect(() => {
     if (me.data?.data.user) {
+      setRedirecting(true);
       router.replace(next || DEFAULT_AFTER_LOGIN);
     }
   }, [me.data?.data.user, next, router]);
@@ -50,30 +63,25 @@ function LoginForm() {
         body: JSON.stringify({ email: body.email.trim(), password: body.password }),
       }),
     onSuccess: async (res) => {
-      setSessionGate("customer");
-      qc.setQueryData(["me"], { data: { user: res.data.user } });
-      router.replace(next || DEFAULT_AFTER_LOGIN);
-
-      const { readGuestCart, clearGuestCart } = await import("@/lib/guestCart");
-      const guest = readGuestCart();
-      if (guest.length) {
-        try {
-          await api("/cart/merge", {
-            method: "POST",
-            body: JSON.stringify({ items: guest.map((g) => ({ variantId: g.variantId, quantity: g.quantity })) }),
-          });
-          clearGuestCart();
-        } catch {
-          /* merge best-effort */
-        }
+      setError(null);
+      setRedirecting(true);
+      try {
+        const user = await establishCustomerSession(res.data.user);
+        qc.setQueryData(["me"], { data: { user } });
+        await qc.invalidateQueries({ queryKey: ["cart"] });
+        router.replace(next || DEFAULT_AFTER_LOGIN);
+      } catch (e) {
+        setRedirecting(false);
+        setError(e instanceof Error ? e.message : "Unable to complete sign-in. Please try again.");
       }
-
-      await qc.invalidateQueries({ queryKey: ["cart"] });
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      setRedirecting(false);
+      setError(e.message);
+    },
   });
 
-  if (sessionLoading || me.isLoading || me.data?.data.user || login.isSuccess) {
+  if (sessionLoading || me.isLoading || me.data?.data.user || redirecting) {
     return (
       <div className="flex min-h-[50svh] items-center justify-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
@@ -94,7 +102,14 @@ function LoginForm() {
         </div>
       ) : null}
 
-      <form className="space-y-4" onSubmit={form.handleSubmit((v) => login.mutate(v))}>
+      <form
+        className="space-y-4"
+        onSubmit={form.handleSubmit((v) => {
+          setError(null);
+          login.mutate(v);
+        })}
+        noValidate
+      >
         <div>
           <Label>Email</Label>
           <AuthInput type="email" autoComplete="email" placeholder="you@email.com" {...form.register("email")} />
@@ -103,6 +118,7 @@ function LoginForm() {
         <div>
           <Label>Password</Label>
           <PasswordField registration={form.register("password")} />
+          <FieldError message={form.formState.errors.password?.message} />
         </div>
         <Button type="submit" className="mt-2 h-12 w-full rounded-full" pending={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}

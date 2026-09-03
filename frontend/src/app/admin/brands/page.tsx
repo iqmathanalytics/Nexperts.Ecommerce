@@ -8,6 +8,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 import { mediaUrl } from "@/lib/utils";
 
 type Brand = {
@@ -150,11 +151,25 @@ export default function BrandsPage() {
                   Edit
                 </Button>
                 {(b.status ?? "ACTIVE") === "ARCHIVED" ? (
-                  <Button size="sm" variant="ghost" onClick={() => restore.mutate(b.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    pending={restore.isPending}
+                    onClick={() => {
+                      if (confirmAction(`Restore “${b.name}” to active brands?`)) restore.mutate(b.id);
+                    }}
+                  >
                     Restore
                   </Button>
                 ) : (
-                  <Button size="sm" variant="ghost" onClick={() => archive.mutate(b.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    pending={archive.isPending}
+                    onClick={() => {
+                      if (confirmAction(`Archive “${b.name}”? It will hide from the storefront.`)) archive.mutate(b.id);
+                    }}
+                  >
                     Archive
                   </Button>
                 )}

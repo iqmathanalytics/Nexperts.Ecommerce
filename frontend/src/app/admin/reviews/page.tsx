@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 type Review = {
   id: number;
@@ -106,21 +107,50 @@ export default function ReviewsAdmin() {
             cell: (r) => (
               <div className="flex flex-wrap gap-1">
                 {r.status !== "APPROVED" ? (
-                  <Button size="sm" disabled={busy} onClick={() => mod.mutate({ id: r.id, status: "APPROVED" })}>
+                  <Button
+                    size="sm"
+                    pending={busy}
+                    onClick={() => {
+                      if (confirmAction("Accept this review and publish it on the product page?")) {
+                        mod.mutate({ id: r.id, status: "APPROVED" });
+                      }
+                    }}
+                  >
                     Accept
                   </Button>
                 ) : null}
                 {r.status !== "REJECTED" ? (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => mod.mutate({ id: r.id, status: "REJECTED" })}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    pending={busy}
+                    onClick={() => {
+                      if (confirmAction("Reject this review?")) mod.mutate({ id: r.id, status: "REJECTED" });
+                    }}
+                  >
                     Reject
                   </Button>
                 ) : null}
                 {r.status !== "HIDDEN" ? (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => mod.mutate({ id: r.id, status: "HIDDEN" })}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    pending={busy}
+                    onClick={() => {
+                      if (confirmAction("Hide this review from the storefront?")) mod.mutate({ id: r.id, status: "HIDDEN" });
+                    }}
+                  >
                     Hide
                   </Button>
                 ) : null}
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => del.mutate(r.id)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  pending={busy}
+                  onClick={() => {
+                    if (confirmAction("Permanently delete this review? This cannot be undone.")) del.mutate(r.id);
+                  }}
+                >
                   Delete
                 </Button>
               </div>

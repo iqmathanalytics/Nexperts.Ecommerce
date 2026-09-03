@@ -8,6 +8,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { AdminImageField } from "@/components/admin/AdminImageField";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 import { mediaUrl } from "@/lib/utils";
 
 type Category = {
@@ -152,11 +153,25 @@ export default function CategoriesPage() {
                   Edit
                 </Button>
                 {c.status === "ARCHIVED" ? (
-                  <Button size="sm" variant="ghost" onClick={() => restore.mutate(c.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    pending={restore.isPending}
+                    onClick={() => {
+                      if (confirmAction(`Restore “${c.name}” to active categories?`)) restore.mutate(c.id);
+                    }}
+                  >
                     Restore
                   </Button>
                 ) : (
-                  <Button size="sm" variant="ghost" onClick={() => archive.mutate(c.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    pending={archive.isPending}
+                    onClick={() => {
+                      if (confirmAction(`Archive “${c.name}”? It will hide from shop navigation.`)) archive.mutate(c.id);
+                    }}
+                  >
                     Archive
                   </Button>
                 )}

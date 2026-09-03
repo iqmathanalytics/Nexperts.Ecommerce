@@ -9,6 +9,7 @@ import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/compo
 import { AdminImageField } from "@/components/admin/AdminImageField";
 import { AdminProductPicker } from "@/components/admin/AdminProductPicker";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 type Collection = {
   id: number;
@@ -130,7 +131,14 @@ export default function CollectionsPage() {
                 <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => archive.mutate(c.id)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  pending={archive.isPending}
+                  onClick={() => {
+                    if (confirmAction(`Archive “${c.name}”? It will hide from the storefront.`)) archive.mutate(c.id);
+                  }}
+                >
                   Archive
                 </Button>
               </div>

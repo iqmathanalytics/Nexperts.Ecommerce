@@ -9,6 +9,7 @@ import { formatINR } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { AdminDrawer, AdminPage, DataTable, FilterBar, FormError } from "@/components/admin/AdminTable";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 type Customer = {
   id: number;
@@ -101,21 +102,42 @@ export default function CustomersPage() {
         onClick={fromRow ? (e) => e.stopPropagation() : undefined}
       >
         {c.status === "ACTIVE" ? (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => status.mutate({ id: c.id, next: "SUSPENDED" })}>
+          <Button
+            size="sm"
+            variant="outline"
+            pending={busy}
+            onClick={() => {
+              if (confirmAction(`Deactivate ${c.firstName} ${c.lastName}? They will not be able to sign in.`)) {
+                status.mutate({ id: c.id, next: "SUSPENDED" });
+              }
+            }}
+          >
             Deactivate
           </Button>
         ) : null}
         {c.status === "SUSPENDED" ? (
-          <Button size="sm" disabled={busy} onClick={() => status.mutate({ id: c.id, next: "ACTIVE" })}>
+          <Button
+            size="sm"
+            pending={busy}
+            onClick={() => {
+              if (confirmAction(`Activate ${c.firstName} ${c.lastName}?`)) status.mutate({ id: c.id, next: "ACTIVE" });
+            }}
+          >
             Activate
           </Button>
         ) : null}
         {c.status === "DELETED" ? (
-          <Button size="sm" disabled={busy} onClick={() => restore.mutate(c.id)}>
+          <Button
+            size="sm"
+            pending={busy}
+            onClick={() => {
+              if (confirmAction(`Restore ${c.firstName} ${c.lastName}?`)) restore.mutate(c.id);
+            }}
+          >
             Restore
           </Button>
         ) : (
-          <Button size="sm" variant="danger" disabled={busy} onClick={() => setConfirmDelete(c)}>
+          <Button size="sm" variant="danger" pending={busy} onClick={() => setConfirmDelete(c)}>
             Delete
           </Button>
         )}

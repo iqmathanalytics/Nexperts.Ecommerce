@@ -30,3 +30,13 @@ export function clearSessionGate(kind: SessionGate) {
   document.cookie = `${SESSION_GATES[kind]}=; Path=/; Max-Age=0; SameSite=Lax${secureFlag()}`;
   notifyGate();
 }
+
+/** True when the soft gate cookie is present with a non-empty value. */
+export function hasSessionGate(kind: SessionGate) {
+  if (typeof document === "undefined") return false;
+  const prefix = `${SESSION_GATES[kind]}=`;
+  return document.cookie.split(";").some((part) => {
+    const trimmed = part.trim();
+    return trimmed.startsWith(prefix) && trimmed.length > prefix.length;
+  });
+}
