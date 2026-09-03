@@ -100,7 +100,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:grid-cols-[220px_1fr] md:px-6 md:py-12">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 pb-24 md:grid-cols-[220px_1fr] md:px-6 md:py-12 md:pb-12">
         <aside className="h-fit rounded-[1.8rem] border border-line bg-surface p-3">
           <nav className="flex gap-1 overflow-x-auto pb-1 scrollbar-none md:flex-col md:overflow-visible md:pb-0">
             {links.map((l) => {

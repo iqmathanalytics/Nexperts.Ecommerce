@@ -60,19 +60,22 @@ export default function CartPage() {
   const mutate = useMutation({
     mutationFn: ({ id, quantity }: { id: number; quantity: number }) =>
       api(`/cart/items/${id}`, { method: "PATCH", body: JSON.stringify({ quantity }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+    onSuccess: (result) => qc.setQueryData(["cart"], result),
   });
   const remove = useMutation({
     mutationFn: (id: number) => api(`/cart/items/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+    onSuccess: (result) => qc.setQueryData(["cart"], result),
   });
   const clear = useMutation({
     mutationFn: () => api("/cart", { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+    onSuccess: (result) => qc.setQueryData(["cart"], result),
   });
   const wish = useMutation({
     mutationFn: (id: number) => api(`/cart/items/${id}/wishlist`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+    onSuccess: (result) => {
+      qc.setQueryData(["cart"], result);
+      void qc.invalidateQueries({ queryKey: ["wishlist"] });
+    },
   });
 
   if (sessionLoading || (isAuthenticated && isLoading)) {

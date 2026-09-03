@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type MouseEvent } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,8 +12,7 @@ import { api } from "@/lib/api";
 import type { ProductCard as ProductCardType } from "@/lib/types";
 import { QuickViewModal } from "@/components/store/QuickViewModal";
 import { TiltStage } from "@/components/store/TiltStage";
-import { useStoreUi } from "@/components/store/StoreUiContext";
-import { easeOut, isModifiedClick } from "@/lib/motion";
+import { easeOut } from "@/lib/motion";
 
 export function ProductCard({
   product,
@@ -36,7 +35,6 @@ export function ProductCard({
   const [hoverReady, setHoverReady] = useState(false);
   const qc = useQueryClient();
   const router = useRouter();
-  const { goToProduct } = useStoreUi();
   const href = `/products/${product.slug}`;
   const hoverSrc = secondaryImageUrl || product.hoverImageUrl || null;
   const canHoverSwap = Boolean(hoverSrc && hoverSrc !== product.imageUrl);
@@ -48,14 +46,6 @@ export function ProductCard({
       queryFn: () => api(`/products/${product.slug}?lite=1`),
       staleTime: 60_000,
     });
-  }
-
-  function openProduct(e: MouseEvent<HTMLAnchorElement>) {
-    if (isModifiedClick(e)) return;
-    e.preventDefault();
-    // Push on the click tick so Next starts the route immediately (curtain is decorative).
-    goToProduct({ href, name: product.name, imageUrl: product.imageUrl });
-    router.push(href);
   }
 
   return (
@@ -78,7 +68,7 @@ export function ProductCard({
             <div className="product-podium" />
             <div className="product-arch relative aspect-[3/4] overflow-hidden bg-surface-muted/70 shadow-[0_28px_60px_-28px_rgba(28,25,21,0.45)] ring-1 ring-white/40 transition duration-500 group-hover:shadow-[0_36px_70px_-24px_rgba(28,25,21,0.5)]">
               <span className="card-shine pointer-events-none absolute inset-y-0 left-0 z-10 w-1/3 bg-white/20 opacity-0 group-hover:opacity-100" />
-              <Link href={href} onClick={openProduct} className="absolute inset-0 block">
+              <Link href={href} prefetch className="absolute inset-0 block">
                 {product.imageUrl ? (
                   <>
                     <Image
@@ -150,7 +140,7 @@ export function ProductCard({
           </div>
         </TiltStage>
 
-        <Link href={href} onClick={openProduct} className={`mt-5 block text-center ${dense ? "space-y-0.5" : "space-y-1"}`}>
+        <Link href={href} prefetch className={`mt-5 block text-center ${dense ? "space-y-0.5" : "space-y-1"}`}>
           {product.brand?.name ? (
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">{product.brand.name}</p>
           ) : null}

@@ -29,6 +29,8 @@ export type StorefrontEditorial = {
   ticker: string[];
   promoCodes: string[];
   offers: OfferItem[];
+  /** ISO datetime for /sale countdown. Empty = rolling 3-day fallback. */
+  saleEndsAt: string;
 };
 
 const portraitH = (w: number) => Math.round((w * 4) / 3);
@@ -80,10 +82,10 @@ export const DEFAULT_EDITORIAL: StorefrontEditorial = {
     { href: "/category/outerwear?gender=WOMEN", label: "Outerwear", image: px(7671166, 800) },
   ],
   menTiles: [
-    { href: "/category/tops?gender=MEN", label: "Shirts", image: px(1043474, 800) },
-    { href: "/category/bottoms?gender=MEN", label: "Trousers", image: u("photo-1488161628813-04466f872be2", 800) },
-    { href: "/category/outerwear?gender=MEN", label: "Jackets", image: px(842811, 800) },
-    { href: "/products?gender=MEN&sort=newest", label: "New in", image: u("photo-1617137968427-85924c800a22", 800) },
+    { href: "/category/shirts?gender=MEN", label: "Shirt", image: px(1043474, 800) },
+    { href: "/category/t-shirts?gender=MEN", label: "T-shirt", image: u("photo-1521572163474-6864f9cf17ab", 800) },
+    { href: "/category/trousers?gender=MEN", label: "Trousers", image: u("photo-1488161628813-04466f872be2", 800) },
+    { href: "/category/jackets?gender=MEN", label: "Jackets", image: px(842811, 800) },
   ],
   megaWomen: [
     { href: "/category/dresses?gender=WOMEN", label: "Dresses", image: u("photo-1595777457583-95e059d581b8", 600) },
@@ -91,9 +93,10 @@ export const DEFAULT_EDITORIAL: StorefrontEditorial = {
     { href: "/sale", label: "Sale", image: px(2043590, 600) },
   ],
   megaMen: [
-    { href: "/category/tops?gender=MEN", label: "Shirts", image: px(1043474, 600) },
-    { href: "/category/outerwear?gender=MEN", label: "Jackets", image: px(842811, 600) },
-    { href: "/products?gender=MEN&sort=newest", label: "New in", image: u("photo-1617137968427-85924c800a22", 600) },
+    { href: "/category/shirts?gender=MEN", label: "Shirt", image: px(1043474, 600) },
+    { href: "/category/t-shirts?gender=MEN", label: "T-shirt", image: u("photo-1521572163474-6864f9cf17ab", 600) },
+    { href: "/category/trousers?gender=MEN", label: "Trousers", image: u("photo-1488161628813-04466f872be2", 600) },
+    { href: "/category/jackets?gender=MEN", label: "Jackets", image: px(842811, 600) },
   ],
   ticker: [
     "Complimentary shipping over RM 999",
@@ -110,7 +113,16 @@ export const DEFAULT_EDITORIAL: StorefrontEditorial = {
     { kicker: "Flat deal", code: "FLAT200", text: "RM 200 off over RM 1,499", href: "/sale" },
     { kicker: "Shipping", code: "FREE", text: "Free delivery over RM 999", href: "/products" },
   ],
+  saleEndsAt: "",
 };
+
+function isLegacyMenNav(tiles: unknown) {
+  if (!Array.isArray(tiles) || !tiles.length) return true;
+  return tiles.some((t) => {
+    const href = t && typeof t === "object" && "href" in t ? String((t as { href?: string }).href ?? "") : "";
+    return /\/category\/(tops|bottoms|outerwear)(\?|$)/.test(href);
+  });
+}
 
 export function mergeEditorial(value: unknown): StorefrontEditorial {
   if (!value || typeof value !== "object") return DEFAULT_EDITORIAL;
@@ -122,11 +134,12 @@ export function mergeEditorial(value: unknown): StorefrontEditorial {
     campaigns: Array.isArray(v.campaigns) && v.campaigns.length ? v.campaigns : DEFAULT_EDITORIAL.campaigns,
     dressEdits: Array.isArray(v.dressEdits) && v.dressEdits.length ? v.dressEdits : DEFAULT_EDITORIAL.dressEdits,
     womenTiles: Array.isArray(v.womenTiles) && v.womenTiles.length ? v.womenTiles : DEFAULT_EDITORIAL.womenTiles,
-    menTiles: Array.isArray(v.menTiles) && v.menTiles.length ? v.menTiles : DEFAULT_EDITORIAL.menTiles,
+    menTiles: isLegacyMenNav(v.menTiles) ? DEFAULT_EDITORIAL.menTiles : v.menTiles!,
     megaWomen: Array.isArray(v.megaWomen) && v.megaWomen.length ? v.megaWomen : DEFAULT_EDITORIAL.megaWomen,
-    megaMen: Array.isArray(v.megaMen) && v.megaMen.length ? v.megaMen : DEFAULT_EDITORIAL.megaMen,
+    megaMen: isLegacyMenNav(v.megaMen) ? DEFAULT_EDITORIAL.megaMen : v.megaMen!,
     ticker: Array.isArray(v.ticker) && v.ticker.length ? v.ticker : DEFAULT_EDITORIAL.ticker,
     promoCodes: Array.isArray(v.promoCodes) && v.promoCodes.length ? v.promoCodes : DEFAULT_EDITORIAL.promoCodes,
     offers: Array.isArray(v.offers) && v.offers.length ? v.offers : DEFAULT_EDITORIAL.offers,
+    saleEndsAt: typeof v.saleEndsAt === "string" ? v.saleEndsAt : DEFAULT_EDITORIAL.saleEndsAt,
   };
 }

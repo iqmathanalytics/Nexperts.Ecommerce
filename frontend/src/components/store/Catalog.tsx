@@ -11,7 +11,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageState, ProductCardSkeleton } from "@/components/ui/state";
 import type { CategoryNode, ProductCard } from "@/lib/types";
-import { isWomenOnlyCategory, parseShopGender, type ShopGender } from "@/lib/shop";
+import { categoryDisplayName, isWomenOnlyCategory, MEN_CATEGORY_NAV, MEN_PARENT_SLUGS, parseShopGender, type ShopGender } from "@/lib/shop";
 
 function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -51,6 +51,7 @@ export function CatalogInner({
   const pathname = usePathname();
   const router = useRouter();
   const [accum, setAccum] = useState<ProductCard[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const currentPage = Number(params.get("page") ?? 1);
 
@@ -141,15 +142,25 @@ export function CatalogInner({
   const categoryValue = params.get("category") ?? forcedCategory ?? "";
   const activeGender = forcedGender ?? parseShopGender(params.get("gender"));
   const visibleCats = (cats.data?.data ?? []).filter((c) => {
-    if (activeGender === "MEN") return !isWomenOnlyCategory(c.slug);
+    if (activeGender === "MEN") return !isWomenOnlyCategory(c.slug) && !MEN_PARENT_SLUGS.has(c.slug);
     return true;
   });
-  const flatCats = visibleCats.flatMap((c) => [
-    { ...c, label: c.name },
-    ...c.children
-      .filter((child) => (activeGender === "MEN" ? !isWomenOnlyCategory(child.slug) : true))
-      .map((child) => ({ ...child, label: `${c.name} · ${child.name}` })),
-  ]);
+  const menChips = activeGender === "MEN" ? MEN_CATEGORY_NAV : null;
+  const flatCats = (activeGender === "MEN"
+    ? [
+        ...MEN_CATEGORY_NAV.map((item) => ({ id: item.slug, slug: item.slug, label: item.label })),
+        ...visibleCats.flatMap((c) => [
+          { id: String(c.id), slug: c.slug, label: c.name },
+          ...c.children
+            .filter((child) => !isWomenOnlyCategory(child.slug) && !MEN_PARENT_SLUGS.has(child.slug))
+            .map((child) => ({ id: String(child.id), slug: child.slug, label: `${c.name} · ${categoryDisplayName(child.slug, child.name, "MEN")}` })),
+        ]),
+      ]
+    : visibleCats.flatMap((c) => [
+        { id: String(c.id), slug: c.slug, label: c.name },
+        ...c.children.map((child) => ({ id: String(child.id), slug: child.slug, label: `${c.name} · ${child.name}` })),
+      ])
+  ).filter((c, i, all) => all.findIndex((x) => x.slug === c.slug) === i);
   const hasFilters = Boolean(
     params.get("q") ||
       params.get("category") ||
@@ -164,7 +175,7 @@ export function CatalogInner({
   const brandColors = ["#1a1a1a", "#8b7355", "#c4a35a", "#5c6b4a", "#6b4c3b", "#2c3e50"];
 
   return (
-    <div className="bg-background text-ink">
+    <div className="bg-background pb-8 text-ink md:pb-0">
       {!hideHeading ? (
         <section className="border-b border-line bg-surface">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
@@ -199,24 +210,34 @@ export function CatalogInner({
             >
               All
             </button>
-            {(visibleCats).map((c) => (
+            {(menChips ?? visibleCats).map((c) => (
               <button
-                key={c.id}
+                key={"slug" in c ? c.slug : c.id}
                 type="button"
                 onClick={() => setFilter("category", c.slug)}
                 className={`btn-chip inline-flex shrink-0 items-center justify-center px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
                   categoryValue === c.slug ? "btn-chip-active" : ""
                 }`}
               >
-                {c.name}
+                {"label" in c ? c.label : c.name}
               </button>
             ))}
           </div>
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-8 md:px-6 lg:grid-cols-[240px_1fr]">
-        <aside className="h-fit lg:sticky lg:top-24">
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 md:px-6 lg:grid-cols-[240px_1fr] lg:gap-10">
+        <div className="lg:hidden">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="flex h-11 w-full items-center justify-between border border-line bg-surface px-4 text-[11px] font-semibold uppercase tracking-[0.16em]"
+          >
+            Filters
+            <ChevronDown className={`h-4 w-4 transition ${filtersOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+        <aside className={`h-fit lg:sticky lg:top-[calc(var(--store-chrome)+1rem)] ${filtersOpen ? "block" : "hidden"} lg:block`}>
           <div className="flex items-center justify-between pb-2">
             <p className="text-sm font-semibold">Filters</p>
             {hasFilters ? (
@@ -332,7 +353,7 @@ export function CatalogInner({
         <div>
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted">{meta ? `${meta.total} pieces` : "Loading…"}</p>
-            <Select value={params.get("sort") ?? "relevance"} onChange={(e) => setFilter("sort", e.target.value)} className="w-52">
+            <Select value={params.get("sort") ?? "relevance"} onChange={(e) => setFilter("sort", e.target.value)} className="w-full max-w-xs sm:w-52">
               <option value="relevance">Relevance</option>
               <option value="newest">Newest</option>
               <option value="price_asc">Price: low to high</option>

@@ -1,3 +1,3 @@
-export const production = {"NEXT_PUBLIC_API_URL":"https://nexperts-ecommerce-api.onrender.com/api/v1","NEXT_PUBLIC_SITE_URL":"https://nexperts-store.twilight-waterfall-5fc9.workers.dev","NEXT_PUBLIC_SITE_NAME":"Nexperts"};
-export const development = {"NEXT_PUBLIC_API_URL":"https://nexperts-ecommerce-api.onrender.com/api/v1","NEXT_PUBLIC_SITE_URL":"https://nexperts-store.twilight-waterfall-5fc9.workers.dev","NEXT_PUBLIC_SITE_NAME":"Nexperts"};
+export const production = {"NEXT_PUBLIC_API_URL":"https://nexperts-ecommerce-api.onrender.com/api/v1","NEXT_PUBLIC_SITE_URL":"https://nexperts-store.twilight-waterfall-5fc9.workers.dev","NEXT_PUBLIC_SITE_NAME":"Nexperts","API_PROXY_TARGET":"https://nexperts-ecommerce-api.onrender.com"};
+export const development = {"NEXT_PUBLIC_API_URL":"https://nexperts-ecommerce-api.onrender.com/api/v1","API_PROXY_TARGET":"https://nexperts-ecommerce-api.onrender.com","NEXT_PUBLIC_SITE_URL":"https://nexperts-store.twilight-waterfall-5fc9.workers.dev","NEXT_PUBLIC_SITE_NAME":"Nexperts"};
 export const test = {};

@@ -1,20 +1,11 @@
-import { API_URL, SITE_NAME } from "@/lib/utils";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-
-async function loadProduct(slug: string) {
-  try {
-    const res = await fetch(`${API_URL}/products/${slug}`, { next: { revalidate: 120 } });
-    const json = await res.json();
-    return json.data ?? null;
-  } catch {
-    return null;
-  }
-}
+import { SITE_NAME } from "@/lib/utils";
+import { getCachedProduct } from "@/lib/productFetch";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const p = await loadProduct(slug);
+  const p = await getCachedProduct(slug);
   if (!p) return { title: `${SITE_NAME} product` };
   return {
     title: p.seoTitle || p.name,
@@ -25,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function Layout({ children, params }: { children: ReactNode; params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const p = await loadProduct(slug);
+  const p = await getCachedProduct(slug);
   const jsonLd = p
     ? {
         "@context": "https://schema.org/",
@@ -34,7 +25,7 @@ export default async function Layout({ children, params }: { children: ReactNode
         description: p.description,
         sku: p.variants?.[0]?.sku,
         brand: p.brand?.name,
-        image: p.images?.map((i: { url: string }) => i.url),
+        image: p.images?.map((i) => i.url),
         offers: {
           "@type": "Offer",
           priceCurrency: "MYR",
@@ -46,9 +37,12 @@ export default async function Layout({ children, params }: { children: ReactNode
           : undefined,
       }
     : null;
+  const jsonLdHtml = jsonLd
+    ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>`
+    : "";
   return (
     <>
-      {jsonLd ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /> : null}
+      {jsonLdHtml ? <div dangerouslySetInnerHTML={{ __html: jsonLdHtml }} /> : null}
       {children}
     </>
   );

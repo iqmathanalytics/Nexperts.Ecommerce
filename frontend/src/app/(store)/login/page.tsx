@@ -26,7 +26,11 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const form = useForm({ resolver: zodResolver(schema) });
   const login = useMutation({
-    mutationFn: (body: z.infer<typeof schema>) => api("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: z.infer<typeof schema>) =>
+      api("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: body.email.trim(), password: body.password }),
+      }),
     onSuccess: async () => {
       setSessionGate("customer");
       const { readGuestCart, clearGuestCart } = await import("@/lib/guestCart");

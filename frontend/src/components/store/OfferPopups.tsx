@@ -52,7 +52,7 @@ export function OfferPopups() {
     if (quiet || !welcome) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (dismissed(WELCOME_KEY)) return;
-    const show = window.setTimeout(() => setWelcomeOpen(true), reduce ? 600 : 1600);
+    const show = window.setTimeout(() => setWelcomeOpen(true), reduce ? 800 : 2600);
     return () => window.clearTimeout(show);
   }, [quiet, welcome]);
 
@@ -131,7 +131,7 @@ function WelcomeOffer({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[95] flex items-end justify-center p-4 sm:items-center"
+      className="fixed inset-0 z-[95] flex items-end justify-center p-4 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:items-center sm:pb-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="offer-title"
@@ -199,7 +199,7 @@ function WelcomeOffer({
 
 function DockOffer({ offer, onClose }: { offer: OfferItem; onClose: () => void }) {
   return (
-    <motion.div className="fixed bottom-20 left-4 right-4 z-[80] mx-auto max-w-sm md:bottom-6 md:left-auto md:right-5" {...offerDock}>
+    <motion.div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-4 right-4 z-[80] mx-auto max-w-sm md:bottom-6 md:left-auto md:right-5" {...offerDock}>
       <div className="relative overflow-hidden rounded-2xl border border-line bg-white p-4 pr-12 shadow-[0_22px_60px_rgba(28,25,21,0.18)]">
         <motion.div
           className="absolute inset-x-0 top-0 h-1 bg-accent"

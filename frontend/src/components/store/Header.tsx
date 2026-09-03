@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Heart, Menu, Search, ShoppingBag, User, X, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import { MiniCart } from "@/components/store/MiniCart";
 import { SearchOverlay } from "@/components/store/SearchOverlay";
 import { MobileTabBar } from "@/components/store/MobileTabBar";
 import { MEGA_MEN, MEGA_WOMEN, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
-import { categoryHref, withShopGender } from "@/lib/shop";
+import { categoryHref, MEN_CATEGORY_NAV, WOMEN_CATEGORY_NAV, withShopGender } from "@/lib/shop";
 import { GUEST_CART_EVENT, guestCartCount } from "@/lib/guestCart";
 import Image from "next/image";
 import { OfferTheatre } from "@/components/store/OfferTheatre";
@@ -38,23 +38,25 @@ function isPrimaryCurrent(path: string, href: string, label: string) {
 const WOMEN_LINKS = [
   { href: "/women", label: "View all" },
   { href: categoryHref("dresses", "WOMEN"), label: "Dresses" },
-  { href: categoryHref("tops", "WOMEN"), label: "Tops & shirts" },
-  { href: categoryHref("bottoms", "WOMEN"), label: "Trousers" },
-  { href: categoryHref("ethnic-wear", "WOMEN"), label: "Heritage" },
+  { href: categoryHref("tops", "WOMEN"), label: "Tops" },
+  { href: categoryHref("bottoms", "WOMEN"), label: "Bottoms" },
+  { href: categoryHref("ethnic-wear", "WOMEN"), label: "Ethnic Wear" },
   { href: categoryHref("outerwear", "WOMEN"), label: "Outerwear" },
   { href: "/collections/seasonal/festive", label: "Festive edit" },
 ];
 
 const MEN_LINKS = [
   { href: "/men", label: "View all" },
-  { href: categoryHref("tops", "MEN"), label: "Shirts & tops" },
-  { href: categoryHref("bottoms", "MEN"), label: "Trousers" },
-  { href: categoryHref("outerwear", "MEN"), label: "Jackets" },
+  { href: categoryHref("shirts", "MEN"), label: "Shirts" },
+  { href: categoryHref("t-shirts", "MEN"), label: "T-shirt" },
+  { href: categoryHref("trousers", "MEN"), label: "Trousers" },
+  { href: categoryHref("jackets", "MEN"), label: "Jackets" },
   { href: "/products?gender=MEN&sort=newest", label: "New in" },
 ];
 
 export function Header() {
   const path = usePathname();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mega, setMega] = useState<"women" | "men" | null>(null);
@@ -63,6 +65,12 @@ export function Header() {
   const { openSearch, openMiniCart, cartPulse } = useStoreUi();
   const isHeroPage =
     path === "/" || path === "/women" || path === "/men" || path === "/sale" || path === "/products" || path === "/checkout/success";
+
+  useEffect(() => {
+    for (const href of ["/", "/women", "/men", "/sale", "/products", "/cart", "/account"]) {
+      router.prefetch(href);
+    }
+  }, [router]);
 
   const closeMenus = useCallback(() => {
     hoverLocked.current = true;
@@ -134,7 +142,7 @@ export function Header() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-colors duration-150 ${
+        className={`fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)] transition-colors duration-150 ${
           solid
             ? "border-b border-line bg-surface text-ink"
             : "bg-gradient-to-b from-black/80 via-black/45 to-transparent text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.7)]"
@@ -159,9 +167,6 @@ export function Header() {
             <div className="flex gap-5">
               <Link href="/faq" className="hover:opacity-100 opacity-80">
                 Help
-              </Link>
-              <Link href="/store-finder" className="hover:opacity-100 opacity-80">
-                Find a store
               </Link>
               <Link href={isAuthenticated ? "/account" : "/login"} className="hover:opacity-100 opacity-80">
                 {isAuthenticated ? "My account" : "Sign in"}
@@ -219,7 +224,7 @@ export function Header() {
           </Link>
 
           <div className="flex h-full items-center justify-end gap-0.5">
-            <button type="button" onClick={openSearch} className={iconBtn} aria-label="Search">
+            <button type="button" onClick={openSearch} className={`hidden md:inline-flex ${iconBtn}`} aria-label="Search">
               <Search className="h-5 w-5" />
             </button>
             <Link
@@ -283,7 +288,7 @@ export function Header() {
                     ))}
                   </ul>
                 </div>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                <div className={`grid grid-cols-2 gap-3 ${mega === "men" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
                   {(mega === "women" ? megaWomen : megaMen).map((c) => (
                     <Link key={c.href} href={withShopGender(c.href, mega === "women" ? "WOMEN" : "MEN")} className="group product-arch relative aspect-[3/4] overflow-hidden bg-surface-muted">
                       <Image
@@ -308,8 +313,8 @@ export function Header() {
 
       {/* Mobile full menu */}
       {mobileOpen ? (
-        <div className="fixed inset-0 z-[60] overflow-y-auto bg-white text-ink lg:hidden">
-          <div className="flex h-14 items-center justify-between border-b border-line px-4">
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-white pb-[calc(5rem+env(safe-area-inset-bottom))] text-ink lg:hidden">
+          <div className="flex h-14 items-center justify-between border-b border-line px-4 pt-[env(safe-area-inset-top)]">
             <span className="nexperts-mark text-sm">{SITE_NAME}</span>
             <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close menu" className="p-2">
               <X className="h-5 w-5" />
@@ -339,6 +344,12 @@ export function Header() {
             </Link>
             <Link href="/outfits" onClick={closeMenus} className="block border-b border-line py-4 text-sm">
               Outfit builder
+            </Link>
+            <Link href={isAuthenticated ? "/account" : "/login"} onClick={closeMenus} className="block border-b border-line py-4 text-sm">
+              {isAuthenticated ? "My account" : "Sign in"}
+            </Link>
+            <Link href="/faq" onClick={closeMenus} className="block py-4 text-sm text-muted">
+              Help
             </Link>
           </nav>
         </div>
@@ -374,7 +385,7 @@ export function Footer() {
   }
 
   return (
-    <footer className="mt-auto border-t border-line bg-surface pb-20 text-ink md:pb-0">
+    <footer className="mt-auto border-t border-line bg-surface pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-ink md:pb-0">
       <div className="border-b border-line bg-surface-muted">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-10 md:flex-row md:items-center md:justify-between md:px-6">
           <div>
@@ -424,10 +435,20 @@ export function Footer() {
           <Link href="/women" className="block text-sm hover:underline">
             Woman
           </Link>
-          <Link href="/men" className="mt-2.5 block text-sm hover:underline">
+          {WOMEN_CATEGORY_NAV.map((item) => (
+            <Link key={`f-w-${item.slug}`} href={categoryHref(item.slug, "WOMEN")} className="mt-2.5 block text-sm text-muted hover:text-ink hover:underline">
+              {item.label}
+            </Link>
+          ))}
+          <Link href="/men" className="mt-6 block text-sm hover:underline">
             Man
           </Link>
-          <Link href="/products?sort=newest" className="mt-2.5 block text-sm hover:underline">
+          {MEN_CATEGORY_NAV.map((item) => (
+            <Link key={`f-m-${item.slug}`} href={categoryHref(item.slug, "MEN")} className="mt-2.5 block text-sm text-muted hover:text-ink hover:underline">
+              {item.label}
+            </Link>
+          ))}
+          <Link href="/products?sort=newest" className="mt-6 block text-sm hover:underline">
             New in
           </Link>
           <Link href="/lookbooks" className="mt-2.5 block text-sm hover:underline">
@@ -447,9 +468,6 @@ export function Footer() {
           </Link>
           <Link href="/contact" className="mt-2.5 block text-sm hover:underline">
             Contact
-          </Link>
-          <Link href="/store-finder" className="mt-2.5 block text-sm hover:underline">
-            Find a store
           </Link>
           <p className="mt-4 text-sm text-muted">Standard delivery 2–4 days</p>
           <p className="mt-1 text-sm text-muted">Remote areas 3–6 days · 7-day returns</p>

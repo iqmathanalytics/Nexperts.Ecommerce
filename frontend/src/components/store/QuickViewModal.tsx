@@ -15,7 +15,6 @@ import { useStoreUi } from "@/components/store/StoreUiContext";
 import { useSession } from "@/hooks/useSession";
 import { loginUrl } from "@/lib/auth";
 import { ScarcityBanner } from "@/components/store/ScarcityBanner";
-import { isModifiedClick } from "@/lib/motion";
 import { ProductCommerceDetails } from "@/components/store/ProductCommerceDetails";
 import { addGuestCartItem } from "@/lib/guestCart";
 
@@ -65,7 +64,7 @@ export function QuickViewModal({
   const router = useRouter();
   const qc = useQueryClient();
   const { push } = useToast();
-  const { openMiniCart, pulseCart, goToProduct } = useStoreUi();
+  const { openMiniCart, pulseCart } = useStoreUi();
   const { isAuthenticated } = useSession();
   const [qty, setQty] = useState(1);
   const [variantId, setVariantId] = useState<number | null>(null);
@@ -85,12 +84,14 @@ export function QuickViewModal({
 
   const add = useMutation({
     mutationFn: () => api("/cart/items", { method: "POST", body: JSON.stringify({ variantId: variant!.id, quantity: qty }) }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["cart"] });
-      push("Added to bag");
+    onMutate: () => {
       pulseCart();
       openMiniCart();
       onClose();
+    },
+    onSuccess: (result) => {
+      qc.setQueryData(["cart"], result);
+      push("Added to bag");
     },
     onError: (e: Error) => {
       if (e instanceof ApiRequestError && e.status === 401) {
@@ -245,19 +246,9 @@ export function QuickViewModal({
 
           <Link
             href={`/products/${productSlug}`}
-            onClick={(e) => {
-              onClose();
-              if (isModifiedClick(e)) return;
-              e.preventDefault();
-              const href = `/products/${productSlug}`;
-              goToProduct({
-                href,
-                name,
-                imageUrl: images[0]?.url ?? preview?.imageUrl ?? null,
-              });
-              router.push(href);
-            }}
-            className="mt-6 inline-block text-xs font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline"
+            prefetch
+            onClick={() => onClose()}
+            className="btn-store mt-6 inline-block text-xs font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline"
           >
             View full details
           </Link>

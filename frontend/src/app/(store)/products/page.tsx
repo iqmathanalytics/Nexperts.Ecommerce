@@ -22,7 +22,7 @@ export default function ProductsPage() {
         ]}
         links={[
           { href: categoryHref("dresses", "WOMEN"), label: "Dresses" },
-          { href: categoryHref("tops", "MEN"), label: "Shirts" },
+          { href: categoryHref("shirts", "MEN"), label: "Shirts" },
         ]}
       />
       <Suspense

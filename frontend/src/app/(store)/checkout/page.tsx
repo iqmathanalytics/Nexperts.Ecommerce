@@ -92,11 +92,13 @@ export default function CheckoutPage() {
     onError: (e: Error) => setError(e.message),
   });
   const place = useMutation({
-    mutationFn: () =>
-      api<{ id: number; orderNumber: string }>("/checkout", {
+    mutationFn: async () => {
+      const res = await api<{ id: number; orderNumber: string }>("/checkout", {
         method: "POST",
         body: JSON.stringify({ addressId, couponCode: appliedCoupon || undefined, paymentMethod }),
-      }),
+      });
+      return res;
+    },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["cart"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
@@ -105,6 +107,16 @@ export default function CheckoutPage() {
     onError: (e: Error) => setError(e.message),
   });
   const form = useForm({ resolver: zodResolver(addressSchema), defaultValues: { country: "Malaysia", isDefault: true } });
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("nx_loyalty_coupon");
+      if (saved) setCouponCode(saved);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     if (!onlineAvailable && paymentMethod === "ONLINE") setPaymentMethod("COD");
   }, [onlineAvailable, paymentMethod]);
@@ -167,7 +179,7 @@ export default function CheckoutPage() {
             <OrderPlacedCeremony compact />
             <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.36em] text-[#c4a056]">The house</p>
             <p className="mt-3 font-display text-4xl font-medium italic text-white">Sealing your order</p>
-            <p className="mt-3 text-sm text-white/75">Please keep this page open for a moment.</p>
+            <p className="mt-3 text-sm text-white/75">This screen holds for a moment, then your confirmation opens.</p>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -384,6 +396,11 @@ export default function CheckoutPage() {
                       onClick={() => {
                         setAppliedCoupon("");
                         setCouponCode("");
+                        try {
+                          sessionStorage.removeItem("nx_loyalty_coupon");
+                        } catch {
+                          /* ignore */
+                        }
                       }}
                     >
                       Remove

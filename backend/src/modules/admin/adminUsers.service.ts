@@ -59,7 +59,7 @@ export async function updateCustomerStatus(adminId: number, id: number, status: 
 
 export const adminUserSchema = z.object({
   firstName: z.string().min(2),
-  lastName: z.string().min(1),
+  lastName: z.string().max(100).default(""),
   email: z.string().email().transform((v) => v.toLowerCase()),
   password: z.string().min(8).optional(),
   role: z.enum(["SUPER_ADMIN", "ADMIN", "INVENTORY_MANAGER", "ORDER_MANAGER", "ANALYST"]),

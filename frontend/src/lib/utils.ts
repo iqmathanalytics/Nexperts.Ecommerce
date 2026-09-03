@@ -51,7 +51,7 @@ export function errorMessage(err: unknown, fallback = "Something went wrong") {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:4010/api/v1";
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Nexperts";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 

@@ -32,7 +32,19 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const form = useForm({ resolver: zodResolver(schema) });
   const mutate = useMutation({
-    mutationFn: (body: z.infer<typeof schema>) => api("/auth/register", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: z.infer<typeof schema>) => {
+      const phone = body.phone?.trim();
+      return api("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName: body.firstName.trim(),
+          lastName: body.lastName.trim(),
+          email: body.email.trim(),
+          password: body.password,
+          ...(phone ? { phone } : {}),
+        }),
+      });
+    },
     onSuccess: () => {
       setSessionGate("customer");
       qc.invalidateQueries({ queryKey: ["me"] });

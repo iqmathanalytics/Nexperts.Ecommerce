@@ -6,8 +6,8 @@ import { LookbookCarousel } from "@/components/store/LookbookCarousel";
 import { Reveal } from "@/components/store/Reveal";
 import { CampaignTile } from "@/components/store/CampaignTile";
 import { AmbientScene } from "@/components/store/AmbientScene";
-import { CAMPAIGNS, DRESS_EDITS, DEFAULT_EDITORIAL, HERO_VIDEO, MEN_HERO_VIDEO, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
-import { categoryHref, isWomenOnlyCategory, SHARED_CATEGORY_SLUGS } from "@/lib/shop";
+import { CAMPAIGNS, DRESS_EDITS, DEFAULT_EDITORIAL, HERO_VIDEO, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
+import { categoryHref, MEN_CATEGORY_NAV, WOMEN_CATEGORY_NAV } from "@/lib/shop";
 import type { CategoryNode, ProductCard } from "@/lib/types";
 
 export type HomeData = {
@@ -40,7 +40,6 @@ const DESTINATIONS = [
 
 export function HomePageView({ data }: { data: HomeData }) {
   const featured = data.featured ?? [];
-  const categories = data.categories ?? [];
   const lookbooks = data.lookbooks ?? [];
   const editorial = mergeEditorial(data.editorial);
   const campaigns = editorial.campaigns.length ? editorial.campaigns : CAMPAIGNS;
@@ -51,7 +50,7 @@ export function HomePageView({ data }: { data: HomeData }) {
   return (
     <div className="bg-background text-ink">
       <CampaignHero
-        videos={[HERO_VIDEO, MEN_HERO_VIDEO]}
+        videos={[HERO_VIDEO]}
         title={editorial.homeHeadline}
         subtitle={editorial.homeSubhead}
         actions={[
@@ -166,47 +165,41 @@ export function HomePageView({ data }: { data: HomeData }) {
         </div>
       </section>
 
-      {categories.length > 0 ? (
-        <section>
-          <div className="mx-auto max-w-[1400px] px-4 py-16 md:px-8">
+      <section>
+        <div className="mx-auto max-w-[1400px] px-4 py-16 md:px-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">Shop by category</p>
             <div className="mt-8 grid gap-10 md:grid-cols-2">
               <div>
                 <h3 className="font-display text-2xl font-semibold">Woman</h3>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {categories
-                    .filter((c) => isWomenOnlyCategory(c.slug) || SHARED_CATEGORY_SLUGS.has(c.slug))
-                    .map((c) => (
-                      <Link
-                        key={`w-${c.id}`}
-                        href={categoryHref(c.slug, "WOMEN")}
-                        className="btn-store btn-chip rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] hover:bg-[var(--btn-fill)] hover:border-[var(--btn-fill-border)] hover:text-[var(--btn-fill-text)]"
-                      >
-                        {c.name}
-                      </Link>
-                    ))}
+                  {WOMEN_CATEGORY_NAV.map((item) => (
+                    <Link
+                      key={`w-${item.slug}`}
+                      href={categoryHref(item.slug, "WOMEN")}
+                      className="btn-store btn-chip rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] hover:bg-[var(--btn-fill)] hover:border-[var(--btn-fill-border)] hover:text-[var(--btn-fill-text)]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                 </div>
               </div>
               <div>
                 <h3 className="font-display text-2xl font-semibold">Man</h3>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {categories
-                    .filter((c) => SHARED_CATEGORY_SLUGS.has(c.slug))
-                    .map((c) => (
-                      <Link
-                        key={`m-${c.id}`}
-                        href={categoryHref(c.slug, "MEN")}
-                        className="btn-store btn-chip rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] hover:bg-[var(--btn-fill)] hover:border-[var(--btn-fill-border)] hover:text-[var(--btn-fill-text)]"
-                      >
-                        {c.slug === "tops" ? "Shirts" : c.slug === "outerwear" ? "Jackets" : c.name}
-                      </Link>
-                    ))}
+                  {MEN_CATEGORY_NAV.map((item) => (
+                    <Link
+                      key={`m-${item.slug}`}
+                      href={categoryHref(item.slug, "MEN")}
+                      className="btn-store btn-chip rounded-full px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] hover:bg-[var(--btn-fill)] hover:border-[var(--btn-fill-border)] hover:text-[var(--btn-fill-text)]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </section>
-      ) : null}
 
       <section className="px-4 pb-20 md:px-8">
         <div className="mx-auto grid max-w-[1400px] gap-5 md:grid-cols-3">

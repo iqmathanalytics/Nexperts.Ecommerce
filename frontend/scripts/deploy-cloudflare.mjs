@@ -3,7 +3,7 @@
  * env so they win over .env.local (Next.js otherwise prefers .env.local).
  */
 import { spawn } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,4 +45,33 @@ function run(command, args) {
 }
 
 await run("npx", ["opennextjs-cloudflare", "build"]);
+injectKeepAliveCron();
 await run("npx", ["opennextjs-cloudflare", "deploy"]);
+
+function injectKeepAliveCron() {
+  const workerPath = resolve(root, ".open-next/worker.js");
+  if (!existsSync(workerPath)) {
+    console.warn("Keep-alive: .open-next/worker.js missing, skipped");
+    return;
+  }
+  let src = readFileSync(workerPath, "utf8");
+  if (src.includes("async scheduled")) {
+    console.log("Keep-alive cron handler already present");
+    return;
+  }
+  const injected = src.replace(
+    /export default \{\s*async fetch/,
+    `export default {
+    async scheduled(_event, env, ctx) {
+        const target = String(env.API_PROXY_TARGET || "https://nexperts-ecommerce-api.onrender.com").replace(/\\/$/, "");
+        ctx.waitUntil(fetch(target + "/health", { cache: "no-store" }).catch(() => undefined));
+    },
+    async fetch`,
+  );
+  if (injected === src) {
+    console.warn("Keep-alive: could not patch worker export");
+    return;
+  }
+  writeFileSync(workerPath, injected);
+  console.log("Keep-alive: injected 2-minute Render health ping");
+}

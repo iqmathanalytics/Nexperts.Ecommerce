@@ -5,8 +5,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useIsFetching } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
-const SHOW_AFTER_MS = 450;
-const HIDE_AFTER_MS = 120;
+/** Show the top bar immediately — delayed bars feel like the click did nothing. */
+const SHOW_AFTER_MS = 0;
+const HIDE_AFTER_MS = 80;
 
 /** Branded spinner for page / section waits. */
 export function PageLoader({
@@ -39,9 +40,24 @@ export function PageLoader({
   );
 }
 
+function isInternalNavAnchor(anchor: HTMLAnchorElement) {
+  if (anchor.target && anchor.target !== "_self") return false;
+  if (anchor.hasAttribute("download")) return false;
+  const href = anchor.getAttribute("href");
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
+  try {
+    const url = new URL(href, window.location.href);
+    if (url.origin !== window.location.origin) return false;
+    if (url.pathname === window.location.pathname && url.search === window.location.search) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Top progress + delayed overlay.
- * Shows only when navigation / data work lasts longer than SHOW_AFTER_MS.
+ * Instant top progress on in-app navigation.
+ * Uses pointerdown so feedback starts before click handlers / preventDefault.
  */
 export function GlobalLoading() {
   const pathname = usePathname();
@@ -50,39 +66,45 @@ export function GlobalLoading() {
   const [visible, setVisible] = useState(false);
 
   const fetching = useIsFetching({
-    predicate: (query) =>
-      // Skip quiet background refetches that already have data
-      query.state.fetchStatus === "fetching" && query.state.data === undefined,
+    predicate: (query) => query.state.fetchStatus === "fetching" && query.state.data === undefined,
   });
-  // Mutations stay on the button (`pending`) — don't flash a global chip on every click.
   const busy = routePending || fetching > 0;
 
   useEffect(() => {
     setRoutePending(false);
+    document.documentElement.classList.remove("nx-route-pending");
+    document.querySelectorAll("[data-nav-pending='true']").forEach((el) => {
+      el.removeAttribute("data-nav-pending");
+    });
   }, [pathname, searchParams]);
 
   useEffect(() => {
-    const onClick = (event: MouseEvent) => {
-      if (event.defaultPrevented) return;
-      if (event.button !== 0) return;
+    const arm = (event: Event) => {
+      if (!(event instanceof PointerEvent) && !(event instanceof MouseEvent)) return;
+      if ("button" in event && event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const anchor = (event.target as HTMLElement | null)?.closest("a");
-      if (!anchor) return;
-      if (anchor.target && anchor.target !== "_self") return;
-      if (anchor.hasAttribute("download")) return;
-      const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
-      try {
-        const url = new URL(href, window.location.href);
-        if (url.origin !== window.location.origin) return;
-        if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a");
+      if (anchor instanceof HTMLAnchorElement && isInternalNavAnchor(anchor)) {
+        anchor.setAttribute("data-nav-pending", "true");
+        document.documentElement.classList.add("nx-route-pending");
         setRoutePending(true);
-      } catch {
-        /* ignore bad href */
+        return;
+      }
+      const button = target?.closest("button[data-nav], a[data-nav]");
+      if (button instanceof HTMLElement) {
+        button.setAttribute("data-nav-pending", "true");
+        document.documentElement.classList.add("nx-route-pending");
+        setRoutePending(true);
       }
     };
-    document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
+    // pointerdown = first paint of feedback; click covers keyboard activation
+    document.addEventListener("pointerdown", arm, true);
+    document.addEventListener("click", arm, true);
+    return () => {
+      document.removeEventListener("pointerdown", arm, true);
+      document.removeEventListener("click", arm, true);
+    };
   }, []);
 
   useEffect(() => {
@@ -101,37 +123,31 @@ export function GlobalLoading() {
     };
   }, [busy]);
 
-  // Safety: never leave the bar stuck if a navigation aborts
   useEffect(() => {
     if (!routePending) return;
-    const failSafe = window.setTimeout(() => setRoutePending(false), 12_000);
+    const failSafe = window.setTimeout(() => {
+      setRoutePending(false);
+      document.documentElement.classList.remove("nx-route-pending");
+    }, 8_000);
     return () => window.clearTimeout(failSafe);
   }, [routePending]);
 
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 top-0 z-[130] transition-opacity duration-200",
+        "pointer-events-none fixed inset-x-0 top-0 z-[130] transition-opacity duration-100",
         visible ? "opacity-100" : "opacity-0",
       )}
       aria-hidden={!visible}
     >
-      <div className="relative h-[3px] w-full overflow-hidden bg-transparent">
+      <div className="relative h-[2px] w-full overflow-hidden bg-transparent">
         <div
           className={cn(
             "absolute inset-y-0 left-0 w-1/3 bg-[linear-gradient(90deg,transparent,var(--accent),var(--brand),var(--accent),transparent)]",
-            visible && "animate-[loading-slide_1.05s_ease-in-out_infinite]",
+            visible && "animate-[loading-slide_0.85s_ease-in-out_infinite]",
           )}
         />
       </div>
-      {visible && fetching > 0 && !routePending ? (
-        <div className="pointer-events-none absolute left-1/2 top-[calc(var(--store-chrome)+1.25rem)] -translate-x-1/2 md:top-24">
-          <div className="flex items-center gap-2 rounded-full border border-line bg-surface/95 px-3 py-1.5 shadow-[0_12px_30px_-18px_rgba(28,25,21,0.55)] backdrop-blur-sm">
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--btn-fill-border)] border-t-[var(--btn-fill-text)]" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Loading</span>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

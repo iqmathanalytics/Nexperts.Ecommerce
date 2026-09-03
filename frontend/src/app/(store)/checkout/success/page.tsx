@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, MapPin, Package, Truck } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatDate, formatMoney, SITE_NAME } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { expectedDeliveryWindow, paymentLabel } from "@/lib/orders";
 import { asAmount, formatAddress, type CustomerOrder } from "@/lib/orderTypes";
 import { OrderPlacedCeremony } from "@/components/store/OrderPlacedCeremony";
 import { easeOut } from "@/lib/motion";
+import { splashHoldMs } from "@/lib/splash";
 
 function SuccessInner() {
   const params = useSearchParams();
@@ -26,49 +27,42 @@ function SuccessInner() {
   const order = orderQuery.data?.data;
   const pay = order?.payments?.[0];
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "60123456789";
+  const [ceremony, setCeremony] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCeremony(false), splashHoldMs());
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <div className="bg-background text-ink">
-      <section className="relative flex min-h-[88svh] flex-col items-center justify-center overflow-hidden bg-[#1e3d32] px-6 py-24 text-center text-white">
-        <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full border border-white/10" />
-        <div className="pointer-events-none absolute -right-16 bottom-8 h-56 w-56 rounded-full border border-[#c4a056]/35" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(196,160,86,0.22),transparent_55%)]" />
-
-        <OrderPlacedCeremony />
-
-        <motion.p
-          className="relative mt-8 text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.55, ease: easeOut }}
-        >
-          House confirmation
-        </motion.p>
-        <motion.h1
-          className="relative mt-4 max-w-xl font-display text-5xl font-medium italic leading-[0.92] text-white md:text-7xl"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.82, duration: 0.7, ease: easeOut }}
-        >
-          It’s yours.
-        </motion.h1>
-        <motion.p
-          className="relative mt-5 max-w-md text-sm leading-relaxed text-white/85 md:text-base"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.55, ease: easeOut }}
-        >
-          {SITE_NAME} has sealed your order. A note is on its way, and the atelier is preparing your pieces.
-        </motion.p>
-        {orderNumber ? (
-          <motion.p
-            className="relative mt-8 border border-white/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.15, duration: 0.5, ease: easeOut }}
+      <AnimatePresence>
+        {ceremony ? (
+          <motion.div
+            className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-[#1e3d32] px-6 text-center text-white"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, y: "-6%" }}
+            transition={{ duration: 0.4, ease: easeOut }}
           >
+            <OrderPlacedCeremony />
+            <p className="relative mt-8 text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]">House confirmation</p>
+            <h1 className="relative mt-4 font-display text-5xl font-medium italic text-white md:text-7xl">It’s yours.</h1>
+            <p className="relative mt-5 max-w-md text-sm text-white/85">The house has sealed your order. Confirmation opens next.</p>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <section className="border-b border-line bg-[#1e3d32] px-6 py-14 text-center text-white md:py-16">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]">House confirmation</p>
+        <h1 className="mt-4 font-display text-4xl font-medium italic text-white md:text-6xl">It’s yours.</h1>
+        <p className="mx-auto mt-4 max-w-md text-sm text-white/85">
+          {SITE_NAME} has sealed your order. A note is on its way, and the atelier is preparing your pieces.
+        </p>
+        {orderNumber ? (
+          <p className="mt-6 inline-block border border-white/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
             {orderNumber}
-          </motion.p>
+          </p>
         ) : null}
       </section>
 

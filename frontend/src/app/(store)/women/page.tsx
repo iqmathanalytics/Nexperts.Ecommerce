@@ -5,17 +5,13 @@ import { ProductGrid } from "@/components/store/ProductCard";
 import { CampaignHero } from "@/components/store/CampaignHero";
 import { Reveal } from "@/components/store/Reveal";
 import { DRESS_EDITS, DEFAULT_EDITORIAL, WOMEN_HERO_VIDEO, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
-import { categoryHref, withShopGender } from "@/lib/shop";
+import { categoryHref, WOMEN_CATEGORY_NAV, withShopGender } from "@/lib/shop";
 import type { ProductCard } from "@/lib/types";
 
 export const revalidate = 300;
 
 const WOMEN_NAV = [
-  { href: categoryHref("dresses", "WOMEN"), label: "Dresses" },
-  { href: categoryHref("tops", "WOMEN"), label: "Tops" },
-  { href: categoryHref("bottoms", "WOMEN"), label: "Trousers" },
-  { href: categoryHref("ethnic-wear", "WOMEN"), label: "Heritage" },
-  { href: categoryHref("outerwear", "WOMEN"), label: "Outerwear" },
+  ...WOMEN_CATEGORY_NAV.map((item) => ({ href: categoryHref(item.slug, "WOMEN"), label: item.label })),
   { href: "/products?gender=WOMEN&sort=newest", label: "New in" },
 ];
 

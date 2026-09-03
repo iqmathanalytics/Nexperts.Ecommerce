@@ -14,10 +14,23 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** Browser calls go through the same-origin `/api/v1` proxy so auth cookies stick. */
+function resolveClientApiBase() {
+  if (typeof window !== "undefined") return "/api/v1";
+  return API_URL;
+}
+
 function fallbackMessage(status: number) {
   if (status === 429) return "Too many sign-in attempts. Please wait a few minutes and try again.";
-  if (status === 0) return "Unable to reach the server. Please try again.";
+  if (status === 0 || status === 502) return "Unable to reach the server. Please try again.";
   return "Unexpected server response.";
+}
+
+function isPublicGet(path: string, method: string) {
+  if (method !== "GET" && method !== "HEAD") return false;
+  return /^(?:\/products|\/categories|\/brands|\/editorial|\/home|\/commerce|\/lookbooks|\/collections|\/designers)/.test(
+    path.split("?")[0] ?? path,
+  );
 }
 
 export async function api<T>(path: string, init?: RequestInit): Promise<{ data: T; meta?: Record<string, number> }> {
@@ -25,11 +38,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<{ data: 
   if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
+  const method = (init?.method ?? "GET").toUpperCase();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${resolveClientApiBase()}${path}`, {
       ...init,
-      cache: init?.cache ?? "no-store",
+      cache: init?.cache ?? (isPublicGet(path, method) ? "default" : "no-store"),
       headers,
       credentials: "include",
     });

@@ -185,38 +185,40 @@ export async function listTransactions(filters: {
 }
 
 export async function inventoryAnalytics() {
-  const [rows] = await pool.query(`
-    SELECT
-      COALESCE(SUM(GREATEST(i.stock - i.reserved_stock, 0)), 0) AS totalStock,
-      SUM(CASE WHEN (i.stock - i.reserved_stock) > i.reorder_level THEN 1 ELSE 0 END) AS healthyStock,
-      SUM(CASE WHEN (i.stock - i.reserved_stock) > 0 AND (i.stock - i.reserved_stock) <= i.reorder_level THEN 1 ELSE 0 END) AS lowStock,
-      SUM(CASE WHEN (i.stock - i.reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock,
-      COALESCE(SUM(GREATEST(i.stock - i.reserved_stock, 0) * v.price), 0) AS inventoryValue
-    FROM inventory i
-    INNER JOIN product_variants v ON v.id = i.variant_id
-    INNER JOIN products p ON p.id = v.product_id
-    WHERE v.status = 'ACTIVE' AND p.status = 'PUBLISHED'
-  `);
+  const [[rows], [best], [slow]] = await Promise.all([
+    pool.query(`
+      SELECT
+        COALESCE(SUM(GREATEST(i.stock - i.reserved_stock, 0)), 0) AS totalStock,
+        SUM(CASE WHEN (i.stock - i.reserved_stock) > i.reorder_level THEN 1 ELSE 0 END) AS healthyStock,
+        SUM(CASE WHEN (i.stock - i.reserved_stock) > 0 AND (i.stock - i.reserved_stock) <= i.reorder_level THEN 1 ELSE 0 END) AS lowStock,
+        SUM(CASE WHEN (i.stock - i.reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock,
+        COALESCE(SUM(GREATEST(i.stock - i.reserved_stock, 0) * v.price), 0) AS inventoryValue
+      FROM inventory i
+      INNER JOIN product_variants v ON v.id = i.variant_id
+      INNER JOIN products p ON p.id = v.product_id
+      WHERE v.status = 'ACTIVE' AND p.status = 'PUBLISHED'
+    `),
+    pool.query(`
+      SELECT p.name, p.id, SUM(oi.quantity) AS units
+      FROM order_items oi
+      INNER JOIN products p ON p.id = oi.product_id
+      INNER JOIN orders o ON o.id = oi.order_id
+      WHERE o.status != 'CANCELLED'
+      GROUP BY p.id
+      ORDER BY units DESC
+      LIMIT 8
+    `),
+    pool.query(`
+      SELECT p.name, p.id, i.stock
+      FROM inventory i
+      INNER JOIN product_variants v ON v.id = i.variant_id
+      INNER JOIN products p ON p.id = v.product_id
+      LEFT JOIN order_items oi ON oi.variant_id = v.id
+      WHERE oi.id IS NULL AND i.stock > 0
+      LIMIT 8
+    `),
+  ]);
   const summary = (rows as Array<Record<string, number>>)[0];
-  const [best] = await pool.query(`
-    SELECT p.name, p.id, SUM(oi.quantity) AS units
-    FROM order_items oi
-    INNER JOIN products p ON p.id = oi.product_id
-    INNER JOIN orders o ON o.id = oi.order_id
-    WHERE o.status != 'CANCELLED'
-    GROUP BY p.id
-    ORDER BY units DESC
-    LIMIT 8
-  `);
-  const [slow] = await pool.query(`
-    SELECT p.name, p.id, i.stock
-    FROM inventory i
-    INNER JOIN product_variants v ON v.id = i.variant_id
-    INNER JOIN products p ON p.id = v.product_id
-    LEFT JOIN order_items oi ON oi.variant_id = v.id
-    WHERE oi.id IS NULL AND i.stock > 0
-    LIMIT 8
-  `);
   return {
     totalStock: Number(summary?.totalStock ?? 0),
     healthyStock: Number(summary?.healthyStock ?? 0),

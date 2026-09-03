@@ -24,9 +24,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/account/:path*", "/cart", "/checkout", "/checkout/:path*"],
+  matcher: [
+    /*
+     * Run on pages (for x-pathname / intro cover) and protected routes.
+     * Skip Next internals, static assets, and the API proxy.
+     */
+    "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)",
+  ],
 };

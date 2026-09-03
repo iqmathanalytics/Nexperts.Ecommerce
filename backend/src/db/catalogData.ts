@@ -4,10 +4,10 @@ export const SIZES = ["S", "M", "L", "XL"] as const;
 
 export const CATEGORY_TREE = [
   { name: "Dresses", children: ["Casual Dresses", "Evening Dresses", "Party Dresses", "Maxi Dresses", "Midi Dresses", "Mini Dresses"] },
-  { name: "Tops", children: [] as string[] },
-  { name: "Bottoms", children: [] as string[] },
+  { name: "Tops", children: ["Shirts", "T-Shirts"] },
+  { name: "Bottoms", children: ["Trousers"] },
   { name: "Ethnic Wear", children: ["Ethnic Dresses"] },
-  { name: "Outerwear", children: [] as string[] },
+  { name: "Outerwear", children: ["Jackets"] },
 ];
 
 export const CLOTHING_BRANDS = [
@@ -47,10 +47,14 @@ export const CATEGORY_IMAGES: Record<string, string> = {
   "Midi Dresses": heroU("photo-1496747611176-843222e1e57c"),
   "Mini Dresses": heroPx(985635),
   Tops: heroPx(7679720),
+  Shirts: heroPx(1043474),
+  "T-Shirts": heroU("photo-1521572163474-6864f9cf17ab"),
   Bottoms: heroU("photo-1594633312681-425c7b97ccd1"),
+  Trousers: heroU("photo-1488161628813-04466f872be2"),
   "Ethnic Wear": heroU("photo-1610030469983-98e550d6193c"),
   "Ethnic Dresses": heroU("photo-1583391733956-3750e0ff4e8b"),
   Outerwear: heroPx(7671166),
+  Jackets: heroPx(842811),
 };
 
 export const CATALOG: Array<{
@@ -405,6 +409,7 @@ export const CATALOG: Array<{
   {
     name: "UrbanThread Oxford Shirt",
     category: "Tops",
+    extraCategory: "Shirts",
     brand: "UrbanThread",
     gender: "MEN",
     price: 2299,
@@ -444,6 +449,7 @@ export const CATALOG: Array<{
   {
     name: "Lumina Wool Overcoat",
     category: "Outerwear",
+    extraCategory: "Jackets",
     brand: "Lumina",
     gender: "MEN",
     price: 11999,
@@ -463,6 +469,7 @@ export const CATALOG: Array<{
   {
     name: "UrbanThread Tailored Chinos",
     category: "Bottoms",
+    extraCategory: "Trousers",
     brand: "UrbanThread",
     gender: "MEN",
     price: 2599,

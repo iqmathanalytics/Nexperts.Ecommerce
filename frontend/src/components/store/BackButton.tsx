@@ -41,6 +41,7 @@ export function BackButton({
   return (
     <button
       type="button"
+      data-nav
       onClick={goBack}
       aria-label={label}
       className={cn(

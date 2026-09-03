@@ -14,27 +14,19 @@ export type CampaignHeroLink = { href: string; label: string };
 
 export type CampaignHeroVideo = {
   src: string;
-  /** Optional lighter source for phones / save-data. */
+  /** Optional lighter source for save-data / very slow links. */
   srcMobile?: string;
-  /** Optional Full HD for large desktop when a single film is on screen. */
-  srcHd?: string;
   poster: string;
   alt: string;
 };
 
-function pickVideoSrc(video: CampaignHeroVideo, opts?: { allowFullHd?: boolean }) {
+function pickVideoSrc(video: CampaignHeroVideo) {
   if (typeof window === "undefined") return video.src;
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
   const saveData = Boolean(connection?.saveData);
-  const slow =
-    connection?.effectiveType === "2g" ||
-    connection?.effectiveType === "slow-2g" ||
-    connection?.effectiveType === "3g";
-  const phone = window.matchMedia("(max-width: 767px)").matches;
-  const largeDesktop = window.matchMedia("(min-width: 1280px)").matches;
-
-  if ((phone || saveData || slow) && video.srcMobile) return video.srcMobile;
-  if (opts?.allowFullHd && largeDesktop && video.srcHd && !saveData && !slow) return video.srcHd;
+  // Only throttle on truly constrained links — treating "3g" as slow forced soft 360p on many desktops/phones.
+  const verySlow = connection?.effectiveType === "2g" || connection?.effectiveType === "slow-2g";
+  if ((saveData || verySlow) && video.srcMobile) return video.srcMobile;
   return video.src;
 }
 
@@ -43,38 +35,38 @@ function FilmPane({
   reduceMotion,
   fallbackImage,
   eager,
-  allowFullHd = false,
 }: {
   video: CampaignHeroVideo;
   reduceMotion: boolean;
   fallbackImage?: string;
   eager?: boolean;
-  allowFullHd?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLVideoElement>(null);
   const still = fallbackImage || video.poster;
-  const [src, setSrc] = useState(() => pickVideoSrc(video, { allowFullHd }));
+  const [src, setSrc] = useState(video.src);
   const [inView, setInView] = useState(eager ?? false);
-  // Poster paints first for LCP; video arms after a short idle delay even when eager.
+  // Poster paints first for LCP; video arms after the page is idle.
   const [ready, setReady] = useState(false);
+  const [hasFrame, setHasFrame] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setSrc(pickVideoSrc(video, { allowFullHd }));
-  }, [video, allowFullHd]);
+    setSrc(pickVideoSrc(video));
+    setHasFrame(false);
+    setFailed(false);
+  }, [video]);
 
   useEffect(() => {
     if (reduceMotion) return;
     if (!eager) return;
-    const ric = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
-    if (ric) {
-      const id = ric(() => setReady(true), { timeout: 900 });
-      return () => {
-        (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
-      };
-    }
-    const t = window.setTimeout(() => setReady(true), 450);
-    return () => window.clearTimeout(t);
+    const armVideo = () => setReady(true);
+    const idle = window.requestIdleCallback?.(armVideo, { timeout: 1800 });
+    const fallback = idle == null ? window.setTimeout(armVideo, 1200) : undefined;
+    return () => {
+      if (idle != null) window.cancelIdleCallback?.(idle);
+      if (fallback) window.clearTimeout(fallback);
+    };
   }, [eager, reduceMotion]);
 
   useEffect(() => {
@@ -86,7 +78,7 @@ function FilmPane({
         setInView(visible);
         if (visible && !eager) setReady(true);
       },
-      { root: null, threshold: 0.2, rootMargin: "80px 0px" },
+      { root: null, threshold: 0.15, rootMargin: "120px 0px" },
     );
     io.observe(root);
     return () => io.disconnect();
@@ -94,50 +86,78 @@ function FilmPane({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || reduceMotion || !ready) return;
+    if (!el || reduceMotion || !ready || failed) return;
     el.muted = true;
     if (inView) {
-      el.play().catch(() => undefined);
+      const play = () => el.play().catch(() => undefined);
+      // Wait for enough data so playback doesn't stutter/break on first paint.
+      if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) play();
+      else {
+        const onCanPlay = () => {
+          el.removeEventListener("canplay", onCanPlay);
+          play();
+        };
+        el.addEventListener("canplay", onCanPlay);
+        el.load();
+        return () => el.removeEventListener("canplay", onCanPlay);
+      }
     } else {
       el.pause();
     }
-  }, [reduceMotion, ready, inView, src]);
+  }, [reduceMotion, ready, inView, src, failed]);
 
   useEffect(() => {
     const onVisible = () => {
       const el = ref.current;
-      if (!el || reduceMotion || !inView) return;
+      if (!el || reduceMotion || !inView || failed) return;
       if (document.visibilityState === "visible") el.play().catch(() => undefined);
       else el.pause();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [reduceMotion, inView]);
+  }, [reduceMotion, inView, failed]);
+
+  const showPoster = reduceMotion || !ready || failed || !hasFrame;
 
   return (
     <div ref={wrapRef} className="hero-film">
-      {reduceMotion || !ready ? (
+      {showPoster ? (
         <div
           className="absolute inset-0 bg-cover bg-[center_22%] md:bg-center"
           style={{ backgroundImage: `url(${still})` }}
           role="img"
           aria-label={video.alt}
         />
-      ) : (
+      ) : null}
+      {!reduceMotion && ready && !failed ? (
         <video
+          key={src}
           ref={ref}
-          className="hero-film-media"
-          autoPlay={inView}
+          className={`hero-film-media transition-opacity duration-300 ${hasFrame ? "opacity-100" : "opacity-0"}`}
           muted
           loop
           playsInline
-          preload={eager ? "auto" : "metadata"}
+          preload={eager ? "metadata" : "none"}
           poster={video.poster}
           aria-label={video.alt}
+          onPlaying={() => setHasFrame(true)}
+          onLoadedData={() => setHasFrame(true)}
+          onError={() => {
+            // Fall back once to the lighter file, then stay on poster.
+            if (video.srcMobile && src !== video.srcMobile) {
+              setHasFrame(false);
+              setSrc(video.srcMobile);
+              return;
+            }
+            setFailed(true);
+          }}
+          onWaiting={() => {
+            /* keep last frame; browser buffers without blanking the layer */
+          }}
         >
           <source src={src} type="video/mp4" />
         </video>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -199,7 +219,6 @@ export function CampaignHero({
               reduceMotion={reduceMotion}
               fallbackImage={i === 0 ? image : film.poster}
               eager={i === 0}
-              allowFullHd={!split}
             />
           ))}
         </div>
@@ -214,7 +233,7 @@ export function CampaignHero({
 
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "var(--hero-veil)" }} />
 
-      <div className="pointer-events-none relative z-10 mx-auto flex h-full w-full max-w-3xl flex-col items-center justify-end px-6 pb-16 pt-[calc(var(--store-chrome)+1rem)] text-center md:pb-20">
+      <div className="pointer-events-none relative z-10 mx-auto flex h-full w-full max-w-3xl flex-col items-center justify-end px-6 pb-24 pt-[calc(var(--store-chrome)+1rem)] text-center md:pb-20">
         <div className="flex w-full flex-col items-center gap-4 md:gap-5">
           {kicker ? (
             <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.2em] text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">{kicker}</p>

@@ -9,9 +9,6 @@ const OpeningScreen = dynamic(() => import("@/components/store/OpeningScreen").t
   ssr: false,
 });
 const OfferPopups = dynamic(() => import("@/components/store/OfferPopups").then((m) => m.OfferPopups), { ssr: false });
-const ProductTransit = dynamic(() => import("@/components/store/ProductTransit").then((m) => m.ProductTransit), {
-  ssr: false,
-});
 
 export function StoreShell({ children }: { children: ReactNode }) {
   return (
@@ -23,7 +20,6 @@ export function StoreShell({ children }: { children: ReactNode }) {
       </main>
       <Footer />
       <OfferPopups />
-      <ProductTransit />
     </div>
   );
 }

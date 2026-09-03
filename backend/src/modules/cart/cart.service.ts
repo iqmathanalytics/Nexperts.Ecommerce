@@ -100,18 +100,23 @@ export async function getCart(userId: number) {
 }
 
 export async function addToCart(userId: number, input: z.infer<typeof cartItemSchema>) {
-  const cart = await getOrCreateCart(userId);
-  const [variant] = await db.select().from(productVariants).where(eq(productVariants.id, input.variantId)).limit(1);
+  const [cart, variants] = await Promise.all([
+    getOrCreateCart(userId),
+    db.select().from(productVariants).where(eq(productVariants.id, input.variantId)).limit(1),
+  ]);
+  const variant = variants[0];
   if (!variant || variant.status !== "ACTIVE") throw new AppError("NOT_FOUND", "Variant not found", 404);
-  const [product] = await db.select().from(products).where(eq(products.id, variant.productId)).limit(1);
+  const [[product], [inv], [existing]] = await Promise.all([
+    db.select().from(products).where(eq(products.id, variant.productId)).limit(1),
+    db.select().from(inventory).where(eq(inventory.variantId, variant.id)).limit(1),
+    db
+      .select()
+      .from(cartItems)
+      .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.variantId, input.variantId)))
+      .limit(1),
+  ]);
   if (!product || product.status !== "PUBLISHED") throw new AppError("NOT_FOUND", "Product not available", 404);
-  const [inv] = await db.select().from(inventory).where(eq(inventory.variantId, variant.id)).limit(1);
   const available = Math.max(0, Number(inv?.stock ?? 0) - Number(inv?.reservedStock ?? 0));
-  const [existing] = await db
-    .select()
-    .from(cartItems)
-    .where(and(eq(cartItems.cartId, cart.id), eq(cartItems.variantId, input.variantId)))
-    .limit(1);
   const nextQty = (existing?.quantity ?? 0) + input.quantity;
   if (nextQty > available) throw new AppError("OUT_OF_STOCK", "Not enough stock for this quantity", 400);
   if (existing) {
@@ -131,11 +136,15 @@ export async function updateCartItem(userId: number, itemId: number, quantity: n
     return getCart(userId);
   }
   const targetVariant = variantId ?? item.variantId;
-  const [variant] = await db.select().from(productVariants).where(eq(productVariants.id, targetVariant)).limit(1);
+  const [variants, existingInv] = await Promise.all([
+    db.select().from(productVariants).where(eq(productVariants.id, targetVariant)).limit(1),
+    db.select().from(inventory).where(eq(inventory.variantId, targetVariant)).limit(1),
+  ]);
+  const variant = variants[0];
   if (!variant || variant.status !== "ACTIVE") throw new AppError("NOT_FOUND", "Variant not found", 404);
   const [product] = await db.select().from(products).where(eq(products.id, variant.productId)).limit(1);
   if (!product || product.status !== "PUBLISHED") throw new AppError("NOT_FOUND", "Product not available", 404);
-  const [inv] = await db.select().from(inventory).where(eq(inventory.variantId, targetVariant)).limit(1);
+  const inv = existingInv[0];
   const available = Math.max(0, Number(inv?.stock ?? 0) - Number(inv?.reservedStock ?? 0));
   if (quantity > available) throw new AppError("OUT_OF_STOCK", "Not enough stock", 400);
   await db.update(cartItems).set({ quantity, variantId: targetVariant }).where(eq(cartItems.id, itemId));

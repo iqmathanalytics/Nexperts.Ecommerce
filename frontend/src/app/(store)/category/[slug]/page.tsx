@@ -9,7 +9,7 @@ import { CatalogInner } from "@/components/store/Catalog";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { PageHero } from "@/components/store/PageHero";
 import { PageState, PageLoader } from "@/components/ui/state";
-import { categoryHref, inferCategoryGender, shopGenderLabel } from "@/lib/shop";
+import { categoryDisplayName, categoryHref, inferCategoryGender, MEN_CATEGORY_NAV, resolveCategorySlug, shopGenderLabel } from "@/lib/shop";
 import type { ProductCard } from "@/lib/types";
 
 type Category = {
@@ -22,16 +22,18 @@ type Category = {
 };
 
 function CategoryInner() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: rawSlug } = useParams<{ slug: string }>();
   const params = useSearchParams();
-  const gender = inferCategoryGender(slug, params.get("gender"));
+  const encoded = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
+  const gender = inferCategoryGender(encoded ?? "", params.get("gender"));
+  const slug = encoded ? resolveCategorySlug(encoded, gender) : "";
   const cat = useQuery({
     queryKey: ["category", slug],
-    queryFn: () => api<Category>(`/categories/${slug}`),
+    queryFn: () => api<Category>(`/categories/${encodeURIComponent(slug)}`),
     enabled: Boolean(slug),
   });
 
-  if (cat.isLoading) {
+  if (!slug || cat.isPending) {
     return <PageLoader label="Loading category" />;
   }
   if (cat.isError || !cat.data) return <PageState title="Category not found" />;
@@ -39,18 +41,36 @@ function CategoryInner() {
   const category = cat.data.data;
   const childHref = (childSlug: string) => categoryHref(childSlug, gender);
   const kicker = gender ? `${shopGenderLabel(gender)} · Clothing` : "Clothing category";
+  const title = categoryDisplayName(category.slug, category.name, gender);
+  const menChips = gender === "MEN" ? MEN_CATEGORY_NAV : null;
 
   return (
     <div className="bg-background text-ink">
       <PageHero
         image={category.imageUrl}
         kicker={kicker}
-        title={category.name}
+        title={title}
         subtitle={category.description}
         focal="center"
         backHref={gender === "MEN" ? "/men" : gender === "WOMEN" ? "/women" : "/products"}
       >
-        {category.children.length > 0 ? (
+        {menChips ? (
+          <div className="flex flex-wrap gap-2">
+            {menChips.map((item) => (
+              <Link
+                key={item.slug}
+                href={categoryHref(item.slug, "MEN")}
+                className={`btn-store btn-hero-outline rounded-sm border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                  item.slug === slug
+                    ? "border-white bg-white text-[#123028]"
+                    : "border-white/80 bg-[rgba(244,239,230,0.9)] text-[#123028] hover:bg-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        ) : category.children.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {category.children.map((child) => (
               <Link

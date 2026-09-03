@@ -34,6 +34,7 @@ export const adminNav: AdminNavSection[] = [
     title: "Marketing",
     items: [
       { label: "Coupons", href: "/admin/coupons" },
+      { label: "Editorial", href: "/admin/editorial" },
       { label: "Reviews", href: "/admin/reviews" },
     ],
   },

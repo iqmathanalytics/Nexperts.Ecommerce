@@ -10,6 +10,7 @@ import {
   collectionProducts,
   collections,
   consentRecords,
+  coupons,
   lookbookItems,
   lookbooks,
   loyaltyAccounts,
@@ -364,14 +365,38 @@ export async function redeemLoyalty(userId: number, points: number) {
   if (acc.balance < points) throw new AppError("INSUFFICIENT", "Not enough points", 400);
   // 100 points = RM 10
   const discountAmount = (points / 100) * 10;
+  const code = `LOYALTY${userId}${Date.now().toString(36).toUpperCase()}`;
+  const startsAt = new Date();
+  const endsAt = new Date(Date.now() + 30 * 86400000);
+
   await db.update(loyaltyAccounts).set({ balance: acc.balance - points }).where(eq(loyaltyAccounts.id, acc.id));
   await db.insert(loyaltyTransactions).values({
     accountId: acc.id,
     points: -points,
     type: "REDEEM",
-    reason: `Redeemed for RM ${discountAmount} off`,
+    reason: `Redeemed for RM ${discountAmount} off (${code})`,
   });
-  return { discountAmount, balance: acc.balance - points, couponHint: `LOYALTY${points}` };
+  await db.insert(coupons).values({
+    code,
+    type: "FIXED",
+    value: String(discountAmount),
+    minOrderAmount: "0.00",
+    maxDiscount: null,
+    startsAt,
+    endsAt,
+    usageLimit: 1,
+    usageCount: 0,
+    perUserLimit: 1,
+    status: "ACTIVE",
+  });
+
+  return {
+    discountAmount,
+    balance: acc.balance - points,
+    couponCode: code,
+    couponHint: code,
+    endsAt: endsAt.toISOString(),
+  };
 }
 
 export async function shippingEstimate(pincode: string) {

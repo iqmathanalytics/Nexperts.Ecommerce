@@ -48,6 +48,7 @@ export const editorialSchema = z.object({
   offers: z
     .array(z.object({ kicker: z.string().max(80), code: z.string().max(40), text: z.string().max(180), href: z.string().max(400) }))
     .optional(),
+  saleEndsAt: z.string().max(40).optional().nullable(),
 });
 
 export const collectionSchema = z.object({

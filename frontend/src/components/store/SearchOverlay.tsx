@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useStoreUi } from "@/components/store/StoreUiContext";
-import { fade, isModifiedClick } from "@/lib/motion";
+import { fade } from "@/lib/motion";
 import { categoryHref } from "@/lib/shop";
 
 type Suggest = {
@@ -36,7 +36,7 @@ function pushRecent(term: string) {
 
 export function SearchOverlay() {
   const router = useRouter();
-  const { searchOpen, closeSearch, goToProduct } = useStoreUi();
+  const { searchOpen, closeSearch } = useStoreUi();
   const [q, setQ] = useState("");
   const [recent, setRecent] = useState<string[]>([]);
   const debouncedQ = useDebouncedValue(q, 150);
@@ -103,14 +103,8 @@ export function SearchOverlay() {
                   <Link
                     key={p.slug}
                     href={`/products/${p.slug}`}
-                    onClick={(e) => {
-                      closeSearch();
-                      if (isModifiedClick(e)) return;
-                      e.preventDefault();
-                      const href = `/products/${p.slug}`;
-                      goToProduct({ href, name: p.name });
-                      router.push(href);
-                    }}
+                    prefetch
+                    onClick={() => closeSearch()}
                     className="block border-b border-line py-3 transition hover:pl-1"
                   >
                     <span className="font-medium">{p.name}</span>
@@ -154,11 +148,6 @@ export function SearchOverlay() {
                     </ul>
                   </div>
                 ) : null}
-                <div className="md:col-span-2">
-                  <Link href="/visual-search" onClick={closeSearch} className="text-xs font-semibold uppercase tracking-[0.18em] underline-offset-4 hover:underline">
-                    Try visual search
-                  </Link>
-                </div>
               </div>
             )}
           </div>

@@ -7,23 +7,28 @@ import { api } from "@/lib/api";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { ProductCardSkeleton } from "@/components/ui/state";
 import { CampaignHero } from "@/components/store/CampaignHero";
-import { SALE_HERO, SALE_HERO_VIDEO } from "@/lib/editorial";
+import { mergeEditorial, SALE_HERO, SALE_HERO_VIDEO, type StorefrontEditorial } from "@/lib/editorial";
 import type { ProductCard } from "@/lib/types";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function SaleClock() {
+function SaleClock({ endsAt }: { endsAt?: string | null }) {
   const end = useMemo(() => {
+    if (endsAt) {
+      const parsed = new Date(endsAt).getTime();
+      if (!Number.isNaN(parsed) && parsed > Date.now()) return parsed;
+    }
     const d = new Date();
     d.setDate(d.getDate() + 3);
     d.setHours(23, 59, 59, 0);
     return d.getTime();
-  }, []);
-  const [left, setLeft] = useState(end - Date.now());
+  }, [endsAt]);
+  const [left, setLeft] = useState(() => Math.max(0, end - Date.now()));
 
   useEffect(() => {
+    setLeft(Math.max(0, end - Date.now()));
     const id = window.setInterval(() => setLeft(Math.max(0, end - Date.now())), 1000);
     return () => window.clearInterval(id);
   }, [end]);
@@ -47,12 +52,8 @@ function SaleClock() {
           key={p.l}
           className="flex min-h-[4.75rem] flex-col items-center justify-center border border-accent/45 bg-ink/80 px-1 py-2.5 text-center backdrop-blur-md md:min-h-[5.25rem]"
         >
-          <p className="font-display text-[1.7rem] font-medium leading-none tabular-nums text-accent md:text-[2.05rem]">
-            {p.v}
-          </p>
-          <p className="mt-2 w-full text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-white/80">
-            {p.l}
-          </p>
+          <p className="font-display text-[1.7rem] font-medium leading-none tabular-nums text-accent md:text-[2.05rem]">{p.v}</p>
+          <p className="mt-2 w-full text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-white/80">{p.l}</p>
         </div>
       ))}
     </div>
@@ -64,7 +65,12 @@ export default function SalePage() {
     queryKey: ["sale-products"],
     queryFn: () => api<ProductCard[]>("/products?sort=discount&limit=24"),
   });
-
+  const editorial = useQuery({
+    queryKey: ["editorial"],
+    queryFn: () => api<StorefrontEditorial>("/editorial"),
+    staleTime: 60_000,
+  });
+  const ed = mergeEditorial(editorial.data?.data);
   const onSale = (data?.data ?? []).filter((p) => p.discountPercent > 0);
 
   return (
@@ -80,7 +86,7 @@ export default function SalePage() {
           { href: "/products?gender=MEN&sort=discount", label: "Man", variant: "outline" },
         ]}
       >
-        <SaleClock />
+        <SaleClock endsAt={ed.saleEndsAt || null} />
       </CampaignHero>
       <div className="mx-auto max-w-[1400px] px-4 py-12 md:px-6">
         <p className="font-display text-3xl font-medium italic tracking-tight md:text-4xl">On sale now</p>

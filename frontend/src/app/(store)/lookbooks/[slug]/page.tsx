@@ -3,18 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatINR } from "@/lib/utils";
 import { PageState, Skeleton } from "@/components/ui/state";
-import { useStoreUi } from "@/components/store/StoreUiContext";
 import { PageBackCorner } from "@/components/store/BackButton";
-import { isModifiedClick } from "@/lib/motion";
 
 export default function LookbookPage() {
   const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
-  const { goToProduct } = useStoreUi();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["lookbook", slug],
     queryFn: () =>
@@ -64,18 +60,7 @@ export default function LookbookPage() {
         <h2 className="font-display text-3xl font-semibold">Shop the look</h2>
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {(lb.items ?? []).map((item) => (
-            <Link
-              key={item.productId}
-              href={`/products/${item.slug}`}
-              onClick={(e) => {
-                if (isModifiedClick(e)) return;
-                e.preventDefault();
-                const href = `/products/${item.slug}`;
-                goToProduct({ href, name: item.name, imageUrl: item.imageUrl });
-                router.push(href);
-              }}
-              className="group border border-line bg-surface"
-            >
+            <Link key={item.productId} href={`/products/${item.slug}`} prefetch className="group border border-line bg-surface">
               <div className="relative aspect-[2/3] overflow-hidden bg-surface-muted">
                 {item.imageUrl ? (
                   <Image src={item.imageUrl} alt="" fill className="object-cover object-center" sizes="33vw" />

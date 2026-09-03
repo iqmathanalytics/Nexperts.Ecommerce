@@ -57,69 +57,86 @@ function namedCounts(rows: unknown, nameKey: string, valueKey: string) {
 
 export async function dashboard(period = "30d") {
   const start = range(period);
-  const [kpis] = await pool.query(
-    `SELECT
-      COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0) AS revenue,
-      COUNT(*) AS orders,
-      COALESCE(AVG(CASE WHEN status != 'CANCELLED' THEN total END), 0) AS aov,
-      COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN (SELECT COALESCE(SUM(quantity),0) FROM order_items oi WHERE oi.order_id = orders.id) ELSE 0 END), 0) AS units
-     FROM orders
-     WHERE created_at >= ?`,
-    [start],
-  );
-  const [customers] = await pool.query(
-    `SELECT COUNT(*) AS total FROM users u
-     INNER JOIN user_roles ur ON ur.user_id = u.id
-     INNER JOIN roles r ON r.id = ur.role_id
-     WHERE r.name = 'CUSTOMER' AND u.status = 'ACTIVE'`,
-  );
-  const [pendingOrders] = await pool.query(`SELECT COUNT(*) AS total FROM orders WHERE status IN ('PENDING','CONFIRMED')`);
-  const [pendingReviews] = await pool.query(`SELECT COUNT(*) AS total FROM reviews WHERE status = 'PENDING'`);
-  const [stock] = await pool.query(`
-    SELECT
-      SUM(CASE WHEN (stock - reserved_stock) > 0 AND (stock - reserved_stock) <= reorder_level THEN 1 ELSE 0 END) AS lowStock,
-      SUM(CASE WHEN (stock - reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock
-    FROM inventory
-  `);
-  const [revenueSeries] = await pool.query(
-    `SELECT DATE(created_at) AS day, COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END),0) AS revenue,
-            COUNT(*) AS orders
-     FROM orders WHERE created_at >= ?
-     GROUP BY DATE(created_at) ORDER BY day`,
-    [start],
-  );
-  const [topProducts] = await pool.query(
-    `SELECT p.name, SUM(oi.quantity) AS units, SUM(oi.total) AS revenue
-     FROM order_items oi
-     INNER JOIN products p ON p.id = oi.product_id
-     INNER JOIN orders o ON o.id = oi.order_id
-     WHERE o.created_at >= ? AND o.status != 'CANCELLED'
-     GROUP BY p.id ORDER BY units DESC LIMIT 8`,
-    [start],
-  );
-  const [topCategories] = await pool.query(
-    `SELECT c.name, SUM(oi.quantity) AS units
-     FROM order_items oi
-     INNER JOIN product_categories pc ON pc.product_id = oi.product_id
-     INNER JOIN categories c ON c.id = pc.category_id
-     INNER JOIN orders o ON o.id = oi.order_id
-     WHERE o.created_at >= ? AND o.status != 'CANCELLED'
-     GROUP BY c.id ORDER BY units DESC LIMIT 8`,
-    [start],
-  );
-  const [growth] = await pool.query(
-    `SELECT DATE(u.created_at) AS day, COUNT(*) AS customers
-     FROM users u
-     INNER JOIN user_roles ur ON ur.user_id = u.id
-     INNER JOIN roles r ON r.id = ur.role_id AND r.name = 'CUSTOMER'
-     WHERE u.created_at >= ?
-     GROUP BY DATE(u.created_at) ORDER BY day`,
-    [start],
-  );
-  const [statusRows] = await pool.query(
-    `SELECT status, COUNT(*) AS count FROM orders WHERE created_at >= ? GROUP BY status ORDER BY count DESC`,
-    [start],
-  );
+  const [
+    [kpis],
+    [customers],
+    [pendingOrders],
+    [pendingReviews],
+    [stock],
+    [revenueSeries],
+    [topProducts],
+    [topCategories],
+    [growth],
+    [statusRows],
+  ] = await Promise.all([
+    pool.query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0) AS revenue,
+        COUNT(*) AS orders,
+        COALESCE(AVG(CASE WHEN status != 'CANCELLED' THEN total END), 0) AS aov,
+        COALESCE((
+          SELECT SUM(oi.quantity) FROM order_items oi
+          INNER JOIN orders ox ON ox.id = oi.order_id
+          WHERE ox.created_at >= ? AND ox.status != 'CANCELLED'
+        ), 0) AS units
+       FROM orders
+       WHERE created_at >= ?`,
+      [start, start],
+    ),
+    pool.query(
+      `SELECT COUNT(*) AS total FROM users u
+       INNER JOIN user_roles ur ON ur.user_id = u.id
+       INNER JOIN roles r ON r.id = ur.role_id
+       WHERE r.name = 'CUSTOMER' AND u.status = 'ACTIVE'`,
+    ),
+    pool.query(`SELECT COUNT(*) AS total FROM orders WHERE status IN ('PENDING','CONFIRMED')`),
+    pool.query(`SELECT COUNT(*) AS total FROM reviews WHERE status = 'PENDING'`),
+    pool.query(`
+      SELECT
+        SUM(CASE WHEN (stock - reserved_stock) > 0 AND (stock - reserved_stock) <= reorder_level THEN 1 ELSE 0 END) AS lowStock,
+        SUM(CASE WHEN (stock - reserved_stock) <= 0 THEN 1 ELSE 0 END) AS outOfStock
+      FROM inventory
+    `),
+    pool.query(
+      `SELECT DATE(created_at) AS day, COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END),0) AS revenue,
+              COUNT(*) AS orders
+       FROM orders WHERE created_at >= ?
+       GROUP BY DATE(created_at) ORDER BY day`,
+      [start],
+    ),
+    pool.query(
+      `SELECT p.name, SUM(oi.quantity) AS units, SUM(oi.total) AS revenue
+       FROM order_items oi
+       INNER JOIN products p ON p.id = oi.product_id
+       INNER JOIN orders o ON o.id = oi.order_id
+       WHERE o.created_at >= ? AND o.status != 'CANCELLED'
+       GROUP BY p.id ORDER BY units DESC LIMIT 8`,
+      [start],
+    ),
+    pool.query(
+      `SELECT c.name, SUM(oi.quantity) AS units
+       FROM order_items oi
+       INNER JOIN product_categories pc ON pc.product_id = oi.product_id
+       INNER JOIN categories c ON c.id = pc.category_id
+       INNER JOIN orders o ON o.id = oi.order_id
+       WHERE o.created_at >= ? AND o.status != 'CANCELLED'
+       GROUP BY c.id ORDER BY units DESC LIMIT 8`,
+      [start],
+    ),
+    pool.query(
+      `SELECT DATE(u.created_at) AS day, COUNT(*) AS customers
+       FROM users u
+       INNER JOIN user_roles ur ON ur.user_id = u.id
+       INNER JOIN roles r ON r.id = ur.role_id AND r.name = 'CUSTOMER'
+       WHERE u.created_at >= ?
+       GROUP BY DATE(u.created_at) ORDER BY day`,
+      [start],
+    ),
+    pool.query(
+      `SELECT status, COUNT(*) AS count FROM orders WHERE created_at >= ? GROUP BY status ORDER BY count DESC`,
+      [start],
+    ),
+  ]);
   const kpi = (kpis as Array<Record<string, number>>)[0] ?? {};
   const st = (stock as Array<Record<string, number>>)[0] ?? {};
   const revenueOverTime = fillDailySeries(start, revenueSeries as Array<Record<string, unknown>>, ["revenue", "orders"]);
@@ -149,23 +166,25 @@ export async function dashboard(period = "30d") {
 
 export async function salesAnalytics(period = "30d") {
   const start = range(period);
-  const [rows] = await pool.query(
-    `SELECT
-      COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0) AS grossRevenue,
-      COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total - tax ELSE 0 END), 0) AS netRevenue,
-      COUNT(*) AS orders,
-      COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN discount ELSE 0 END), 0) AS discounts,
-      COALESCE(SUM(CASE WHEN payment_status = 'REFUNDED' THEN total ELSE 0 END), 0) AS refunds,
-      COALESCE(AVG(CASE WHEN status != 'CANCELLED' THEN total END), 0) AS aov
-     FROM orders WHERE created_at >= ?`,
-    [start],
-  );
-  const [units] = await pool.query(
-    `SELECT COALESCE(SUM(oi.quantity),0) AS units
-     FROM order_items oi INNER JOIN orders o ON o.id = oi.order_id
-     WHERE o.created_at >= ? AND o.status != 'CANCELLED'`,
-    [start],
-  );
+  const [[rows], [units]] = await Promise.all([
+    pool.query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total ELSE 0 END), 0) AS grossRevenue,
+        COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total - tax ELSE 0 END), 0) AS netRevenue,
+        COUNT(*) AS orders,
+        COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN discount ELSE 0 END), 0) AS discounts,
+        COALESCE(SUM(CASE WHEN payment_status = 'REFUNDED' THEN total ELSE 0 END), 0) AS refunds,
+        COALESCE(AVG(CASE WHEN status != 'CANCELLED' THEN total END), 0) AS aov
+       FROM orders WHERE created_at >= ?`,
+      [start],
+    ),
+    pool.query(
+      `SELECT COALESCE(SUM(oi.quantity),0) AS units
+       FROM order_items oi INNER JOIN orders o ON o.id = oi.order_id
+       WHERE o.created_at >= ? AND o.status != 'CANCELLED'`,
+      [start],
+    ),
+  ]);
   const s = (rows as Array<Record<string, number>>)[0] ?? {};
   return {
     grossRevenue: toMoney(s.grossRevenue ?? 0),

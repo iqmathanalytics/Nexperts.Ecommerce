@@ -2,33 +2,50 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Heart, Home, LayoutGrid, Search, ShoppingBag } from "lucide-react";
 import { api } from "@/lib/api";
 import { loginUrl } from "@/lib/auth";
 import { useSession } from "@/hooks/useSession";
 import { useStoreUi } from "@/components/store/StoreUiContext";
+import { GUEST_CART_EVENT, guestCartCount } from "@/lib/guestCart";
 
 export function MobileTabBar() {
   const path = usePathname();
   const { openSearch, openMiniCart } = useStoreUi();
   const { isAuthenticated } = useSession();
+  const hide =
+    path.startsWith("/checkout") || path === "/login" || path === "/register" || path.startsWith("/forgot-password");
   const cart = useQuery({
     queryKey: ["cart"],
     queryFn: () => api<{ items: unknown[] }>("/cart"),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !hide,
     retry: false,
     staleTime: 15_000,
   });
-  const count = cart.data?.data.items.length ?? 0;
+  const [guestCount, setGuestCount] = useState(0);
+  useEffect(() => {
+    const sync = () => setGuestCount(guestCartCount());
+    sync();
+    window.addEventListener(GUEST_CART_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(GUEST_CART_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+  const count = isAuthenticated ? (cart.data?.data.items.length ?? 0) : guestCount;
+
+  if (hide) return null;
 
   const item = (active: boolean) =>
-    `flex flex-1 flex-col items-center gap-0.5 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] ${
+    `flex flex-1 flex-col items-center gap-0.5 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] touch-manipulation ${
       active ? "text-ink" : "text-muted"
     }`;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur-md md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
       <div className="flex items-stretch">
         <Link href="/" className={item(path === "/")}>
           <Home className="h-5 w-5" />

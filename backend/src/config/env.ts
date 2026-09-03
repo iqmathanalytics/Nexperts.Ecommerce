@@ -37,6 +37,7 @@ const schema = z.object({
   TAX_RATE: z.coerce.number().default(0.18),
   FREE_SHIPPING_MIN: z.coerce.number().default(999),
   SHIPPING_FLAT: z.coerce.number().default(49),
+  REVALIDATE_SECRET: z.string().optional().default(""),
 });
 
 const parsed = schema.safeParse(process.env);

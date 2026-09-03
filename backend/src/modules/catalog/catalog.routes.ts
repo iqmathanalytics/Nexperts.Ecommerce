@@ -34,6 +34,7 @@ catalogRouter.get(
   "/products/:slug",
   asyncHandler(async (req, res) => {
     const lite = req.query.lite === "1" || req.query.lite === "true";
+    res.setHeader("Cache-Control", lite ? "public, max-age=45" : "public, max-age=20, stale-while-revalidate=120");
     res.json(success(await catalog.getProductBySlug(String(req.params.slug), { lite })));
   }),
 );
@@ -56,6 +57,7 @@ catalogRouter.get(
 catalogRouter.get(
   "/brands",
   asyncHandler(async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=300");
     res.json(success(await catalog.listBrands()));
   }),
 );
@@ -63,6 +65,7 @@ catalogRouter.get(
 catalogRouter.get(
   "/home",
   asyncHandler(async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=45, stale-while-revalidate=300");
     res.json(success(await catalog.homepageData()));
   }),
 );

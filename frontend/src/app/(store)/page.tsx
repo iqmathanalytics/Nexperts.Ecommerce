@@ -1,28 +1,39 @@
+import { Suspense } from "react";
 import { fetchPublicApi } from "@/lib/server-api";
 import { HomePageView, type HomeData } from "@/components/store/HomePageView";
+import { CampaignHero } from "@/components/store/CampaignHero";
 import { PageState } from "@/components/ui/state";
-import { HERO_VIDEO } from "@/lib/editorial";
+import { DEFAULT_EDITORIAL, HERO_VIDEO } from "@/lib/editorial";
 import type { ProductCard } from "@/lib/types";
 
 export const revalidate = 300;
 
-export default async function HomePage() {
+function HomeFallback() {
+  return (
+    <CampaignHero
+      video={HERO_VIDEO}
+      title={DEFAULT_EDITORIAL.homeHeadline}
+      subtitle={DEFAULT_EDITORIAL.homeSubhead}
+      actions={[
+        { href: "/women", label: "Shop woman", variant: "solid" },
+        { href: "/men", label: "Shop man", variant: "outline" },
+      ]}
+    />
+  );
+}
+
+async function HomeLoaded() {
   try {
     const home = await fetchPublicApi<HomeData>("/home", 300);
     const featured = Array.isArray(home.featured) ? home.featured : ([] as ProductCard[]);
     return (
-      <>
-        {/* Poster only — browsers reject link preload as="video". */}
-        <link rel="preconnect" href="https://assets.mixkit.co" />
-        <link rel="preload" as="image" href={HERO_VIDEO.poster} fetchPriority="high" />
-        <HomePageView
-          data={{
-            ...home,
-            featured,
-            lookbooks: home.lookbooks ?? [],
-          }}
-        />
-      </>
+      <HomePageView
+        data={{
+          ...home,
+          featured,
+          lookbooks: home.lookbooks ?? [],
+        }}
+      />
     );
   } catch {
     return (
@@ -31,4 +42,15 @@ export default async function HomePage() {
       </PageState>
     );
   }
+}
+
+export default function HomePage() {
+  return (
+    <>
+      <link rel="preload" as="image" href={HERO_VIDEO.poster} fetchPriority="high" />
+      <Suspense fallback={<HomeFallback />}>
+        <HomeLoaded />
+      </Suspense>
+    </>
+  );
 }

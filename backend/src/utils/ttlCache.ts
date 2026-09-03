@@ -1,3 +1,5 @@
+import { env } from "../config/env";
+
 type Entry<T> = { value: T; expires: number };
 
 const store = new Map<string, Entry<unknown>>();
@@ -32,6 +34,22 @@ export function cacheDel(key: string) {
   store.delete(key);
 }
 
+/** Notify Next/Cloudflare to drop ISR pages after admin merch changes. */
+function pingFrontendRevalidate() {
+  const secret = env.REVALIDATE_SECRET;
+  if (!secret) return;
+  const base = (env.FRONTEND_URL || "").replace(/\/$/, "");
+  if (!base) return;
+  void fetch(`${base}/api/revalidate`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-revalidate-secret": secret,
+    },
+    body: JSON.stringify({ paths: ["/", "/women", "/men", "/sale", "/lookbooks", "/designers"] }),
+  }).catch(() => undefined);
+}
+
 export function invalidateStorefrontCache() {
   cacheDel("editorial");
   cacheDel("homepage");
@@ -40,4 +58,5 @@ export function invalidateStorefrontCache() {
   for (const key of [...store.keys()]) {
     if (key.startsWith("product:") || key.startsWith("products:")) store.delete(key);
   }
+  pingFrontendRevalidate();
 }

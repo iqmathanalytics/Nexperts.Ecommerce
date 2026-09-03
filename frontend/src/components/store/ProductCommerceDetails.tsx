@@ -4,25 +4,9 @@ import { Banknote, CreditCard, Package, RotateCcw, Truck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
+import type { StoreCommerce } from "@/lib/productFetch";
 
-export type StoreCommerce = {
-  currency: string;
-  payments: Array<{
-    id: "COD" | "ONLINE";
-    available: boolean;
-    label: string;
-    note: string;
-  }>;
-  shipping: {
-    eta: string;
-    dispatch: string;
-    freeOver: number;
-    flat: number;
-    note: string;
-  };
-  returns: { days: number; note: string };
-  packaging: string;
-};
+export type { StoreCommerce };
 
 export const FALLBACK_COMMERCE: StoreCommerce = {
   currency: "MYR",
@@ -51,11 +35,12 @@ export const FALLBACK_COMMERCE: StoreCommerce = {
   packaging: "Premium packaging on every order.",
 };
 
-export function useStoreCommerce() {
+export function useStoreCommerce(enabled = true) {
   return useQuery({
     queryKey: ["commerce"],
     queryFn: () => api<StoreCommerce>("/commerce"),
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
+    enabled,
     select: (res) => res.data,
   });
 }
@@ -69,6 +54,7 @@ export function ProductCommerceDetails({
   shippingInfo,
   returnInfo,
   sku,
+  commerce: commerceProp,
 }: {
   compact?: boolean;
   description?: string | null;
@@ -76,9 +62,10 @@ export function ProductCommerceDetails({
   shippingInfo?: string | null;
   returnInfo?: string | null;
   sku?: string | null;
+  commerce?: StoreCommerce;
 }) {
-  const commerceQuery = useStoreCommerce();
-  const commerce = commerceQuery.data ?? FALLBACK_COMMERCE;
+  const commerceQuery = useStoreCommerce(!commerceProp);
+  const commerce = commerceProp ?? commerceQuery.data ?? FALLBACK_COMMERCE;
   const specs = Object.entries(specifications ?? {}).filter(([k]) => !SPEC_SKIP.has(k));
   const styling = specifications?.Styling;
   const model = specifications?.Model;

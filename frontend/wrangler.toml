@@ -9,5 +9,11 @@ workers_dev = true
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+[vars]
+API_PROXY_TARGET = "https://nexperts-ecommerce-api.onrender.com"
+
 [observability]
 enabled = true
+
+[triggers]
+crons = ["*/2 * * * *"]

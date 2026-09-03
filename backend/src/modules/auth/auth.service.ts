@@ -15,14 +15,20 @@ import { AppError } from "../../utils/http";
 import { audit } from "../../utils/audit";
 import { signToken } from "../../middleware/auth";
 import { sendPasswordResetEmail } from "../../utils/email";
+import { cacheDel, cacheGet, cacheSet } from "../../utils/ttlCache";
 
 const SALT_ROUNDS = 12;
+
+const optionalPhone = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : typeof v === "string" ? v.trim() : v),
+  z.string().min(8).max(30).optional(),
+);
 
 export const registerSchema = z.object({
   firstName: z.string().min(2).max(100),
   lastName: z.string().min(1).max(100),
   email: z.string().email().max(255).transform((v) => v.toLowerCase()),
-  phone: z.string().min(8).max(30).optional(),
+  phone: optionalPhone,
   password: z.string().min(8).max(100),
 });
 
@@ -43,7 +49,10 @@ export const resetSchema = z.object({
 export const updateProfileSchema = z.object({
   firstName: z.string().min(2).max(100).optional(),
   lastName: z.string().min(1).max(100).optional(),
-  phone: z.string().min(8).max(30).optional().nullable(),
+  phone: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v),
+    z.string().min(8).max(30).optional().nullable(),
+  ),
 });
 
 export const changePasswordSchema = z.object({
@@ -52,17 +61,19 @@ export const changePasswordSchema = z.object({
 });
 
 async function loadAuthContext(userId: number) {
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const [[user], assigned] = await Promise.all([
+    db.select().from(users).where(eq(users.id, userId)).limit(1),
+    db
+      .select({ role: roles.name, permission: permissions.code })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .leftJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
+      .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(userRoles.userId, userId)),
+  ]);
   if (!user || user.status !== "ACTIVE") {
     throw new AppError("UNAUTHENTICATED", "Account is not active", 401);
   }
-  const assigned = await db
-    .select({ role: roles.name, permission: permissions.code })
-    .from(userRoles)
-    .innerJoin(roles, eq(userRoles.roleId, roles.id))
-    .leftJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-    .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(eq(userRoles.userId, userId));
 
   const roleSet = new Set(assigned.map((r) => r.role));
   const permSet = new Set(assigned.map((r) => r.permission).filter((p): p is string => Boolean(p)));
@@ -171,12 +182,18 @@ export async function resetPassword(token: string, password: string) {
 }
 
 export async function getMe(userId: number) {
+  const cacheKey = `me:${userId}`;
+  const cached = cacheGet<ReturnType<typeof publicUser> & { permissions: string[] }>(cacheKey);
+  if (cached) return cached;
   const ctx = await loadAuthContext(userId);
-  return { ...publicUser(ctx.user, { roles: ctx.roles }), permissions: ctx.permissions };
+  const data = { ...publicUser(ctx.user, { roles: ctx.roles }), permissions: ctx.permissions };
+  cacheSet(cacheKey, data, 30_000);
+  return data;
 }
 
 export async function updateProfile(userId: number, input: z.infer<typeof updateProfileSchema>) {
   await db.update(users).set(input).where(eq(users.id, userId));
+  cacheDel(`me:${userId}`);
   return getMe(userId);
 }
 
@@ -187,4 +204,5 @@ export async function changePassword(userId: number, input: z.infer<typeof chang
   if (!match) throw new AppError("INVALID_PASSWORD", "Current password is incorrect", 400);
   const passwordHash = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
   await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+  cacheDel(`me:${userId}`);
 }

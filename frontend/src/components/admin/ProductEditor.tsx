@@ -397,7 +397,7 @@ export default function ProductEditor({ mode }: { mode: "create" | "edit" }) {
         <p className="mb-3 font-medium">Sizes / SKU / inventory</p>
         <p className="mb-3 text-xs text-muted">These sizes appear on the product page. Removing a size hides it from the shop.</p>
         {variants.map((v, i) => (
-          <div key={v.id ?? i} className="mb-3 grid gap-2 rounded-xl border border-line p-3 md:grid-cols-7">
+          <div key={v.id ?? i} className="mb-3 grid gap-2 rounded-xl border border-line p-3 sm:grid-cols-2 xl:grid-cols-7">
             <Input
               placeholder="Size"
               value={v.attributes?.size ?? v.name}

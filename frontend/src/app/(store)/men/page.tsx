@@ -4,17 +4,15 @@ import { fetchPublicApi } from "@/lib/server-api";
 import { ProductGrid } from "@/components/store/ProductCard";
 import { CampaignHero } from "@/components/store/CampaignHero";
 import { DEFAULT_EDITORIAL, MEN_HERO_VIDEO, MEN_TILES, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
-import { categoryHref, withShopGender } from "@/lib/shop";
+import { categoryHref, MEN_CATEGORY_NAV, withShopGender } from "@/lib/shop";
 import type { ProductCard } from "@/lib/types";
 
 export const revalidate = 300;
 
-const MEN_NAV = [
-  { href: categoryHref("tops", "MEN"), label: "Shirts" },
-  { href: categoryHref("bottoms", "MEN"), label: "Trousers" },
-  { href: categoryHref("outerwear", "MEN"), label: "Jackets" },
-  { href: "/products?gender=MEN&sort=newest", label: "New in" },
-];
+const MEN_NAV = MEN_CATEGORY_NAV.map((item) => ({
+  href: categoryHref(item.slug, "MEN"),
+  label: item.label,
+}));
 
 export default async function MenHubPage() {
   const [products, editorialRaw] = await Promise.all([
@@ -23,7 +21,7 @@ export default async function MenHubPage() {
   ]);
   const list = Array.isArray(products) ? products : [];
   const editorial = mergeEditorial(editorialRaw);
-  const tiles = (editorial.menTiles.length ? editorial.menTiles : MEN_TILES).map((l) => ({
+  const tiles = MEN_TILES.map((l) => ({
     ...l,
     href: withShopGender(l.href, "MEN"),
   }));

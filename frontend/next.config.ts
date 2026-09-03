@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "recharts", "framer-motion"],
   },
   async headers() {
+    // Immutable /_next/static caching breaks Turbopack HMR in development
+    // (stale chunk → "module factory is not available").
+    if (process.env.NODE_ENV !== "production") return [];
     return [
       {
         source: "/_next/static/:path*",

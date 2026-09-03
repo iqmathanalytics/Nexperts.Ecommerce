@@ -96,7 +96,7 @@ export function AdminSidebar({
     <aside
       aria-hidden={!open}
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex h-screen w-72 flex-col bg-brand-deep text-white shadow-[8px_0_32px_-18px_rgba(16,24,20,0.55)] transition-transform duration-200",
+        "fixed inset-y-0 left-0 z-30 flex h-screen w-[min(18rem,88vw)] flex-col bg-brand-deep text-white shadow-[8px_0_32px_-18px_rgba(16,24,20,0.55)] transition-transform duration-200",
         open ? "translate-x-0" : "-translate-x-full",
       )}
     >

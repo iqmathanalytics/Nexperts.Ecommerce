@@ -6,10 +6,13 @@ import {
   categories,
   inventory,
   productCategories,
+  productFitStats,
   productImages,
+  productPresence,
   productVariants,
   products,
   reviews,
+  ugcPhotos,
   users,
 } from "../../db/schema";
 import { AppError } from "../../utils/http";
@@ -111,14 +114,16 @@ async function queryProducts(query: z.infer<typeof productQuerySchema>) {
     params.push(like, like, like, like, like, like);
   }
   if (query.category) {
+    const slugs = categorySlugCandidates(query.category);
+    const placeholders = slugs.map(() => "?").join(",");
     where.push(`EXISTS (
       SELECT 1 FROM product_categories pc
       INNER JOIN categories c ON c.id = pc.category_id
-      WHERE pc.product_id = p.id AND (c.slug = ? OR c.id IN (
-        SELECT id FROM categories WHERE parent_id = (SELECT id FROM categories WHERE slug = ? LIMIT 1)
+      WHERE pc.product_id = p.id AND (c.slug IN (${placeholders}) OR c.id IN (
+        SELECT id FROM categories WHERE parent_id IN (SELECT id FROM categories WHERE slug IN (${placeholders}))
       ))
     )`);
-    params.push(query.category, query.category);
+    params.push(...slugs, ...slugs);
   }
   if (query.brand) {
     where.push("(b.slug = ? OR b.name = ?)");
@@ -240,35 +245,37 @@ async function queryProducts(query: z.infer<typeof productQuerySchema>) {
 export async function searchSuggest(q: string) {
   if (!q.trim()) return { products: [], categories: [], brands: [] };
   const like = `%${q.trim()}%`;
-  const [productRows] = await pool.query(
-    `SELECT p.name, p.slug, v.sku, b.name AS brand
-     FROM products p
-     INNER JOIN product_variants v ON v.product_id = p.id AND v.is_default = 1
-     LEFT JOIN brands b ON b.id = p.brand_id
-     WHERE p.status = 'PUBLISHED'
-       AND (p.brand_id IS NULL OR b.status = 'ACTIVE')
-       AND (
-         p.name LIKE ?
-         OR v.sku LIKE ?
-         OR b.name LIKE ?
-         OR EXISTS (
-           SELECT 1 FROM product_variants vx
-           WHERE vx.product_id = p.id AND vx.sku LIKE ?
+  const [[productRows], cats, brs] = await Promise.all([
+    pool.query(
+      `SELECT p.name, p.slug, v.sku, b.name AS brand
+       FROM products p
+       INNER JOIN product_variants v ON v.product_id = p.id AND v.is_default = 1
+       LEFT JOIN brands b ON b.id = p.brand_id
+       WHERE p.status = 'PUBLISHED'
+         AND (p.brand_id IS NULL OR b.status = 'ACTIVE')
+         AND (
+           p.name LIKE ?
+           OR v.sku LIKE ?
+           OR b.name LIKE ?
+           OR EXISTS (
+             SELECT 1 FROM product_variants vx
+             WHERE vx.product_id = p.id AND vx.sku LIKE ?
+           )
          )
-       )
-     LIMIT 8`,
-    [like, like, like, like],
-  );
-  const cats = await db
-    .select({ name: categories.name, slug: categories.slug })
-    .from(categories)
-    .where(and(eq(categories.status, "ACTIVE"), sql`${categories.name} LIKE ${like}`))
-    .limit(5);
-  const brs = await db
-    .select({ name: brands.name, slug: brands.slug })
-    .from(brands)
-    .where(and(eq(brands.status, "ACTIVE"), sql`${brands.name} LIKE ${like}`))
-    .limit(5);
+       LIMIT 8`,
+      [like, like, like, like],
+    ),
+    db
+      .select({ name: categories.name, slug: categories.slug })
+      .from(categories)
+      .where(and(eq(categories.status, "ACTIVE"), sql`${categories.name} LIKE ${like}`))
+      .limit(5),
+    db
+      .select({ name: brands.name, slug: brands.slug })
+      .from(brands)
+      .where(and(eq(brands.status, "ACTIVE"), sql`${brands.name} LIKE ${like}`))
+      .limit(5),
+  ]);
   return { products: productRows, categories: cats, brands: brs };
 }
 
@@ -294,7 +301,7 @@ async function loadProductBySlug(slug: string, opts: { lite?: boolean }) {
     throw new AppError("NOT_FOUND", "Product not found", 404);
   }
 
-  const [brand, cats, variants, images, reviewRows] = await Promise.all([
+  const [brand, cats, variants, images, reviewRows, fitRows, presenceRows, ugcRows] = await Promise.all([
     product.brandId
       ? db
           .select(brandCardColumns)
@@ -351,6 +358,23 @@ async function loadProductBySlug(slug: string, opts: { lite?: boolean }) {
           .where(and(eq(reviews.productId, product.id), eq(reviews.status, "APPROVED")))
           .orderBy(desc(reviews.createdAt))
           .limit(20),
+    opts.lite
+      ? Promise.resolve([])
+      : db.select().from(productFitStats).where(eq(productFitStats.productId, product.id)).limit(1),
+    opts.lite
+      ? Promise.resolve([])
+      : db.select().from(productPresence).where(eq(productPresence.productId, product.id)).limit(1),
+    opts.lite
+      ? Promise.resolve([])
+      : db
+          .select({
+            id: ugcPhotos.id,
+            imageUrl: ugcPhotos.imageUrl,
+            caption: ugcPhotos.caption,
+          })
+          .from(ugcPhotos)
+          .where(and(eq(ugcPhotos.productId, product.id), eq(ugcPhotos.status, "APPROVED")))
+          .limit(24),
   ]);
 
   if (brand && brand.status !== "ACTIVE") {
@@ -359,6 +383,27 @@ async function loadProductBySlug(slug: string, opts: { lite?: boolean }) {
 
   const avgRating =
     reviewRows.length === 0 ? 0 : reviewRows.reduce((s, r) => s + r.rating, 0) / reviewRows.length;
+
+  const related = opts.lite
+    ? { items: [] as Awaited<ReturnType<typeof listProducts>>["items"] }
+    : await listProducts({
+        category: cats[0]?.slug,
+        gender: product.gender && product.gender !== "UNISEX" ? product.gender : undefined,
+        page: 1,
+        limit: 8,
+        sort: "popularity",
+      });
+
+  const fitStat = fitRows[0];
+  const small = fitStat?.smallCount ?? 0;
+  const trueC = fitStat?.trueCount ?? 0;
+  const large = fitStat?.largeCount ?? 0;
+  const fitTotal = small + trueC + large;
+  let fitLabel = "True to size";
+  if (fitTotal > 0) {
+    if (small >= trueC && small >= large) fitLabel = "Runs small";
+    else if (large >= trueC && large >= small) fitLabel = "Runs large";
+  }
 
   return {
     ...product,
@@ -383,7 +428,11 @@ async function loadProductBySlug(slug: string, opts: { lite?: boolean }) {
     rating: Number(avgRating.toFixed(1)),
     reviewCount: reviewRows.length,
     reviews: reviewRows,
-    related: [] as Awaited<ReturnType<typeof listProducts>>["items"],
+    related: related.items.filter((item) => item.slug !== product.slug).slice(0, 8),
+    fit: { small, true: trueC, large, label: fitLabel, total: fitTotal },
+    presence: { viewers: presenceRows[0]?.viewers ?? 0 },
+    ugc: ugcRows,
+    commerce: storefrontCommerce(),
   };
 }
 
@@ -434,8 +483,38 @@ async function loadBrands() {
     .orderBy(asc(brands.name));
 }
 
+function categorySlugCandidates(slug: string) {
+  const normalized = slug.trim().toLowerCase().replace(/_/g, "-").replace(/\s+/g, "-");
+  const aliases: Record<string, string> = {
+    "ethnic wear": "ethnic-wear",
+    ethnicwear: "ethnic-wear",
+    heritage: "ethnic-wear",
+    dress: "dresses",
+    top: "tops",
+    bottom: "bottoms",
+    shirt: "shirts",
+    tshirt: "t-shirts",
+    "t-shirt": "t-shirts",
+    "t shirt": "t-shirts",
+    trouser: "trousers",
+    pants: "trousers",
+    jacket: "jackets",
+  };
+  const spaced = normalized.replace(/-/g, " ");
+  const compact = normalized.replace(/-/g, "");
+  const resolved = aliases[normalized] ?? aliases[spaced] ?? aliases[compact] ?? normalized;
+  return [...new Set([resolved, normalized, slug])];
+}
+
 export async function getCategoryBySlug(slug: string) {
-  const [cat] = await db.select().from(categories).where(eq(categories.slug, slug)).limit(1);
+  let cat: typeof categories.$inferSelect | undefined;
+  for (const candidate of categorySlugCandidates(slug)) {
+    const [row] = await db.select().from(categories).where(eq(categories.slug, candidate)).limit(1);
+    if (row) {
+      cat = row;
+      break;
+    }
+  }
   if (!cat || cat.status !== "ACTIVE") throw new AppError("NOT_FOUND", "Category not found", 404);
   const children = await db.select().from(categories).where(eq(categories.parentId, cat.id));
   return { ...cat, children: children.filter((c) => c.status === "ACTIVE") };

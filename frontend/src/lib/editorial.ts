@@ -72,10 +72,10 @@ export const WOMEN_TILES = [
 ];
 
 export const MEN_TILES = [
-  { href: "/category/tops?gender=MEN", label: "Shirts", image: px(1043474, 800) },
-  { href: "/category/bottoms?gender=MEN", label: "Trousers", image: u("photo-1488161628813-04466f872be2", 800) },
-  { href: "/category/outerwear?gender=MEN", label: "Jackets", image: px(842811, 800) },
-  { href: "/products?gender=MEN&sort=newest", label: "New in", image: u("photo-1617137968427-85924c800a22", 800) },
+  { href: "/category/shirts?gender=MEN", label: "Shirts", image: px(1043474, 800) },
+  { href: "/category/t-shirts?gender=MEN", label: "T-shirt", image: u("photo-1521572163474-6864f9cf17ab", 800) },
+  { href: "/category/trousers?gender=MEN", label: "Trousers", image: u("photo-1488161628813-04466f872be2", 800) },
+  { href: "/category/jackets?gender=MEN", label: "Jackets", image: px(842811, 800) },
 ];
 
 export const MEGA_WOMEN = [
@@ -85,9 +85,10 @@ export const MEGA_WOMEN = [
 ];
 
 export const MEGA_MEN = [
-  { href: "/category/tops?gender=MEN", label: "Shirts", image: px(1043474, 600) },
-  { href: "/category/outerwear?gender=MEN", label: "Jackets", image: px(842811, 600) },
-  { href: "/products?gender=MEN&sort=newest", label: "New in", image: u("photo-1617137968427-85924c800a22", 600) },
+  { href: "/category/shirts?gender=MEN", label: "Shirts", image: px(1043474, 600) },
+  { href: "/category/t-shirts?gender=MEN", label: "T-shirt", image: u("photo-1521572163474-6864f9cf17ab", 600) },
+  { href: "/category/trousers?gender=MEN", label: "Trousers", image: u("photo-1488161628813-04466f872be2", 600) },
+  { href: "/category/jackets?gender=MEN", label: "Jackets", image: px(842811, 600) },
 ];
 
 export const WOMEN_HERO = px(31808831, 1000);
@@ -96,12 +97,10 @@ export const NEW_HERO = px(1926769, 1400);
 export const SALE_HERO = u("photo-1595777457583-95e059d581b8", 1400);
 
 const mixkit = (id: number, alt: string) => ({
-  /** Mobile / save-data fallback — small file. */
+  /** Save-data / very slow links only — avoid on normal mobile (soft on retina). */
   srcMobile: `https://assets.mixkit.co/videos/${id}/${id}-360.mp4`,
-  /** Default playback — sharp enough for store heroes (~3–6MB). */
+  /** Primary hero quality — Mixkit 720 is sharp (~3–6MB); their 1080 masters are 30–70MB and stall in prod. */
   src: `https://assets.mixkit.co/videos/${id}/${id}-720.mp4`,
-  /** Large desktop on a fast link — Full HD when a single film is showing. */
-  srcHd: `https://assets.mixkit.co/videos/${id}/${id}-1080.mp4`,
   poster: `https://assets.mixkit.co/videos/${id}/${id}-thumb-720-0.jpg`,
   alt,
 });
@@ -144,6 +143,8 @@ export type StorefrontEditorial = {
   ticker: string[];
   promoCodes: string[];
   offers: OfferItem[];
+  /** ISO datetime for /sale countdown. Empty = rolling 3-day fallback. */
+  saleEndsAt: string;
 };
 
 export const DEFAULT_EDITORIAL: StorefrontEditorial = {
@@ -178,10 +179,16 @@ export const DEFAULT_EDITORIAL: StorefrontEditorial = {
     { kicker: "Flat deal", code: "FLAT200", text: "RM 200 off over RM 1,499", href: "/sale" },
     { kicker: "Shipping", code: "FREE", text: "Free delivery over RM 999", href: "/products" },
   ],
+  saleEndsAt: "",
 };
 
 function genderedTiles(tiles: EditorialTile[], gender: ShopGender): EditorialTile[] {
   return tiles.map((t) => ({ ...t, href: withShopGender(t.href, gender) }));
+}
+
+function isLegacyMenNav(tiles?: EditorialTile[]) {
+  if (!tiles?.length) return true;
+  return tiles.some((t) => /\/category\/(tops|bottoms|outerwear)(\?|$)/.test(t.href));
 }
 
 export function mergeEditorial(value: Partial<StorefrontEditorial> | null | undefined): StorefrontEditorial {
@@ -189,9 +196,9 @@ export function mergeEditorial(value: Partial<StorefrontEditorial> | null | unde
   const campaigns = value.campaigns?.length ? value.campaigns : DEFAULT_EDITORIAL.campaigns;
   const dressEdits = value.dressEdits?.length ? value.dressEdits : DEFAULT_EDITORIAL.dressEdits;
   const womenTiles = value.womenTiles?.length ? value.womenTiles : DEFAULT_EDITORIAL.womenTiles;
-  const menTiles = value.menTiles?.length ? value.menTiles : DEFAULT_EDITORIAL.menTiles;
+  const menTiles = isLegacyMenNav(value.menTiles) ? DEFAULT_EDITORIAL.menTiles : value.menTiles!;
   const megaWomen = value.megaWomen?.length ? value.megaWomen : DEFAULT_EDITORIAL.megaWomen;
-  const megaMen = value.megaMen?.length ? value.megaMen : DEFAULT_EDITORIAL.megaMen;
+  const megaMen = isLegacyMenNav(value.megaMen) ? DEFAULT_EDITORIAL.megaMen : value.megaMen!;
   return {
     ...DEFAULT_EDITORIAL,
     ...value,
@@ -205,5 +212,6 @@ export function mergeEditorial(value: Partial<StorefrontEditorial> | null | unde
     ticker: value.ticker?.length ? value.ticker : DEFAULT_EDITORIAL.ticker,
     promoCodes: value.promoCodes?.length ? value.promoCodes : DEFAULT_EDITORIAL.promoCodes,
     offers: value.offers?.length ? value.offers : DEFAULT_EDITORIAL.offers,
+    saleEndsAt: typeof value.saleEndsAt === "string" ? value.saleEndsAt : DEFAULT_EDITORIAL.saleEndsAt,
   };
 }

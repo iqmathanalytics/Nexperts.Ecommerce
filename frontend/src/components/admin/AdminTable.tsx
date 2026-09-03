@@ -19,7 +19,7 @@ export function AdminPage({
     <div className="flex min-h-full flex-col gap-4">
       <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{title}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h1>
           {description ? <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -31,7 +31,7 @@ export function AdminPage({
 
 export function FilterBar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface-raised p-3">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface-raised p-3 [&>input]:min-w-0 [&>input]:flex-1 [&>input]:basis-full sm:[&>input]:basis-[16rem] [&>select]:max-w-full">
       {children}
     </div>
   );
@@ -162,7 +162,7 @@ export function AdminDrawer({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 bg-ink/25 backdrop-blur-[2px]" style={{ left: "var(--admin-sidebar-width, 18rem)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-40 bg-ink/25 backdrop-blur-[2px] lg:[left:var(--admin-sidebar-width,0px)]" onClick={onClose}>
       <aside
         className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col border-l border-line bg-surface shadow-[-18px_0_40px_-28px_rgba(28,25,21,0.4)]"
         onClick={(e) => e.stopPropagation()}
@@ -202,8 +202,7 @@ export function AdminTableModal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-ink/35 p-3 backdrop-blur-[2px] sm:p-5"
-      style={{ left: "var(--admin-sidebar-width, 0px)" }}
+      className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-ink/35 p-0 backdrop-blur-[2px] sm:p-5 lg:[left:var(--admin-sidebar-width,0px)]"
       onClick={onClose}
       role="presentation"
     >
@@ -211,7 +210,7 @@ export function AdminTableModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_24px_60px_-28px_rgba(28,25,21,0.55)]"
+        className="flex h-full w-full flex-col overflow-hidden rounded-none border-0 border-line bg-surface shadow-[0_24px_60px_-28px_rgba(28,25,21,0.55)] sm:rounded-2xl sm:border"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
