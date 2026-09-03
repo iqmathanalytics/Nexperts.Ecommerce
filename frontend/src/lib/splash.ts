@@ -1,7 +1,7 @@
 /** First-visit home intro only. Product pages paint immediately. */
-export const SPLASH_HOLD_MS = 800;
-export const SPLASH_EXIT_MS = 0.28;
-export const SPLASH_REDUCED_MS = 280;
+export const SPLASH_HOLD_MS = 2000;
+export const SPLASH_EXIT_MS = 0.4;
+export const SPLASH_REDUCED_MS = 600;
 export const INTRO_PENDING_CLASS = "nx-intro-pending";
 export const INTRO_SEEN_KEY = "nx-intro-seen";
 
@@ -24,6 +24,11 @@ export function markIntroSeen() {
   } catch {
     /* ignore */
   }
+}
+
+export function clearIntroPending() {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.remove(INTRO_PENDING_CLASS);
 }
 
 export function wait(ms: number) {

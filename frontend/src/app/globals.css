@@ -4,6 +4,9 @@
 html.nx-intro-pending {
   overflow: hidden;
 }
+html.nx-intro-pending body {
+  overflow: hidden;
+}
 html.nx-intro-pending::before {
   content: "";
   position: fixed;

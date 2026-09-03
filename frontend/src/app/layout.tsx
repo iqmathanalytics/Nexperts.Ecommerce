@@ -46,6 +46,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="preconnect" href="https://images.pexels.com" />
         <link rel="dns-prefetch" href="https://images.pexels.com" />
         {apiOrigin ? <link rel="preconnect" href={apiOrigin} /> : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(location.pathname!=="/")return;if(sessionStorage.getItem("nx-intro-seen")==="1")return;document.documentElement.classList.add("nx-intro-pending");}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className={`${body.variable} ${display.variable} min-h-full bg-background font-sans text-ink antialiased [color:var(--ink)]`}>
         <Providers>{children}</Providers>
