@@ -22,6 +22,7 @@ import { OfferTheatre } from "@/components/store/OfferTheatre";
 
 /** Zara / H&M primary IA */
 const PRIMARY = [
+  { href: "/", label: "Home", mega: null },
   { href: "/women", label: "Woman", mega: "women" as const },
   { href: "/men", label: "Man", mega: "men" as const },
   { href: "/products?sort=newest", label: "New", mega: null },
@@ -29,6 +30,7 @@ const PRIMARY = [
 ];
 
 function isPrimaryCurrent(path: string, href: string, label: string) {
+  if (label === "Home") return path === "/";
   if (label === "New") return path === "/products";
   if (label === "Sale") return path === "/sale";
   const base = href.split("?")[0]!;
@@ -195,6 +197,10 @@ export function Header() {
                     href={l.href}
                     aria-current={current ? "page" : undefined}
                     onMouseEnter={() => openMega(l.mega)}
+                    onClick={() => {
+                      closeMenus();
+                      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                    }}
                     className={`relative flex h-full items-center whitespace-nowrap px-3 text-[11px] font-semibold uppercase leading-none tracking-[0.2em] transition ${
                       sale
                         ? current
@@ -218,6 +224,7 @@ export function Header() {
           <Link
             href="/"
             aria-label={SITE_NAME}
+            onClick={() => window.scrollTo({ top: 0, left: 0, behavior: "auto" })}
             className="nexperts-mark flex min-h-8 min-w-[7rem] items-center justify-center text-center text-[1.05rem] leading-none md:text-xl"
           >
             {path === "/sale" ? null : SITE_NAME}
@@ -315,14 +322,24 @@ export function Header() {
       {mobileOpen ? (
         <div className="fixed inset-0 z-[60] overflow-y-auto bg-white pb-[calc(5rem+env(safe-area-inset-bottom))] text-ink lg:hidden">
           <div className="flex h-14 items-center justify-between border-b border-line px-4 pt-[env(safe-area-inset-top)]">
-            <span className="nexperts-mark text-sm">{SITE_NAME}</span>
+            <Link href="/" onClick={closeMenus} className="nexperts-mark text-sm" aria-label="Home">
+              {SITE_NAME}
+            </Link>
             <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close menu" className="p-2">
               <X className="h-5 w-5" />
             </button>
           </div>
           <nav className="px-4 py-2">
             {PRIMARY.map((l) => (
-              <Link key={l.href} href={l.href} onClick={closeMenus} className="flex items-center justify-between border-b border-line py-4 text-sm font-semibold uppercase tracking-[0.18em]">
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => {
+                  closeMenus();
+                  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                }}
+                className="flex items-center justify-between border-b border-line py-4 text-sm font-semibold uppercase tracking-[0.18em]"
+              >
                 {l.label}
                 <ChevronRight className="h-4 w-4 text-muted" />
               </Link>
@@ -417,7 +434,9 @@ export function Footer() {
 
       <div className="mx-auto grid max-w-[1400px] gap-10 px-4 py-14 md:grid-cols-5 md:px-6">
         <div className="md:col-span-2">
-          <p className="nexperts-mark text-lg">{SITE_NAME}</p>
+          <Link href="/" className="nexperts-mark text-lg" aria-label="Home">
+            {SITE_NAME}
+          </Link>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
             A house of contemporary clothing — Woman, Man, and festive edits. Cut for tropical climates, finished for a global wardrobe.
           </p>
@@ -432,7 +451,10 @@ export function Footer() {
         </div>
         <div>
           <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Shop</p>
-          <Link href="/women" className="block text-sm hover:underline">
+          <Link href="/" className="block text-sm hover:underline">
+            Home
+          </Link>
+          <Link href="/women" className="mt-2.5 block text-sm hover:underline">
             Woman
           </Link>
           {WOMEN_CATEGORY_NAV.map((item) => (

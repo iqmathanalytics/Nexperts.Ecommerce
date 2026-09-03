@@ -268,6 +268,26 @@ select {
   width: 100%;
   overflow: hidden;
 }
+.hero-copy {
+  pointer-events: none;
+  position: relative;
+  z-index: 10;
+  margin-inline: auto;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  max-width: 48rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: calc(var(--store-chrome) + 1rem) 1.5rem 6rem;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .hero-copy {
+    padding-bottom: 5rem;
+  }
+}
 .hero-film {
   position: relative;
   height: 100%;

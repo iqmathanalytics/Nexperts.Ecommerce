@@ -13,6 +13,10 @@ export { DOShardedTagCache } from "./.build/durable-objects/sharded-tag-cache.js
 //@ts-expect-error: Will be resolved by wrangler build
 export { BucketCachePurge } from "./.build/durable-objects/bucket-cache-purge.js";
 export default {
+    async scheduled(_event, env, ctx) {
+        const target = String(env.API_PROXY_TARGET || "https://nexperts-ecommerce-api.onrender.com").replace(/\/$/, "");
+        ctx.waitUntil(fetch(target + "/health", { cache: "no-store" }).catch(() => undefined));
+    },
     async fetch(request, env, ctx) {
         return runWithCloudflareRequestContext(request, env, ctx, async () => {
             const response = maybeGetSkewProtectionResponse(request);

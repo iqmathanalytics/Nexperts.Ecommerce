@@ -46,11 +46,8 @@ async function HomeLoaded() {
 
 export default function HomePage() {
   return (
-    <>
-      <link rel="preload" as="image" href={HERO_VIDEO.poster} fetchPriority="high" />
-      <Suspense fallback={<HomeFallback />}>
-        <HomeLoaded />
-      </Suspense>
-    </>
+    <Suspense fallback={<HomeFallback />}>
+      <HomeLoaded />
+    </Suspense>
   );
 }

@@ -47,11 +47,19 @@ export function MobileTabBar() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
       <div className="flex items-stretch">
-        <Link href="/" className={item(path === "/")}>
+        <Link
+          href="/"
+          className={item(path === "/")}
+          onClick={() => window.scrollTo({ top: 0, left: 0, behavior: "auto" })}
+        >
           <Home className="h-5 w-5" />
           Home
         </Link>
-        <Link href="/products" className={item(path.startsWith("/products") || path.startsWith("/category") || path.startsWith("/women") || path.startsWith("/men"))}>
+        <Link
+          href="/products"
+          className={item(path.startsWith("/products") || path.startsWith("/category") || path.startsWith("/women") || path.startsWith("/men"))}
+          onClick={() => window.scrollTo({ top: 0, left: 0, behavior: "auto" })}
+        >
           <LayoutGrid className="h-5 w-5" />
           Shop
         </Link>

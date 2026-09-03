@@ -183,11 +183,13 @@ export function CampaignHero({
   links?: CampaignHeroLink[];
   children?: ReactNode;
 }) {
+  // Keep SSR + first client paint identical; media queries apply after mount.
   const [reduceMotion, setReduceMotion] = useState(false);
   const [narrow, setNarrow] = useState(false);
+  const [mediaReady, setMediaReady] = useState(false);
   const allFilms = videos?.length ? videos : video ? [video] : [];
   // Mobile: one film only — dual autoplay was ~10MB and stalled the main thread.
-  const films = narrow && allFilms.length > 1 ? [allFilms[0]!] : allFilms;
+  const films = mediaReady && narrow && allFilms.length > 1 ? [allFilms[0]!] : allFilms;
   const split = films.length > 1;
 
   useEffect(() => {
@@ -197,6 +199,7 @@ export function CampaignHero({
     const syncWidth = () => setNarrow(width.matches);
     syncMotion();
     syncWidth();
+    setMediaReady(true);
     motion.addEventListener("change", syncMotion);
     width.addEventListener("change", syncWidth);
     return () => {
@@ -205,7 +208,7 @@ export function CampaignHero({
     };
   }, []);
 
-  const lines = title.split("\n");
+  const lines = title.split(/\r?\n/);
   const still = image || films[0]?.poster;
 
   return (
@@ -233,8 +236,8 @@ export function CampaignHero({
 
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "var(--hero-veil)" }} />
 
-      <div className="pointer-events-none relative z-10 mx-auto flex h-full w-full max-w-3xl flex-col items-center justify-end px-6 pb-24 pt-[calc(var(--store-chrome)+1rem)] text-center md:pb-20">
-        <div className="flex w-full flex-col items-center gap-4 md:gap-5">
+      <div className="hero-copy" suppressHydrationWarning>
+        <div className="flex w-full flex-col items-center gap-4 md:gap-5" suppressHydrationWarning>
           {kicker ? (
             <p className="text-[11px] font-semibold uppercase leading-none tracking-[0.2em] text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">{kicker}</p>
           ) : null}

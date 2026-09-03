@@ -58,10 +58,12 @@ function isInternalNavAnchor(anchor: HTMLAnchorElement) {
 /**
  * Instant top progress on in-app navigation.
  * Uses pointerdown so feedback starts before click handlers / preventDefault.
+ * Client-only after mount to avoid SSR/client class mismatches.
  */
 export function GlobalLoading() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
   const [routePending, setRoutePending] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -69,6 +71,10 @@ export function GlobalLoading() {
     predicate: (query) => query.state.fetchStatus === "fetching" && query.state.data === undefined,
   });
   const busy = routePending || fetching > 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setRoutePending(false);
@@ -79,6 +85,7 @@ export function GlobalLoading() {
   }, [pathname, searchParams]);
 
   useEffect(() => {
+    if (!mounted) return;
     const arm = (event: Event) => {
       if (!(event instanceof PointerEvent) && !(event instanceof MouseEvent)) return;
       if ("button" in event && event.button !== 0) return;
@@ -98,16 +105,16 @@ export function GlobalLoading() {
         setRoutePending(true);
       }
     };
-    // pointerdown = first paint of feedback; click covers keyboard activation
     document.addEventListener("pointerdown", arm, true);
     document.addEventListener("click", arm, true);
     return () => {
       document.removeEventListener("pointerdown", arm, true);
       document.removeEventListener("click", arm, true);
     };
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
+    if (!mounted) return;
     let showTimer: number | undefined;
     let hideTimer: number | undefined;
 
@@ -121,16 +128,18 @@ export function GlobalLoading() {
       if (showTimer) window.clearTimeout(showTimer);
       if (hideTimer) window.clearTimeout(hideTimer);
     };
-  }, [busy]);
+  }, [busy, mounted]);
 
   useEffect(() => {
-    if (!routePending) return;
+    if (!mounted || !routePending) return;
     const failSafe = window.setTimeout(() => {
       setRoutePending(false);
       document.documentElement.classList.remove("nx-route-pending");
     }, 8_000);
     return () => window.clearTimeout(failSafe);
-  }, [routePending]);
+  }, [routePending, mounted]);
+
+  if (!mounted) return null;
 
   return (
     <div
