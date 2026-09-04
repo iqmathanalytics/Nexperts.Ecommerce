@@ -98,7 +98,7 @@ export async function getEditorial(): Promise<StorefrontEditorial> {
   if (cached) return cached;
   const [row] = await db.select().from(settings).where(eq(settings.key, EDITORIAL_KEY)).limit(1);
   const next = mergeEditorial(row?.value ?? DEFAULT_EDITORIAL);
-  cacheSet("editorial", next, 45_000);
+  cacheSet("editorial", next, 90_000);
   return next;
 }
 

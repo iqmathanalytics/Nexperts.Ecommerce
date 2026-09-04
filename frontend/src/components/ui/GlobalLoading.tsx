@@ -135,7 +135,10 @@ export function GlobalLoading() {
     const failSafe = window.setTimeout(() => {
       setRoutePending(false);
       document.documentElement.classList.remove("nx-route-pending");
-    }, 8_000);
+      document.querySelectorAll("[data-nav-pending='true']").forEach((el) => {
+        el.removeAttribute("data-nav-pending");
+      });
+    }, 4_000);
     return () => window.clearTimeout(failSafe);
   }, [routePending, mounted]);
 

@@ -1,11 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { CampaignHero } from "@/components/store/CampaignHero";
-import { ProductRail } from "@/components/store/ProductRail";
-import { LookbookCarousel } from "@/components/store/LookbookCarousel";
-import { Reveal } from "@/components/store/Reveal";
 import { CampaignTile } from "@/components/store/CampaignTile";
-import { AmbientScene } from "@/components/store/AmbientScene";
+import { HomeBelowFold } from "@/components/store/HomeBelowFold";
 import { PromoMarquee } from "@/components/store/PromoMarquee";
 import { CAMPAIGNS, DRESS_EDITS, DEFAULT_EDITORIAL, HERO_VIDEO, mergeEditorial, type StorefrontEditorial } from "@/lib/editorial";
 import { categoryHref, MEN_CATEGORY_NAV, WOMEN_CATEGORY_NAV } from "@/lib/shop";
@@ -89,62 +85,7 @@ export function HomePageView({ data }: { data: HomeData }) {
         itemClassName="px-2"
       />
 
-      {featured.length > 0 ? (
-        <section className="relative overflow-hidden">
-          <AmbientScene />
-          <Reveal>
-            <div className="relative mx-auto max-w-[1400px] px-4 py-16 md:px-8 md:py-24">
-              <div className="mb-10 flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">New drop</p>
-                  <h2 className="mt-2 font-display text-3xl font-medium italic md:text-6xl">This week’s silhouettes</h2>
-                </div>
-                <Link href="/products?sort=newest" className="text-[11px] font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline">
-                  View all
-                </Link>
-              </div>
-              <ProductRail products={featured.slice(0, 8)} />
-            </div>
-          </Reveal>
-        </section>
-      ) : null}
-
-      <section className="relative">
-        <div className="mx-auto max-w-[1400px] px-4 py-16 md:px-8 md:py-20">
-          <Reveal>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">The dress studio</p>
-            <h2 className="mt-2 max-w-xl font-display text-3xl font-medium italic md:text-5xl">Cut, drape, occasion</h2>
-          </Reveal>
-          <div className="mt-12 grid items-end gap-8 md:grid-cols-3">
-            {dressEdits.map((d, i) => (
-              <Reveal key={d.href} delay={i * 0.08} className={i === 1 ? "md:-translate-y-10" : i === 2 ? "md:translate-y-6" : ""}>
-                <Link href={d.href} className="group relative block">
-                  <div className="product-arch relative aspect-[3/4] overflow-hidden bg-surface-muted shadow-[0_40px_80px_-40px_rgba(28,25,21,0.5)]">
-                    <Image
-                      src={d.image}
-                      alt={d.title ?? d.label}
-                      fill
-                      quality={70}
-                      sizes="(max-width:768px) 100vw, 33vw"
-                      className="object-cover object-top"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 p-7">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/75">{d.label}</p>
-                      <p className="mt-1 font-display text-3xl font-semibold text-white">{d.title ?? d.label}</p>
-                      <span className="mt-3 inline-block text-[10px] uppercase tracking-[0.18em] text-white/80 opacity-0 transition duration-300 group-hover:opacity-100">
-                        Shop the cut →
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {lookbooks.length > 0 ? <LookbookCarousel items={lookbooks} /> : null}
+      <HomeBelowFold featured={featured} dressEdits={dressEdits} lookbooks={lookbooks} />
 
       <section className="border-y border-line bg-brand text-white">
         <div className="mx-auto grid max-w-[1400px] gap-8 px-4 py-14 md:grid-cols-5 md:px-8">

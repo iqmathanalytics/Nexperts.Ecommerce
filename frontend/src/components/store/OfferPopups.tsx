@@ -10,14 +10,15 @@ import { api } from "@/lib/api";
 import { DEFAULT_EDITORIAL, mergeEditorial, type OfferItem, type StorefrontEditorial } from "@/lib/editorial";
 import { easeOut, offerItem, offerModal, offerStagger } from "@/lib/motion";
 import { useEligibleOffers } from "@/hooks/useEligibleOffers";
+import { useIntroReady } from "@/hooks/useIntroReady";
 import { offerKindLabel } from "@/lib/offers";
 
-const SEEN_PREFIX = "nx-offer-side-v2:";
+const SEEN_PREFIX = "nx-offer-side-v3:";
 const SKIP_PREFIXES = ["/checkout", "/login", "/register", "/forgot-password", "/admin"];
 /** Delay before the first side offer appears. */
 const SHOW_DELAY_MS = 2200;
-/** Each offer stays visible this long, then auto-switches to the next. */
-const OFFER_DURATION_MS = 30_000;
+/** Combo / side offers stay visible this long, then auto-advance or close. */
+const OFFER_DURATION_MS = 10_000;
 /** Brief beat between offers when auto-advancing. */
 const SWITCH_GAP_MS = 400;
 
@@ -27,7 +28,7 @@ function seenKey(code: string) {
 
 function dismissed(code: string) {
   try {
-    return sessionStorage.getItem(seenKey(code)) === "1";
+    return localStorage.getItem(seenKey(code)) === "1";
   } catch {
     return false;
   }
@@ -35,7 +36,7 @@ function dismissed(code: string) {
 
 function remember(code: string) {
   try {
-    sessionStorage.setItem(seenKey(code), "1");
+    localStorage.setItem(seenKey(code), "1");
   } catch {
     /* ignore */
   }
@@ -43,78 +44,77 @@ function remember(code: string) {
 
 export function OfferPopups() {
   const path = usePathname();
+  const introReady = useIntroReady(400);
   const editorialQuery = useQuery({
     queryKey: ["editorial"],
     queryFn: () => api<StorefrontEditorial>("/editorial"),
     staleTime: 5 * 60_000,
+    enabled: introReady,
   });
   const offers = mergeEditorial(editorialQuery.data?.data).offers;
   const rawList = offers.length ? offers : DEFAULT_EDITORIAL.offers;
   const list = useEligibleOffers(rawList);
 
   const quiet = useMemo(() => SKIP_PREFIXES.some((p) => path.startsWith(p)), [path]);
-  const queue = useMemo(() => list.filter((o) => o.code && !dismissed(o.code)), [list]);
+  const [seenTick, setSeenTick] = useState(0);
+  const queue = useMemo(
+    () => list.filter((o) => o.code && !dismissed(o.code)),
+    [list, seenTick],
+  );
   const queueKey = useMemo(() => queue.map((o) => o.code).join("|"), [queue]);
 
-  const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const timers = useRef<{ show: number; advance: number; gap: number }>({ show: 0, advance: 0, gap: 0 });
+  const hasShownRef = useRef(false);
+  const timers = useRef<{ show: number; advance: number }>({ show: 0, advance: 0 });
 
-  const active = open ? (queue[index] ?? null) : null;
+  const active = open ? (queue[0] ?? null) : null;
 
   function clearTimers() {
     window.clearTimeout(timers.current.show);
     window.clearTimeout(timers.current.advance);
-    window.clearTimeout(timers.current.gap);
   }
 
-  function goToNext(fromIndex: number) {
-    const current = queue[fromIndex];
+  function finishCurrent() {
+    const current = queue[0];
     if (current) remember(current.code);
     setOpen(false);
     setCopied(false);
-
-    const nextIndex = fromIndex + 1;
-    if (nextIndex >= queue.length) return;
-
-    window.clearTimeout(timers.current.gap);
-    timers.current.gap = window.setTimeout(() => {
-      setIndex(nextIndex);
-      setOpen(true);
-    }, SWITCH_GAP_MS);
+    setSeenTick((n) => n + 1);
   }
 
   useEffect(() => {
-    clearTimers();
-    if (quiet || !queue.length) {
+    window.clearTimeout(timers.current.show);
+    if (quiet) {
+      window.clearTimeout(timers.current.advance);
       setOpen(false);
-      setIndex(0);
       return;
     }
-    setIndex(0);
-    setOpen(false);
-    setCopied(false);
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    timers.current.show = window.setTimeout(() => setOpen(true), reduce ? 500 : SHOW_DELAY_MS);
-    return clearTimers;
-  }, [quiet, queueKey, queue.length]);
+    if (open || !queue.length) {
+      if (!queue.length) setOpen(false);
+      return;
+    }
 
-  // Auto-dismiss / switch after 30 seconds while an offer is open.
+    if (!introReady) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const delay = hasShownRef.current ? SWITCH_GAP_MS : reduce ? 500 : SHOW_DELAY_MS;
+    timers.current.show = window.setTimeout(() => {
+      hasShownRef.current = true;
+      setOpen(true);
+    }, delay);
+
+    return () => window.clearTimeout(timers.current.show);
+  }, [quiet, open, queueKey, queue.length, introReady]);
+
   useEffect(() => {
-    if (!open || !queue[index]) return;
+    if (!open || !queue[0]) return;
     window.clearTimeout(timers.current.advance);
-    timers.current.advance = window.setTimeout(() => goToNext(index), OFFER_DURATION_MS);
+    timers.current.advance = window.setTimeout(finishCurrent, OFFER_DURATION_MS);
     return () => window.clearTimeout(timers.current.advance);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- advance only while this offer is showing
-  }, [open, index, queueKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hold only while this unseen offer is showing
+  }, [open, queueKey]);
 
   useEffect(() => clearTimers, []);
-
-  function dismissCurrent() {
-    window.clearTimeout(timers.current.advance);
-    goToNext(index);
-  }
 
   async function copyCode(code: string) {
     try {
@@ -136,7 +136,7 @@ export function OfferPopups() {
           copied={copied}
           durationMs={OFFER_DURATION_MS}
           onCopy={() => copyCode(active.code)}
-          onClose={dismissCurrent}
+          onClose={finishCurrent}
         />
       ) : null}
     </AnimatePresence>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { INTRO_UNLOCKED_EVENT, INTRO_PENDING_CLASS } from "@/lib/splash";
 
 export type CampaignHeroAction = {
   href: string;
@@ -60,10 +61,36 @@ function FilmPane({
   useEffect(() => {
     if (reduceMotion) return;
     if (!eager) return;
-    const armVideo = () => setReady(true);
-    const idle = window.requestIdleCallback?.(armVideo, { timeout: 1800 });
-    const fallback = idle == null ? window.setTimeout(armVideo, 1200) : undefined;
+    let idle: number | undefined;
+    let fallback: number | undefined;
+    let cancelled = false;
+
+    const armVideo = () => {
+      if (cancelled) return;
+      setReady(true);
+    };
+
+    // Prefer idle after intro; keep poster as LCP. Longer timeout avoids fighting first paint.
+    const schedule = () => {
+      idle = window.requestIdleCallback?.(armVideo, { timeout: 3500 });
+      fallback = idle == null ? window.setTimeout(armVideo, 2800) : undefined;
+    };
+
+    const onPointer = () => armVideo();
+    window.addEventListener("pointerdown", onPointer, { once: true, passive: true });
+    window.addEventListener(INTRO_UNLOCKED_EVENT, schedule, { once: true });
+
+    // If intro already cleared (or revisit), schedule soon.
+    if (!document.documentElement.classList.contains(INTRO_PENDING_CLASS)) {
+      schedule();
+    } else {
+      fallback = window.setTimeout(schedule, 3200);
+    }
+
     return () => {
+      cancelled = true;
+      window.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener(INTRO_UNLOCKED_EVENT, schedule);
       if (idle != null) window.cancelIdleCallback?.(idle);
       if (fallback) window.clearTimeout(fallback);
     };
@@ -274,7 +301,7 @@ export function CampaignHero({
               {links.map((link, i) => (
                 <Fragment key={link.href}>
                   {i > 0 ? <span className="select-none text-white/30">·</span> : null}
-                  <Link href={link.href} className="transition-opacity duration-100 hover:opacity-80">
+                  <Link href={link.href} prefetch className="transition-opacity duration-100 hover:opacity-80">
                     {link.label}
                   </Link>
                 </Fragment>

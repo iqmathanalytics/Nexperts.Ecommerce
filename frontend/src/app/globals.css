@@ -1,11 +1,14 @@
 @import "tailwindcss";
 
-/* Paint intro cover before React so the store never flashes first. */
+/* Paint intro cover before React so the store never flashes first.
+   OpeningScreen always clears nx-intro-pending (timer + failsafe) so scroll cannot stick. */
 html.nx-intro-pending {
   overflow: hidden;
+  overscroll-behavior: none;
 }
 html.nx-intro-pending body {
   overflow: hidden;
+  overscroll-behavior: none;
 }
 html.nx-intro-pending::before {
   content: "";

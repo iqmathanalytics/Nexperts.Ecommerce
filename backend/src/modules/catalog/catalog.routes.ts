@@ -65,7 +65,7 @@ catalogRouter.get(
 catalogRouter.get(
   "/home",
   asyncHandler(async (_req, res) => {
-    res.setHeader("Cache-Control", "public, max-age=45, stale-while-revalidate=300");
+    res.setHeader("Cache-Control", "public, max-age=90, stale-while-revalidate=600");
     res.json(success(await catalog.homepageData()));
   }),
 );
@@ -73,7 +73,7 @@ catalogRouter.get(
 catalogRouter.get(
   "/editorial",
   asyncHandler(async (_req, res) => {
-    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+    res.setHeader("Cache-Control", "public, max-age=90, stale-while-revalidate=600");
     res.json(success(await adminMerch.getEditorial()));
   }),
 );

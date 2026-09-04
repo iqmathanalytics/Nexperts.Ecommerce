@@ -263,8 +263,8 @@ export function ProductPageClient({ slug, initial }: { slug: string; initial: St
                   placeholder="Email"
                   className="h-11 flex-1 border border-line bg-background px-3 text-sm outline-none focus:border-ink"
                 />
-                <Button disabled={!waitlistEmail || waitlist.isPending} onClick={() => waitlist.mutate()}>
-                  Notify me
+                <Button disabled={!waitlistEmail || waitlist.isPending} pending={waitlist.isPending} onClick={() => waitlist.mutate()}>
+                  {waitlist.isPending ? "Joining…" : "Notify me"}
                 </Button>
               </div>
             </div>

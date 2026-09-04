@@ -11,6 +11,7 @@ import {
   prefersReducedMotion,
   splashTotalMs,
   SPLASH_EXIT_MS,
+  SPLASH_FAILSAFE_MS,
   wait,
 } from "@/lib/splash";
 
@@ -23,17 +24,27 @@ function shouldShowIntro(pathname: string) {
 export function OpeningScreen() {
   const router = useRouter();
   const pathname = usePathname();
-  // Cover home immediately so the store never paints under the splash.
-  const [visible, setVisible] = useState(() => (typeof window !== "undefined" ? shouldShowIntro(pathname) : false));
-  const reduced = typeof window !== "undefined" && prefersReducedMotion();
+  // Always false on SSR + first paint — early CSS cover prevents flash; avoids hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setReduced(prefersReducedMotion());
+  }, []);
 
   useEffect(() => {
     if (pathname !== "/") return;
     router.prefetch("/women");
     router.prefetch("/men");
+    router.prefetch("/products");
+    router.prefetch("/sale");
   }, [router, pathname]);
 
   useEffect(() => {
+    if (!mounted) return;
+
     if (!shouldShowIntro(pathname)) {
       setVisible(false);
       clearIntroPending();
@@ -41,27 +52,38 @@ export function OpeningScreen() {
     }
 
     setVisible(true);
-    // Keep the early CSS cover until React exit finishes.
     document.documentElement.classList.add("nx-intro-pending");
 
     let cancelled = false;
-    void wait(splashTotalMs()).then(() => {
+    const total = splashTotalMs();
+
+    void wait(total).then(() => {
       if (cancelled) return;
-      setVisible(false);
+      // Unlock scroll immediately — do not wait for Motion exitComplete.
+      clearIntroPending();
       persistIntroSeen();
+      setVisible(false);
     });
+
+    // Hard failsafe if timers / Motion misbehave.
+    const failsafe = window.setTimeout(() => {
+      if (cancelled) return;
+      clearIntroPending();
+      persistIntroSeen();
+      setVisible(false);
+    }, Math.max(total + 500, SPLASH_FAILSAFE_MS));
 
     return () => {
       cancelled = true;
+      window.clearTimeout(failsafe);
+      clearIntroPending();
     };
-  }, [pathname]);
+  }, [pathname, mounted]);
+
+  if (!mounted) return null;
 
   return (
-    <AnimatePresence
-      onExitComplete={() => {
-        clearIntroPending();
-      }}
-    >
+    <AnimatePresence onExitComplete={clearIntroPending}>
       {visible ? (
         <motion.div
           className="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-[#1e3d32] text-white"
@@ -70,8 +92,7 @@ export function OpeningScreen() {
           transition={{ duration: SPLASH_EXIT_MS, ease: [0.76, 0, 0.24, 1] }}
           aria-hidden
         >
-          <p className="relative text-[10px] font-semibold uppercase tracking-[0.5em] text-white/80">Nexperts</p>
-          <div className="relative mt-6 flex overflow-hidden">
+          <div className="relative flex overflow-hidden">
             {LETTERS.map((letter, i) => (
               <motion.span
                 key={`${letter}-${i}`}
@@ -94,6 +115,14 @@ export function OpeningScreen() {
             animate={{ width: 160 }}
             transition={reduced ? { duration: 0 } : { duration: 0.7, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
           />
+          <motion.p
+            className="relative mt-6 max-w-xs px-6 text-center text-[11px] font-medium uppercase tracking-[0.32em] text-white/75 md:max-w-md md:text-xs"
+            initial={reduced ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={reduced ? { duration: 0 } : { duration: 0.55, delay: 0.75, ease: [0.22, 1, 0.36, 1] }}
+          >
+            Cut for the tropics. Worn worldwide.
+          </motion.p>
         </motion.div>
       ) : null}
     </AnimatePresence>

@@ -14,13 +14,10 @@ import { useToast } from "@/components/ui/toast";
 import { useStoreUi } from "@/components/store/StoreUiContext";
 import { useSession } from "@/hooks/useSession";
 import { loginUrl } from "@/lib/auth";
-import { ScarcityBanner } from "@/components/store/ScarcityBanner";
-import { ProductCommerceDetails } from "@/components/store/ProductCommerceDetails";
 import { addGuestCartItem } from "@/lib/guestCart";
 
 type Variant = {
   id: number;
-  sku?: string;
   attributes: Record<string, string> | null;
   price: number;
   mrp: number;
@@ -33,10 +30,6 @@ type Product = {
   id: number;
   name: string;
   slug: string;
-  description?: string | null;
-  specifications?: Record<string, string> | null;
-  shippingInfo?: string | null;
-  returnInfo?: string | null;
   brand: { name: string; slug: string } | null;
   images: Array<{ id: number; url: string; isPrimary: boolean }>;
   variants: Variant[];
@@ -105,7 +98,6 @@ export function QuickViewModal({
   const sizes = (product?.variants ?? []).map((v) => ({
     id: v.id,
     label: v.attributes?.size ?? v.attributes?.Size ?? "One size",
-    available: v.available,
     inStock: v.inStock,
   }));
 
@@ -167,8 +159,6 @@ export function QuickViewModal({
             <Skeleton className="mt-4 h-7 w-24" />
           )}
 
-          {variant && variant.available > 0 && variant.available <= 5 ? <ScarcityBanner available={variant.available} className="mt-4" /> : null}
-
           <div className="mt-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Size</p>
             {isError && !product ? (
@@ -177,9 +167,9 @@ export function QuickViewModal({
               </p>
             ) : isLoading && !product ? (
               <div className="mt-3 flex gap-2">
-                <Skeleton className="h-12 w-14" />
-                <Skeleton className="h-12 w-14" />
-                <Skeleton className="h-12 w-14" />
+                <Skeleton className="h-11 w-12" />
+                <Skeleton className="h-11 w-12" />
+                <Skeleton className="h-11 w-12" />
               </div>
             ) : (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -194,7 +184,6 @@ export function QuickViewModal({
                     }`}
                   >
                     {s.label}
-                    <span className="mt-0.5 block text-[10px] opacity-70">{s.inStock ? `${s.available} left` : "Out"}</span>
                   </button>
                 ))}
               </div>
@@ -233,24 +222,13 @@ export function QuickViewModal({
             </Button>
           </div>
 
-          {product ? (
-            <ProductCommerceDetails
-              compact
-              description={product.description}
-              specifications={product.specifications}
-              shippingInfo={product.shippingInfo}
-              returnInfo={product.returnInfo}
-              sku={variant?.sku}
-            />
-          ) : null}
-
           <Link
             href={`/products/${productSlug}`}
             prefetch
             onClick={() => onClose()}
-            className="btn-store mt-6 inline-block text-xs font-semibold uppercase tracking-[0.16em] underline-offset-4 hover:underline"
+            className="btn-store mt-5 inline-flex w-full items-center justify-center border border-line py-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition hover:border-ink"
           >
-            View full details
+            View product details
           </Link>
         </div>
       </div>

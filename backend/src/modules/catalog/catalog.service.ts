@@ -524,7 +524,7 @@ export async function homepageData() {
   const cached = cacheGet<Awaited<ReturnType<typeof loadHomepage>>>("homepage");
   if (cached) return cached;
   const data = await loadHomepage();
-  cacheSet("homepage", data, 45_000);
+  cacheSet("homepage", data, 90_000);
   return data;
 }
 

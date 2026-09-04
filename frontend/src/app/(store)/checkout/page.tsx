@@ -417,8 +417,13 @@ export default function CheckoutPage() {
                 <Label>Coupon code</Label>
                 <Input placeholder="WELCOME10" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" type="button" onClick={() => couponCode.trim() && applyCoupon.mutate(couponCode.trim())}>
-                    Apply
+                  <Button
+                    variant="outline"
+                    type="button"
+                    pending={applyCoupon.isPending}
+                    onClick={() => couponCode.trim() && applyCoupon.mutate(couponCode.trim())}
+                  >
+                    {applyCoupon.isPending ? "Applying…" : "Apply"}
                   </Button>
                   {appliedCoupon ? (
                     <Button

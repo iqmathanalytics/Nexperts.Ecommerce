@@ -66,13 +66,19 @@ export function Header() {
   const { isAuthenticated } = useSession();
   const { openSearch, openMiniCart, cartPulse } = useStoreUi();
   const isHeroPage =
-    path === "/" || path === "/women" || path === "/men" || path === "/sale" || path === "/products" || path === "/checkout/success";
+    path === "/" || path === "/women" || path === "/men" || path === "/sale" || path === "/products";
 
   useEffect(() => {
     for (const href of ["/", "/women", "/men", "/sale", "/products", "/cart", "/account"]) {
       router.prefetch(href);
     }
   }, [router]);
+
+  function prefetchShop(href: string) {
+    const base = href.split("?")[0]!;
+    router.prefetch(base);
+    if (href.includes("?")) router.prefetch(href);
+  }
 
   const closeMenus = useCallback(() => {
     hoverLocked.current = true;
@@ -196,7 +202,11 @@ export function Header() {
                     key={l.href}
                     href={l.href}
                     aria-current={current ? "page" : undefined}
-                    onMouseEnter={() => openMega(l.mega)}
+                    onMouseEnter={() => {
+                      prefetchShop(l.href);
+                      openMega(l.mega);
+                    }}
+                    onFocus={() => prefetchShop(l.href)}
                     onClick={() => {
                       closeMenus();
                       window.scrollTo({ top: 0, left: 0, behavior: "auto" });

@@ -53,12 +53,12 @@ function SuccessInner() {
             exit={{ opacity: 0, y: "-6%" }}
             transition={{ duration: 0.4, ease: easeOut }}
           >
-            <OrderPlacedCeremony />
-            <p className="relative mt-8 text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]">House confirmation</p>
-            <h1 className="relative mt-4 font-display text-5xl font-medium italic text-white md:text-7xl">Order placed</h1>
-            <p className="relative mt-5 max-w-md text-sm text-white/85">It’s yours. The house has sealed your order.</p>
+            <OrderPlacedCeremony compact />
+            <p className="relative mt-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c4a056]">House confirmation</p>
+            <h1 className="relative mt-2 font-display text-4xl font-medium italic leading-none text-white md:text-5xl">Order placed</h1>
+            <p className="relative mt-3 max-w-md text-sm leading-6 text-white/85">It’s yours. The house has sealed your order.</p>
             {orderNumber ? (
-              <p className="relative mt-6 border border-white/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
+              <p className="relative mt-5 border border-white/20 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
                 {orderNumber}
               </p>
             ) : null}
@@ -66,23 +66,23 @@ function SuccessInner() {
         ) : null}
       </AnimatePresence>
 
-      <section className="border-b border-line bg-[#1e3d32] px-6 py-14 text-center text-white md:py-16">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.42em] text-[#c4a056]">House confirmation</p>
-        <h1 className="mt-4 font-display text-4xl font-medium italic text-white md:text-6xl">It’s yours.</h1>
-        <p className="mx-auto mt-4 max-w-md text-sm text-white/85">
+      <section className="border-b border-line bg-[#1e3d32] px-4 py-8 text-center text-white md:px-6 md:py-10">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#c4a056]">House confirmation</p>
+        <h1 className="mt-2 font-display text-3xl font-medium italic leading-none text-white md:text-4xl">It’s yours.</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/85">
           {SITE_NAME} has sealed your order. A note is on its way, and the atelier is preparing your pieces.
         </p>
         {orderNumber ? (
-          <p className="mt-6 inline-block border border-white/20 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
+          <p className="mt-4 inline-block border border-white/20 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
             {orderNumber}
           </p>
         ) : null}
       </section>
 
-      <section className="mx-auto max-w-5xl px-4 py-16 md:px-6 md:py-20">
-        <div className="grid gap-4 md:grid-cols-3">
+      <section className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-10">
+        <div className="grid gap-3 md:grid-cols-3">
           {[
-            { icon: Package, k: "Confirmed", v: "Held at the house until packed" },
+            { icon: Package, k: "Confirmed", v: "Held until packed" },
             {
               icon: Truck,
               k: "Arrives",
@@ -92,77 +92,77 @@ function SuccessInner() {
           ].map((card, i) => (
             <motion.div
               key={card.k}
-              className="rounded-[1.6rem] border border-line bg-surface p-6"
-              initial={{ opacity: 0, y: 20 }}
+              className="min-w-0 rounded-2xl border border-line bg-surface px-4 py-4"
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 + i * 0.08, duration: 0.5, ease: easeOut }}
+              transition={{ delay: 0.08 + i * 0.05, duration: 0.35, ease: easeOut }}
             >
               <card.icon className="h-4 w-4 text-[#1e3d32]" />
-              <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#4f4a42]">{card.k}</p>
-              <p className="mt-2 font-display text-2xl font-medium italic leading-tight text-[#1c1915]">{card.v}</p>
+              <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4f4a42]">{card.k}</p>
+              <p className="mt-1 break-words font-display text-lg font-medium italic leading-snug text-[#1c1915]">{card.v}</p>
             </motion.div>
           ))}
         </div>
 
         {order ? (
-          <div className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="overflow-hidden rounded-[2rem] border border-line bg-surface">
-              <div className="border-b border-line px-6 py-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Pieces in this order</p>
-                <p className="mt-1 font-display text-2xl font-medium italic">
-                  {order.items.length} {order.items.length === 1 ? "silhouette" : "silhouettes"}
+          <div className="mt-6 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+              <div className="border-b border-line px-5 py-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Pieces in this order</p>
+                <p className="mt-0.5 font-display text-xl font-medium italic leading-snug">
+                  {order.items.length} {order.items.length === 1 ? "item" : "items"}
                 </p>
               </div>
               <ul>
                 {order.items.map((item) => (
-                  <li key={item.id} className="flex gap-4 border-b border-line px-6 py-5 last:border-b-0">
-                    <div className="relative h-24 w-16 shrink-0 overflow-hidden bg-surface-muted">
+                  <li key={item.id} className="flex items-start gap-3 border-b border-line px-5 py-3.5 last:border-b-0">
+                    <div className="relative h-16 w-12 shrink-0 overflow-hidden bg-surface-muted">
                       {item.imageUrl ? (
-                        <Image src={item.imageUrl} alt="" fill sizes="64px" className="object-cover object-top" />
+                        <Image src={item.imageUrl} alt="" fill sizes="48px" className="object-cover object-top" />
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium leading-snug">{item.productName}</p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted">
+                      <p className="truncate font-medium leading-snug">{item.productName}</p>
+                      <p className="mt-0.5 text-xs uppercase tracking-[0.12em] text-muted">
                         {item.variantName ?? item.sku} · Qty {item.quantity}
                       </p>
                     </div>
-                    <p className="text-sm tabular-nums">{formatMoney(asAmount(item.unitPrice) * item.quantity)}</p>
+                    <p className="shrink-0 text-sm tabular-nums">{formatMoney(asAmount(item.unitPrice) * item.quantity)}</p>
                   </li>
                 ))}
               </ul>
-              <div className="space-y-2 border-t border-line px-6 py-5 text-sm">
-                <p className="flex justify-between text-muted">
+              <div className="space-y-1.5 border-t border-line px-5 py-4 text-sm">
+                <p className="flex justify-between gap-4 text-muted">
                   <span>Subtotal</span>
-                  <span>{formatMoney(asAmount(order.subtotal))}</span>
+                  <span className="tabular-nums">{formatMoney(asAmount(order.subtotal))}</span>
                 </p>
                 {asAmount(order.discount) > 0 ? (
-                  <p className="flex justify-between text-muted">
-                    <span>House offer{order.couponCode ? ` · ${order.couponCode}` : ""}</span>
-                    <span>−{formatMoney(asAmount(order.discount))}</span>
+                  <p className="flex justify-between gap-4 text-muted">
+                    <span className="min-w-0 truncate">House offer{order.couponCode ? ` · ${order.couponCode}` : ""}</span>
+                    <span className="shrink-0 tabular-nums">−{formatMoney(asAmount(order.discount))}</span>
                   </p>
                 ) : null}
-                <p className="flex justify-between text-muted">
+                <p className="flex justify-between gap-4 text-muted">
                   <span>Shipping</span>
-                  <span>{asAmount(order.shipping) === 0 ? "Complimentary" : formatMoney(asAmount(order.shipping))}</span>
+                  <span className="tabular-nums">{asAmount(order.shipping) === 0 ? "Complimentary" : formatMoney(asAmount(order.shipping))}</span>
                 </p>
-                <p className="flex justify-between font-semibold">
+                <p className="flex justify-between gap-4 font-semibold">
                   <span>Total</span>
-                  <span>{formatMoney(asAmount(order.total))}</span>
+                  <span className="tabular-nums">{formatMoney(asAmount(order.total))}</span>
                 </p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-[2rem] border border-line bg-surface p-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Deliver to</p>
-                <p className="mt-3 font-display text-2xl font-medium italic">{order.shippingAddress?.fullName}</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{formatAddress(order.shippingAddress)}</p>
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-line bg-surface px-5 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Deliver to</p>
+                <p className="mt-2 break-words font-display text-xl font-medium italic leading-snug">{order.shippingAddress?.fullName}</p>
+                <p className="mt-1.5 text-sm leading-6 text-muted">{formatAddress(order.shippingAddress)}</p>
                 {order.shippingAddress?.phone ? (
-                  <p className="mt-2 text-sm text-muted">{order.shippingAddress.phone}</p>
+                  <p className="mt-1 text-sm text-muted">{order.shippingAddress.phone}</p>
                 ) : null}
                 {order.createdAt ? (
-                  <p className="mt-4 text-xs uppercase tracking-[0.14em] text-muted">Placed {formatDate(order.createdAt)}</p>
+                  <p className="mt-3 text-xs uppercase tracking-[0.12em] text-muted">Placed {formatDate(order.createdAt)}</p>
                 ) : null}
               </div>
               <div className="flex flex-col gap-3">
@@ -190,7 +190,7 @@ function SuccessInner() {
             </div>
           </div>
         ) : (
-          <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
               href={id ? `/account/orders/${id}` : "/account/orders"}
               className="btn-store btn-fill inline-flex h-12 items-center justify-center gap-2 px-7 text-[11px] font-semibold uppercase tracking-[0.2em]"
