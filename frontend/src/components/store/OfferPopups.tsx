@@ -13,7 +13,9 @@ import { useEligibleOffers } from "@/hooks/useEligibleOffers";
 import { useIntroReady } from "@/hooks/useIntroReady";
 import { offerKindLabel } from "@/lib/offers";
 
-const SEEN_PREFIX = "nx-offer-side-v3:";
+const SEEN_PREFIX = "nx-offer-side-v4:";
+/** Codes auto-hidden this tab session (not permanent). */
+const SESSION_PREFIX = "nx-offer-session-v1:";
 const SKIP_PREFIXES = ["/checkout", "/login", "/register", "/forgot-password", "/admin"];
 /** Delay before the first side offer appears. */
 const SHOW_DELAY_MS = 2200;
@@ -26,6 +28,10 @@ function seenKey(code: string) {
   return `${SEEN_PREFIX}${code.trim().toUpperCase()}`;
 }
 
+function sessionKey(code: string) {
+  return `${SESSION_PREFIX}${code.trim().toUpperCase()}`;
+}
+
 function dismissed(code: string) {
   try {
     return localStorage.getItem(seenKey(code)) === "1";
@@ -34,12 +40,34 @@ function dismissed(code: string) {
   }
 }
 
+function sessionHidden(code: string) {
+  try {
+    return sessionStorage.getItem(sessionKey(code)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Permanent dismiss — only when the shopper closes / claims. */
 function remember(code: string) {
   try {
     localStorage.setItem(seenKey(code), "1");
   } catch {
     /* ignore */
   }
+}
+
+/** Soft dismiss for the auto-timer so offers can return next visit. */
+function rememberSession(code: string) {
+  try {
+    sessionStorage.setItem(sessionKey(code), "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+function isHidden(code: string) {
+  return dismissed(code) || sessionHidden(code);
 }
 
 export function OfferPopups() {
@@ -58,7 +86,7 @@ export function OfferPopups() {
   const quiet = useMemo(() => SKIP_PREFIXES.some((p) => path.startsWith(p)), [path]);
   const [seenTick, setSeenTick] = useState(0);
   const queue = useMemo(
-    () => list.filter((o) => o.code && !dismissed(o.code)),
+    () => list.filter((o) => o.code && !isHidden(o.code)),
     [list, seenTick],
   );
   const queueKey = useMemo(() => queue.map((o) => o.code).join("|"), [queue]);
@@ -75,9 +103,19 @@ export function OfferPopups() {
     window.clearTimeout(timers.current.advance);
   }
 
+  /** User closed or claimed — do not show this code again on this browser. */
   function finishCurrent() {
     const current = queue[0];
     if (current) remember(current.code);
+    setOpen(false);
+    setCopied(false);
+    setSeenTick((n) => n + 1);
+  }
+
+  /** Timer expired — hide for this tab session only; next visit can show again. */
+  function advanceAuto() {
+    const current = queue[0];
+    if (current) rememberSession(current.code);
     setOpen(false);
     setCopied(false);
     setSeenTick((n) => n + 1);
@@ -96,6 +134,7 @@ export function OfferPopups() {
     }
 
     if (!introReady) return;
+    // Wait until editorial has settled or defaults are ready (queue already non-empty).
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const delay = hasShownRef.current ? SWITCH_GAP_MS : reduce ? 500 : SHOW_DELAY_MS;
     timers.current.show = window.setTimeout(() => {
@@ -109,7 +148,7 @@ export function OfferPopups() {
   useEffect(() => {
     if (!open || !queue[0]) return;
     window.clearTimeout(timers.current.advance);
-    timers.current.advance = window.setTimeout(finishCurrent, OFFER_DURATION_MS);
+    timers.current.advance = window.setTimeout(advanceAuto, OFFER_DURATION_MS);
     return () => window.clearTimeout(timers.current.advance);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hold only while this unseen offer is showing
   }, [open, queueKey]);

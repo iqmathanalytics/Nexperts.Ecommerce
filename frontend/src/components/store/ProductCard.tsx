@@ -78,9 +78,14 @@ export function ProductCard({
                       quality={65}
                       priority={index < 4}
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
-                      className={`object-cover object-top transition duration-500 ease-out ${
-                        canHoverSwap ? "group-hover:opacity-0" : "group-hover:scale-[1.02]"
-                      }`}
+                      className={cn(
+                        "object-cover object-top transition duration-500 ease-out",
+                        // Touch devices keep :hover stuck after tap — never hide the primary
+                        // image unless a real hover pointer is available and the swap is ready.
+                        canHoverSwap
+                          ? "max-md:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-0"
+                          : "[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-[1.02]",
+                      )}
                     />
                     {hoverReady && canHoverSwap ? (
                       <Image
@@ -89,7 +94,7 @@ export function ProductCard({
                         fill
                         quality={60}
                         sizes="(max-width: 768px) 50vw, 20vw"
-                        className="object-cover object-top opacity-0 transition duration-400 group-hover:opacity-100"
+                        className="pointer-events-none object-cover object-top opacity-0 transition duration-400 max-md:hidden [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100"
                       />
                     ) : null}
                   </>

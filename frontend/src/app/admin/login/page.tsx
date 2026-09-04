@@ -77,6 +77,22 @@ export default function AdminLogin() {
 
   return (
     <div className="grid min-h-screen bg-background text-ink lg:grid-cols-[1.05fr_0.95fr]">
+      {/* Mobile brand band */}
+      <div className="relative h-[38svh] min-h-[11.5rem] max-h-[18rem] overflow-hidden bg-brand lg:hidden">
+        <Image src={WOMEN_HERO} alt="" fill priority quality={70} sizes="100vw" className="object-cover object-top" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand via-brand/55 to-brand/15" />
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 text-white">
+          <p className="nexperts-mark text-[10px] text-white/75">{SITE_NAME} · Studio</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold leading-[0.95]">
+            House
+            <br />
+            console
+          </h1>
+          <p className="mt-2 max-w-xs text-sm leading-relaxed text-white/80">Staff only · Manage catalog, orders, and stock</p>
+        </div>
+      </div>
+
+      {/* Desktop hero panel */}
       <aside className="relative hidden overflow-hidden bg-brand lg:block">
         <Image src={WOMEN_HERO} alt="" fill priority quality={70} sizes="50vw" className="object-cover object-top" />
         <div className="absolute inset-0 bg-gradient-to-t from-brand via-brand/55 to-brand/20" />
@@ -103,27 +119,22 @@ export default function AdminLogin() {
         </div>
       </aside>
 
-      <main className="relative flex items-center justify-center px-4 py-12 md:px-10">
+      <main className="relative flex items-start justify-center px-5 pb-10 pt-7 md:px-10 lg:items-center lg:py-12">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
           <div className="orb orb-a opacity-30" />
           <div className="orb orb-c opacity-25" />
         </div>
         <div className="relative w-full max-w-md">
-          <div className="mb-8 lg:hidden">
-            <p className="nexperts-mark text-[10px] text-muted">{SITE_NAME}</p>
-            <h1 className="mt-2 font-display text-3xl font-semibold">House console</h1>
-          </div>
-
           <form
-            className="rounded-[2rem] border border-line bg-surface p-8 shadow-[0_32px_70px_-40px_rgba(28,25,21,0.45)]"
+            className="bg-transparent p-0 lg:rounded-[2rem] lg:border lg:border-line lg:bg-surface lg:p-8 lg:shadow-[0_32px_70px_-40px_rgba(28,25,21,0.45)]"
             onSubmit={form.handleSubmit((values) => {
               setError(null);
               login.mutate(values);
             })}
             noValidate
           >
-            <div className="mb-6 flex items-start gap-3">
-              <span className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-full bg-brand text-accent">
+            <div className="mb-5 flex items-start gap-3 lg:mb-6">
+              <span className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-accent">
                 <ShieldCheck className="h-5 w-5" />
               </span>
               <div>
@@ -170,7 +181,7 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted">
+          <p className="mt-5 text-center text-sm text-muted lg:mt-6">
             Looking for the store?{" "}
             <Link href="/" className="font-semibold text-ink underline-offset-4 hover:underline">
               Go to {SITE_NAME}
