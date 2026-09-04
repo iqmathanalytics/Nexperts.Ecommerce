@@ -170,7 +170,7 @@ function SideOffer({
 
   return (
     <motion.aside
-      className="pointer-events-none fixed inset-y-0 right-0 z-[95] flex items-end justify-end p-4 pb-[calc(5.25rem+env(safe-area-inset-bottom))] sm:items-center sm:p-6 sm:pb-6"
+      className="pointer-events-none fixed bottom-0 right-0 z-[95] flex items-end justify-end p-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:p-4 md:pb-4"
       role="dialog"
       aria-modal="false"
       aria-labelledby="offer-title"
@@ -179,7 +179,7 @@ function SideOffer({
       exit={{ opacity: 0, transition: { duration: 0.22 } }}
     >
       <motion.div
-        className="pointer-events-auto relative w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[1.75rem] border border-line bg-surface text-ink shadow-[0_28px_70px_-24px_rgba(20,40,32,0.45)]"
+        className="pointer-events-auto relative w-[min(17rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-[0_20px_48px_-20px_rgba(20,40,32,0.4)]"
         {...offerModal}
       >
         <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
@@ -191,25 +191,25 @@ function SideOffer({
           />
         </div>
 
-        <div className="relative overflow-hidden bg-brand px-5 pb-5 pt-5 pr-12">
+        <div className="relative overflow-hidden bg-brand px-3.5 pb-3 pt-3.5 pr-10">
           <div className="orb orb-a opacity-60" />
           <div className="orb orb-b opacity-40" />
           <motion.div variants={offerStagger} initial="initial" animate="animate" className="relative">
-            <motion.p variants={offerItem} className="text-[10px] font-semibold uppercase tracking-[0.28em] text-accent">
+            <motion.p variants={offerItem} className="text-[9px] font-semibold uppercase tracking-[0.24em] text-accent">
               {kind}
             </motion.p>
             <motion.p
               id="offer-title"
               variants={offerItem}
-              className="pt-1.5 font-display text-3xl font-semibold leading-tight text-white"
+              className="pt-1 font-display text-xl font-semibold leading-tight text-white"
             >
               {offer.kicker}
             </motion.p>
           </motion.div>
         </div>
 
-        <motion.div className="relative px-5 py-5" variants={offerStagger} initial="initial" animate="animate">
-          <motion.p variants={offerItem} className="text-sm leading-relaxed text-muted">
+        <motion.div className="relative px-3.5 py-3" variants={offerStagger} initial="initial" animate="animate">
+          <motion.p variants={offerItem} className="text-xs leading-relaxed text-muted">
             {offer.text}
           </motion.p>
 
@@ -219,9 +219,9 @@ function SideOffer({
               variants={offerItem}
               onClick={onCopy}
               whileTap={{ scale: 0.97 }}
-              className="mt-4 flex w-full items-center justify-between rounded-full border border-line bg-background px-4 py-2.5 text-left transition-colors duration-200"
+              className="mt-3 flex w-full items-center justify-between rounded-full border border-line bg-background px-3 py-2 text-left transition-colors duration-200"
             >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">Use code</span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted">Use code</span>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                   key={copied ? "ok" : offer.code}
@@ -229,7 +229,7 @@ function SideOffer({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.22 }}
-                  className="font-display text-xl font-semibold tracking-[0.12em]"
+                  className="font-display text-base font-semibold tracking-[0.1em]"
                 >
                   {copied ? "Copied" : offer.code}
                 </motion.span>
@@ -241,13 +241,13 @@ function SideOffer({
             <Link
               href={offer.href}
               onClick={onClose}
-              className="btn-store btn-fill mt-3 flex w-full items-center justify-center gap-2 rounded-full py-3 text-[11px] font-semibold uppercase tracking-[0.2em]"
+              className="btn-store btn-fill mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-semibold uppercase tracking-[0.18em]"
             >
               <motion.span
                 animate={{ rotate: [0, 12, -8, 0] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                <Sparkles className="h-3 w-3 text-accent" />
               </motion.span>
               Claim offer
             </Link>
@@ -256,7 +256,7 @@ function SideOffer({
             type="button"
             variants={offerItem}
             onClick={onClose}
-            className="mt-2 w-full py-1.5 text-[10px] uppercase tracking-[0.18em] text-muted transition-colors duration-200 hover:text-ink"
+            className="mt-1.5 w-full py-1 text-[9px] uppercase tracking-[0.16em] text-muted transition-colors duration-200 hover:text-ink"
           >
             Continue shopping
           </motion.button>
@@ -268,14 +268,14 @@ function SideOffer({
           onClick={onClose}
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
-          className="absolute right-2.5 top-2.5 z-[2] flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white transition-colors duration-200 hover:bg-white/25"
+          className="absolute right-2 top-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition-colors duration-200 hover:bg-white/25"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3 w-3" />
         </motion.button>
 
         <motion.div
           key={`timer-${offer.code}`}
-          className="absolute inset-x-0 bottom-0 h-1 origin-left bg-accent"
+          className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-accent"
           initial={{ scaleX: 1 }}
           animate={{ scaleX: 0 }}
           transition={{ duration: durationMs / 1000, ease: "linear" }}
